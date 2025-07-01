@@ -3,6 +3,7 @@ import { AdapterRegistry } from '@vibecode/adapter-sdk';
 import type { ProcessManager } from '../processes/index.js';
 import { db } from '../database/index.js';
 import { v4 as uuidv4 } from 'uuid';
+import { cliInstaller } from '../services/cli-installer.js';
 
 interface Services {
   adapterRegistry: AdapterRegistry;
@@ -149,6 +150,71 @@ export function setupRoutes(app: Express, services: Services): void {
     } catch (error) {
       console.error('Error terminating session:', error);
       res.status(500).json({ error: 'Failed to terminate session' });
+    }
+  });
+
+  // CLI Management endpoints
+  app.get('/api/cli/status', async (req, res) => {
+    try {
+      const status = await cliInstaller.getAllCLIStatus();
+      res.json(status);
+    } catch (error) {
+      console.error('Error getting CLI status:', error);
+      res.status(500).json({ error: 'Failed to get CLI status' });
+    }
+  });
+
+  app.get('/api/cli/supported', (req, res) => {
+    try {
+      const supported = cliInstaller.getSupportedCLIs();
+      const cliInfo = supported.map(name => ({
+        name,
+        info: cliInstaller.getCLIInfo(name),
+      }));
+      res.json(cliInfo);
+    } catch (error) {
+      console.error('Error getting supported CLIs:', error);
+      res.status(500).json({ error: 'Failed to get supported CLIs' });
+    }
+  });
+
+  app.post('/api/cli/:cliName/install', async (req, res) => {
+    try {
+      const { cliName } = req.params;
+      const result = await cliInstaller.installCLI(cliName);
+      
+      if (result.success) {
+        res.json(result);
+      } else {
+        res.status(400).json(result);
+      }
+    } catch (error) {
+      console.error('Error installing CLI:', error);
+      res.status(500).json({ error: 'Failed to install CLI' });
+    }
+  });
+
+  app.get('/api/cli/:cliName/check', async (req, res) => {
+    try {
+      const { cliName } = req.params;
+      const status = await cliInstaller.checkCLIAvailability(cliName);
+      res.json(status);
+    } catch (error) {
+      console.error('Error checking CLI:', error);
+      res.status(500).json({ error: 'Failed to check CLI' });
+    }
+  });
+
+  app.post('/api/cli/:cliName/ensure', async (req, res) => {
+    try {
+      const { cliName } = req.params;
+      const { autoInstall = false } = req.body;
+      
+      const result = await cliInstaller.ensureCLIAvailable(cliName, autoInstall);
+      res.json(result);
+    } catch (error) {
+      console.error('Error ensuring CLI availability:', error);
+      res.status(500).json({ error: 'Failed to ensure CLI availability' });
     }
   });
 

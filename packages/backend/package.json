@@ -5,11 +5,11 @@
   "main": "./dist/index.js",
   "type": "module",
   "scripts": {
-    "build": "tsc",
-    "dev": "tsx watch src/index.ts",
-    "start": "node dist/index.js",
+    "build": "bun build src/index.ts --outdir dist --target node",
+    "dev": "bun --watch src/index.ts",
+    "start": "bun dist/index.js",
     "clean": "rm -rf dist",
-    "test": "vitest"
+    "test": "bun test"
   },
   "dependencies": {
     "@vibecode/shared": "workspace:*",
