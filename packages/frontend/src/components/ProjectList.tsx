@@ -1,12 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
+import { useProjects, useProjectActions, useUIActions } from '../store';
 
 export function ProjectList() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const queryClient = useQueryClient();
+  
+  const projects = useProjects();
+  const { setProjects, addProject } = useProjectActions();
+  const { addNotification } = useUIActions();
 
-  const { data: projects, isLoading } = useQuery({
+  const { data: fetchedProjects, isLoading } = useQuery({
     queryKey: ['projects'],
     queryFn: api.getProjects,
   });
@@ -16,15 +21,29 @@ export function ProjectList() {
     queryFn: api.getAdapters,
   });
 
+  // Sync fetched projects with store
+  useEffect(() => {
+    if (fetchedProjects) {
+      setProjects(fetchedProjects);
+    }
+  }, [fetchedProjects, setProjects]);
+
   const createProjectMutation = useMutation({
     mutationFn: api.createProject,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
+    onSuccess: (newProject) => {
+      addProject(newProject);
       setShowCreateForm(false);
+      addNotification({
+        type: 'success',
+        message: `Project "${newProject.name}" created successfully!`,
+      });
     },
     onError: (error) => {
       console.error('Failed to create project:', error);
-      alert('Failed to create project. Please try again.');
+      addNotification({
+        type: 'error',
+        message: 'Failed to create project. Please try again.',
+      });
     },
   });
 
