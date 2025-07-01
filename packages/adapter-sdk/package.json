@@ -1,0 +1,28 @@
+{
+  "name": "@vibecode/adapter-sdk",
+  "version": "1.0.0",
+  "description": "SDK for building Vibe Code CLI adapters",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@vibecode/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0",
+    "vitest": "^1.1.0",
+    "@types/node": "^20.10.0"
+  }
+}
