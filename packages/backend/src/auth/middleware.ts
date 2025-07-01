@@ -3,6 +3,8 @@ import { authService } from './auth-service.js';
 import { db } from '../database/index.js';
 import { JWTPayload } from './types.js';
 import { structuredLogger } from '../middleware/logging.js';
+import { createSecuritySessionTracker } from '../security/session-tracker.js';
+import { SecurityEventType, SecurityLevel } from '../security/types.js';
 
 // Extend Express Request to include user
 declare global {
@@ -51,6 +53,23 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
       role: user.role,
       sessionId: payload.sessionId,
     };
+
+    // Initialize security context if not already present
+    if (req.app.get('securityTracker')) {
+      const securityTracker = req.app.get('securityTracker');
+      const context = securityTracker.getSessionSecurity(payload.sessionId);
+      
+      if (!context) {
+        // Initialize security context for this session
+        securityTracker.initializeSession({
+          userId: user.id,
+          sessionId: payload.sessionId,
+          role: user.role,
+          req,
+          dangerousModeEnabled: user.settings?.dangerousModeEnabled || false,
+        });
+      }
+    }
 
     // Log successful authentication
     structuredLogger.debug('Request authenticated', {

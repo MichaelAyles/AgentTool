@@ -125,6 +125,11 @@ if (process.env.NODE_ENV !== 'production') {
 // Make database available to middleware
 app.set('database', db);
 
+// Initialize security context system
+import { createSecuritySessionTracker } from './security/session-tracker.js';
+const securityTracker = createSecuritySessionTracker(db);
+app.set('securityTracker', securityTracker);
+
 // Routes
 setupRoutes(app, { adapterRegistry, processManager });
 

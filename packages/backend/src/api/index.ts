@@ -11,6 +11,7 @@ import { requirePermission, requireAdmin, requireRole } from '../auth/permission
 import gitRouter from './git.js';
 import authRouter from './auth.js';
 import rolesRouter from './roles.js';
+import securityRouter from './security.js';
 
 interface Services {
   adapterRegistry: AdapterRegistry;
@@ -34,6 +35,9 @@ export function setupRoutes(app: Express, services: Services): void {
 
   // Role management
   app.use('/api', rolesRouter);
+
+  // Security management
+  app.use('/api/security', securityRouter);
 
   // Adapters
   app.get('/api/adapters', (req, res) => {
