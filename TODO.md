@@ -30,7 +30,7 @@
 
 ## Process Management
 - [x] **process-1**: Implement PTY support for interactive processes - ✅ Complete (commit: cf90e07)
-- [ ] **process-2**: Add process monitoring and resource management
+- [x] **process-2**: Add process monitoring and resource management - ✅ Complete (commit: 7af3a8a)
 - [ ] **process-3**: Create process queue system with Bull/BullMQ
 - [ ] **process-4**: Implement process state machine and lifecycle
 - [ ] **process-5**: Add process cleanup and error handling

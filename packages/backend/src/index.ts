@@ -42,6 +42,16 @@ async function initializeAdapters() {
   } catch (error) {
     console.warn('⚠️ Could not load Claude Code adapter:', error.message);
   }
+
+  try {
+    // Load Gemini CLI adapter
+    const { GeminiCLIAdapter } = await import('../../../adapters/gemini-cli/src/index.js');
+    const geminiAdapter = new GeminiCLIAdapter();
+    await adapterRegistry.register(geminiAdapter);
+    console.log('✅ Registered Gemini CLI adapter');
+  } catch (error) {
+    console.warn('⚠️ Could not load Gemini CLI adapter:', error.message);
+  }
 }
 
 // Initialize adapters on startup
