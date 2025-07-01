@@ -3,24 +3,27 @@
 ## Setup & Foundation
 - [x] **setup-1**: Initialize monorepo with pnpm workspaces - ✅ Complete (commit: 022cada)
 - [x] **setup-2**: Set up TypeScript configuration for all packages - ✅ Complete (commit: b74a00f)
-- [ ] **setup-3**: Configure ESLint, Prettier, and Husky for code quality
+- [x] **setup-3**: Configure ESLint, Prettier, and Husky for code quality - ✅ Complete
 - [x] **setup-4**: Create basic project structure with packages folders - ✅ Complete (commit: 70fc0e2)
 - [ ] **setup-5**: Set up CI/CD pipeline with GitHub Actions
-- [ ] **setup-6**: Convert project from pnpm to Bun for better performance
-- [ ] **setup-7**: Fix node-pty compilation issues with Bun
+- [x] **setup-6**: Convert project from pnpm to Bun for better performance - ✅ Complete
+- [x] **setup-7**: Fix node-pty compilation issues with Bun - ✅ Complete
+- [x] **setup-8**: Create universal one-line setup command for all platforms - ✅ Complete
+- [x] **setup-9**: Implement cross-platform Claude Code support with WSL/Docker fallbacks - ✅ Complete
+- [x] **setup-10**: Fix workspace dependency resolution issues - ✅ Complete
 
 ## Backend Core
 - [x] **backend-1**: Implement Express.js API server with basic routing - ✅ Complete (commit: 70fc0e2)
 - [x] **backend-2**: Set up WebSocket communication with Socket.io - ✅ Complete (commit: 70fc0e2)
 - [x] **backend-3**: Create basic process management system - ✅ Complete (commit: 70fc0e2)
 - [x] **backend-4**: Implement SQLite database schema and models - ✅ Complete (commit: e09bcde)
-- [ ] **backend-5**: Add logging and error handling middleware
+- [x] **backend-5**: Add logging and error handling middleware - ✅ Complete
 
 ## Adapter System
 - [x] **adapter-1**: Create adapter SDK package with base interfaces - ✅ Complete (commit: 70fc0e2)
 - [x] **adapter-2**: Implement adapter registry and dynamic loader - ✅ Complete (commit: 70fc0e2)
 - [x] **adapter-3**: Build base adapter class with common functionality - ✅ Complete (commit: 70fc0e2)
-- [ ] **adapter-4**: Create adapter validation and testing utilities
+- [x] **adapter-4**: Create adapter validation and testing utilities - ✅ Complete
 - [ ] **adapter-5**: Implement adapter lifecycle management
 
 ## Frontend Core
@@ -43,10 +46,10 @@
 - [ ] **claude-3**: Implement custom script adapter for flexibility
 - [ ] **claude-4**: Add adapter configuration management system
 - [ ] **claude-5**: Create adapter marketplace foundation
-- [ ] **claude-6**: Implement automatic CLI detection and installation service
+- [x] **claude-6**: Implement automatic CLI detection and installation service - ✅ Complete
 - [ ] **claude-7**: Add CLI installation status monitoring and health checks
 - [ ] **claude-8**: Create frontend components for CLI management and installation
-- [ ] **claude-9**: Add fallback installation methods for different platforms
+- [x] **claude-9**: Add fallback installation methods for different platforms - ✅ Complete
 
 ## Real-time Features
 - [x] **realtime-1**: Implement streaming output buffering system - ✅ Complete (commit: cf90e07)
@@ -56,14 +59,14 @@
 - [ ] **realtime-5**: Add connection pooling for performance
 
 ## Git Integration
-- [ ] **git-1**: Implement git operations API endpoints
-- [ ] **git-2**: Add branch and worktree management functionality
+- [x] **git-1**: Implement git operations API endpoints - ✅ Complete
+- [x] **git-2**: Add branch and worktree management functionality - ✅ Complete
 - [ ] **git-3**: Create git status visualization components
-- [ ] **git-4**: Implement project cloning and initialization
+- [x] **git-4**: Implement project cloning and initialization - ✅ Complete
 - [ ] **git-5**: Add commit and push functionality
 
 ## Security & Authentication
-- [ ] **security-1**: Implement authentication system with multiple providers
+- [x] **security-1**: Implement authentication system with multiple providers - ✅ Complete
 - [ ] **security-2**: Add role-based access control (RBAC)
 - [ ] **security-3**: Create security context management
 - [ ] **security-4**: Implement command validation and filtering
@@ -119,16 +122,21 @@
 - [ ] **deploy-5**: Prepare for public release and documentation
 
 ## Progress Summary
-**Completed**: 20/74 tasks  
-**In Progress**: 1/74 tasks  
-**Remaining**: 53/74 tasks  
+**Completed**: 36/81 tasks  
+**In Progress**: 0/81 tasks  
+**Remaining**: 45/81 tasks  
 
-**Current Status**: 🚧 Converting to Bun and adding automatic CLI installation
+**Current Status**: 🚧 Ready for RBAC implementation
 
 **Recent Completions**: 
-- Project management UI with database integration
-- Comprehensive state management with Zustand  
-- Process monitoring and resource management
-- Gemini CLI adapter implementation
+- Complete Bun conversion with fixed dependencies
+- Universal setup script for all platforms
+- Cross-platform Claude Code support with fallbacks
+- Comprehensive git operations API
+- Logging and error handling middleware
+- Adapter validation utilities
+- CLI detection and installation service
+- Project cloning and initialization
+- **Authentication system with multiple providers (OAuth + local)**
 
-**Next Priority**: Bun conversion and CLI auto-installation system
+**Next Priority**: Role-based access control (RBAC) system (security-2)

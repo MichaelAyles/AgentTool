@@ -1,6 +1,7 @@
 import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
+import cookieParser from 'cookie-parser';
 import { setupRoutes } from './api/index.js';
 import { setupWebSocket } from './websocket/index.js';
 import { ProcessManager } from './processes/index.js';
@@ -45,6 +46,7 @@ app.use('/api/', rateLimit({
 // Body parsing and sanitization
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(cookieParser());
 app.use(sanitizeInput());
 
 // Logging middleware
@@ -84,24 +86,44 @@ initializeAdapters().catch(console.error);
 // Ensure we have a temporary user for development
 function ensureTempUser() {
   try {
-    const tempUser = db.getUserById('temp-user');
+    const tempUser = db.getUserById('dev-user');
     if (!tempUser) {
       db.createUser({
-        id: 'temp-user',
-        username: 'temp',
-        email: 'temp@example.com',
-        passwordHash: 'temp',
-        roles: ['user'],
-        settings: {},
+        id: 'dev-user',
+        username: 'dev',
+        email: 'dev@example.com',
+        displayName: 'Development User',
+        role: 'admin' as any,
+        providers: [{
+          provider: 'local' as any,
+          providerId: 'dev-user',
+          email: 'dev@example.com',
+          connected: new Date(),
+        }],
+        settings: {
+          dangerousModeEnabled: true,
+        },
+        created: new Date(),
+        active: true,
       });
-      console.log('✅ Created temporary user for development');
+      
+      // Set a default password for development
+      db.updateUserPassword('dev-user', '$2a$10$dummy.hash.for.development.only');
+      
+      console.log('✅ Created development user (dev@example.com)');
     }
   } catch (error) {
-    console.warn('⚠️ Could not create temporary user:', error.message);
+    console.warn('⚠️ Could not create development user:', error.message);
   }
 }
 
-ensureTempUser();
+// Only create dev user in development
+if (process.env.NODE_ENV !== 'production') {
+  ensureTempUser();
+}
+
+// Make database available to middleware
+app.set('database', db);
 
 // Routes
 setupRoutes(app, { adapterRegistry, processManager });

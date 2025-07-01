@@ -30,6 +30,12 @@ export class ValidationError extends AppError {
   }
 }
 
+export class AuthenticationError extends AppError {
+  constructor(message: string, details?: any) {
+    super(message, 401, 'AUTHENTICATION_ERROR', details);
+  }
+}
+
 export class NotFoundError extends AppError {
   constructor(resource: string) {
     super(`${resource} not found`, 404, 'NOT_FOUND');
