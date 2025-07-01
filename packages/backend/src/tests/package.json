@@ -1,0 +1,25 @@
+{
+  "name": "@vibecode/backend-tests",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "bun test",
+    "test:watch": "bun test --watch",
+    "test:coverage": "bun test --coverage",
+    "test:auth": "bun test auth/",
+    "test:docker": "bun test docker/",
+    "test:api": "bun test api/",
+    "test:services": "bun test services/",
+    "test:processes": "bun test processes/",
+    "test:integration": "bun test integration/",
+    "test:e2e": "bun test e2e/"
+  },
+  "dependencies": {
+    "@types/supertest": "^6.0.2",
+    "supertest": "^7.0.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}

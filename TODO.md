@@ -118,8 +118,8 @@
 - [x] **docker-1**: Implement Docker-based sandboxing - ✅ Complete
 - [x] **docker-2**: Add container orchestration - ✅ Complete
 - [x] **docker-3**: Create security isolation containers - ✅ Complete
-- [ ] **docker-4**: Implement resource limits and monitoring
-- [ ] **docker-5**: Add automatic container cleanup
+- [x] **docker-4**: Implement resource limits and monitoring - ✅ Complete
+- [x] **docker-5**: Add automatic container cleanup - ✅ Complete
 
 ## Testing
 
