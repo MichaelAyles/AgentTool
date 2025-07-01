@@ -4,6 +4,7 @@ import type { ProcessManager } from '../processes/index.js';
 import { db } from '../database/index.js';
 import { v4 as uuidv4 } from 'uuid';
 import { cliInstaller } from '../services/cli-installer.js';
+import gitRouter from './git.js';
 
 interface Services {
   adapterRegistry: AdapterRegistry;
@@ -15,6 +16,9 @@ export function setupRoutes(app: Express, services: Services): void {
   app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
+
+  // Git operations
+  app.use('/api/git', gitRouter);
 
   // Adapters
   app.get('/api/adapters', (req, res) => {

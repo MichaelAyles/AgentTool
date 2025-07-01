@@ -96,6 +96,52 @@ export interface GitWorktree {
   locked: boolean;
 }
 
+export interface GitStatus {
+  current: string;
+  tracking?: string;
+  ahead: number;
+  behind: number;
+  staged: string[];
+  modified: string[];
+  not_added: string[];
+  deleted: string[];
+  renamed: string[];
+  conflicted: string[];
+  created: string[];
+  isClean: boolean;
+}
+
+export interface GitCommit {
+  hash: string;
+  date: string;
+  message: string;
+  author: string;
+  email: string;
+  refs?: string;
+}
+
+export interface GitRemote {
+  name: string;
+  refs: {
+    fetch: string;
+    push: string;
+  };
+}
+
+export interface GitRepository {
+  path: string;
+  isRepo: boolean;
+  currentBranch?: string;
+  remotes: GitRemote[];
+  status?: GitStatus;
+}
+
+export interface GitOperationResult {
+  success: boolean;
+  data?: any;
+  error?: string;
+}
+
 export enum Permission {
   PROJECT_CREATE = 'project:create',
   PROJECT_READ = 'project:read',
