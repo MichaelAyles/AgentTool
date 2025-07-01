@@ -1,7 +1,7 @@
 # Vibe Code Project Context
 
 ## USER INSTRUCTIONS FOR CLAUDE
-After every feature checked off the todo list, check for errors or run CI if implemented, then commit to working branch. 
+After every feature checked off the todo list, check for errors or run CI if implemented, then commit to working branch and push working branch to remote. 
 After current todo list cleared, check for errors or run CI if implemented, then summarise branch and consult user whether to run a PR
 
 ## Project Overview
