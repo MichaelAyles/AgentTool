@@ -3,18 +3,19 @@
 ## USER INSTRUCTIONS FOR CLAUDE
 After every feature checked off the todo list, check for errors or run CI if implemented, then commit to working branch and push working branch to remote.
 Maintain a user visible todo.md, update after every feature implementation with the commit reference
-Update Readme.md if the state of the project is different from whats currently written.
+Update Readme.md and claude.md if the state of the project is different from whats currently written.
 After current todo list cleared, check for errors or run CI if implemented, then summarise branch and consult user whether to run a PR
 
 ## Project Overview
 Vibe Code is a comprehensive web application for managing AI coding assistants (claude-code, gemini-cli, etc.) with support for project management, git operations, CI/CD, MCP servers, and extensible CLI tool integration.
 
 ## Technology Stack
-- **Backend**: Node.js + TypeScript, Express.js, Socket.io, Bull/BullMQ, node-pty
+- **Backend**: Node.js + TypeScript, Express.js, Socket.io, Bull/BullMQ, mock PTY (node-pty replacement)
 - **Frontend**: React + TypeScript, Vite, Zustand, xterm.js, React Query, Tailwind CSS
-- **Database**: SQLite (embedded) or PostgreSQL
+- **Database**: SQLite3 (development), PostgreSQL (production)
 - **Deployment**: Docker, Docker Compose
-- **Package Manager**: pnpm (monorepo with workspaces)
+- **Package Manager**: Bun (monorepo with workspaces)
+- **Runtime**: Bun for development, Node.js for production
 
 ## Key Features
 - **Multi-AI Support**: Extensible adapter system for Claude Code, Gemini CLI, and custom tools
@@ -85,16 +86,20 @@ vibecode/
 
 ## Development Commands
 ```bash
-# Setup
-pnpm install
-cp .env.example .env
+# One-line setup (recommended)
+curl -fsSL https://raw.githubusercontent.com/your-org/vibe-code/main/setup.sh | bash
+
+# Manual setup
+git clone https://github.com/your-org/vibe-code.git
+cd vibe-code
+./setup.sh
 
 # Development
-pnpm dev                  # Start all services
-pnpm build               # Build all packages
-pnpm test                # Run all tests
-pnpm lint                # Lint all code
-pnpm typecheck           # Type checking
+bun dev                  # Start all services
+bun build               # Build all packages
+bun test                # Run all tests
+bun run lint            # Lint all code
+bun run typecheck       # Type checking
 
 # Docker
 docker compose up -d     # Start production environment
@@ -112,11 +117,37 @@ docker compose build    # Build containers
 - `CRYSTAL_COMPARISON.md` - Competitive analysis and differentiation
 
 ## Current Status
-Architecture planning complete. Ready to begin implementation Phase 1: Foundation.
+**Phase 1: Foundation - 75% Complete**
 
-## Next Steps
-1. Set up monorepo structure with pnpm workspaces
-2. Initialize backend API server with Express.js
-3. Create CLI adapter SDK and registry
-4. Build basic React frontend with terminal component
-5. Implement first Claude Code adapter
+✅ **Completed:**
+- Monorepo structure with Bun workspaces
+- Backend API server with Express.js and WebSocket support
+- CLI adapter SDK and registry system
+- React frontend with terminal component
+- Claude Code and Gemini CLI adapters
+- Process management and resource monitoring
+- Project management with database integration
+- Universal cross-platform setup script
+
+🚧 **In Progress:**
+- Workspace dependency resolution fixes
+- Real node-pty integration (currently using mock)
+
+📋 **Next Priority:**
+- Fix remaining TypeScript compilation issues
+- Complete git operations integration
+- Implement security framework
+
+**Progress: 23/86 tasks completed (26.7%)**
+
+## How to Run
+```bash
+# Quick start
+git clone <repository>
+cd vibe-code
+bun dev
+
+# Access the application
+# Frontend: http://localhost:5173
+# Backend API: http://localhost:3000
+```

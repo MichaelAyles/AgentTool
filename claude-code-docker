@@ -1,0 +1,13 @@
+#!/bin/bash
+if command -v docker >/dev/null 2>&1; then
+    docker run --rm -it \
+        -v "$PWD:/workspace" \
+        -w /workspace \
+        -e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
+        node:18-slim \
+        sh -c "npm install -g @anthropic-ai/claude-code && claude-code $*"
+else
+    echo "❌ Claude Code requires Docker on macOS/Windows"
+    echo "💡 Install Docker Desktop or use Linux/WSL"
+    exit 1
+fi

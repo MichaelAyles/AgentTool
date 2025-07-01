@@ -4,9 +4,9 @@
   "description": "Frontend React application for Vibe Code",
   "type": "module",
   "scripts": {
-    "build": "tsc && vite build",
-    "dev": "vite",
-    "preview": "vite preview",
+    "build": "bun --bun tsc && bun --bun vite build",
+    "dev": "bun --bun vite",
+    "preview": "bun --bun vite preview",
     "clean": "rm -rf dist",
     "test": "bun test"
   },

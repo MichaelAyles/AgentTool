@@ -36,22 +36,26 @@ A comprehensive web application for managing AI coding assistants with extensibl
 
 ## 📋 Current Status
 
-**Progress: 20/70 tasks completed (28.5%)**
+**Progress: 23/86 tasks completed (26.7%)**
 
 ### ✅ Completed Features
-- **Foundation**: Monorepo setup, TypeScript configuration, project structure
+- **Foundation**: Bun monorepo setup, TypeScript configuration, project structure
 - **Backend Core**: Express API server, WebSocket communication, SQLite database
 - **Frontend Core**: React with Vite, component structure, terminal interface
 - **Adapter System**: SDK, registry, base classes, Claude Code and Gemini CLI adapters
-- **Process Management**: PTY support, resource monitoring, session lifecycle
+- **Process Management**: Mock PTY support, resource monitoring, session lifecycle
 - **Real-time Features**: Streaming output, WebSocket protocols, session management
 - **State Management**: Zustand store with persistence and notifications
 - **Project Management**: Full CRUD operations with database integration
+- **Setup & Deployment**: Universal cross-platform setup script, Bun integration
+- **CLI Management**: Automatic CLI detection and installation service
 
 ### 🚧 In Progress
-- **Git Integration**: API endpoints for git operations and project management
+- **Workspace Dependencies**: Fixing TypeScript compilation and dependency resolution issues
+- **Real PTY Integration**: Replacing mock PTY with actual node-pty implementation
 
 ### 📋 Upcoming Features
+- **Git Integration**: API endpoints for git operations and project management
 - **Security Framework**: Authentication, authorization, dangerous mode
 - **Git Visualization**: Branch management, diff views, commit history
 - **MCP Integration**: Model Context Protocol support
@@ -78,43 +82,46 @@ A comprehensive web application for managing AI coding assistants with extensibl
 
 ### Development
 - **Package Manager**: Bun with workspaces
-- **Runtime**: Bun for faster execution
+- **Runtime**: Bun for faster execution and development
 - **Testing**: Bun test for unit/integration tests
 - **Linting**: ESLint + Prettier
 - **Type Checking**: TypeScript strict mode
 - **Git Hooks**: Husky for pre-commit validation
+- **Setup**: Universal cross-platform installation script
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js 18+ and Bun 1.0+
+- Node.js 18+ (auto-installed by setup script)
+- Bun 1.0+ (auto-installed by setup script)
 - Claude Code CLI (auto-installed if needed)
 - Gemini CLI (auto-installed if needed)
+- Git (for cloning repository)
 
-### Installation
+### One-Line Setup (Recommended)
+
+```bash
+# Universal setup for all platforms (macOS, Linux, WSL, Windows)
+curl -fsSL https://raw.githubusercontent.com/your-org/vibe-code/main/setup.sh | bash
+```
+
+### Manual Installation
 
 ```bash
 # Clone the repository
 git clone https://github.com/your-org/vibe-code.git
 cd vibe-code
 
-# Install Bun if not already installed
-curl -fsSL https://bun.sh/install | bash
-
-# Install dependencies
-bun install
-
-# Copy environment configuration
-cp .env.example .env
-
-# Start development servers
-./scripts/dev.sh
+# Run setup script
+./setup.sh
 ```
 
 The application will be available at:
 - **Frontend**: http://localhost:5173
 - **Backend API**: http://localhost:3000
 - **WebSocket**: ws://localhost:3000
+
+**Note**: Some features may be limited due to ongoing workspace dependency resolution. The frontend and basic API functionality are working.
 
 ### Development Scripts
 

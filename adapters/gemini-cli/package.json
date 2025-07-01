@@ -5,15 +5,14 @@
   "main": "./dist/index.js",
   "type": "module",
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch",
+    "build": "bun --bun tsc",
+    "dev": "bun --bun tsc --watch",
     "clean": "rm -rf dist",
-    "test": "vitest"
+    "test": "bun test"
   },
   "dependencies": {
     "@vibecode/adapter-sdk": "workspace:*",
     "@vibecode/shared": "workspace:*",
-    "node-pty": "^1.0.0"
   },
   "devDependencies": {
     "typescript": "^5.3.0",

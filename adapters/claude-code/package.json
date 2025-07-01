@@ -5,8 +5,8 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch",
+    "build": "bun --bun tsc",
+    "dev": "bun --bun tsc --watch",
     "clean": "rm -rf dist"
   },
   "dependencies": {
