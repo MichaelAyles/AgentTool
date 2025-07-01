@@ -34,6 +34,7 @@ import databaseOptimizationRouter from './database-optimization.js';
 import cacheManagementRouter from './cache-management.js';
 import performanceMonitoringRouter from './performance-monitoring.js';
 import dockerSandboxingRouter from './docker-sandboxing.js';
+import containerOrchestrationRouter from './container-orchestration.js';
 
 interface Services {
   adapterRegistry: AdapterRegistry;
@@ -126,6 +127,9 @@ export function setupRoutes(app: Express, services: Services): void {
 
   // Docker sandboxing
   app.use('/api/docker', dockerSandboxingRouter);
+
+  // Container orchestration
+  app.use('/api/orchestration', containerOrchestrationRouter);
 
   // Adapters
   app.get('/api/adapters', (req, res) => {
