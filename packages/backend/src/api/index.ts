@@ -29,6 +29,7 @@ import mcpDiscoveryRouter from './mcp-discovery.js';
 import mcpMessagesRouter from './mcp-messages.js';
 import mcpRegistryRouter from './mcp-registry.js';
 import streamingOptimizationRouter from './streaming-optimization.js';
+import connectionOptimizationRouter from './connection-optimization.js';
 
 interface Services {
   adapterRegistry: AdapterRegistry;
@@ -106,6 +107,9 @@ export function setupRoutes(app: Express, services: Services): void {
 
   // Streaming optimization
   app.use('/api/streaming', streamingOptimizationRouter);
+
+  // Connection optimization
+  app.use('/api/connections', connectionOptimizationRouter);
 
   // Adapters
   app.get('/api/adapters', (req, res) => {
