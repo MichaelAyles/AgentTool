@@ -12,6 +12,7 @@ import gitRouter from './git.js';
 import authRouter from './auth.js';
 import rolesRouter from './roles.js';
 import securityRouter from './security.js';
+import dangerousTimeoutRouter from './dangerous-timeout.js';
 
 interface Services {
   adapterRegistry: AdapterRegistry;
@@ -38,6 +39,9 @@ export function setupRoutes(app: Express, services: Services): void {
 
   // Security management
   app.use('/api/security', securityRouter);
+
+  // Dangerous mode timeout and auto-disable
+  app.use('/api/dangerous/timeout', dangerousTimeoutRouter);
 
   // Adapters
   app.get('/api/adapters', (req, res) => {
