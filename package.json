@@ -13,11 +13,15 @@
     "dev": "bun run --filter '*' dev",
     "build": "bun run --filter '*' build",
     "test": "bun run --filter '*' test",
-    "lint": "eslint . --ext .ts,.tsx",
+    "lint": "eslint . --ext .ts,.tsx --fix",
+    "lint:check": "eslint . --ext .ts,.tsx",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
     "clean": "bun run --filter '*' clean",
     "prepare": "husky install",
-    "setup": "bun install && bun run build"
+    "setup": "bun install && bun run build",
+    "pre-commit": "lint-staged"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",

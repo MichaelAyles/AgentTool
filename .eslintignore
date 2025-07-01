@@ -1,0 +1,17 @@
+node_modules/
+dist/
+build/
+coverage/
+*.min.js
+*.min.css
+.next/
+.nuxt/
+.vite/
+.cache/
+.temp/
+.tmp/
+packages/*/dist/
+packages/*/build/
+adapters/*/dist/
+adapters/*/build/
+.tsbuildinfo
