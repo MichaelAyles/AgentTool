@@ -136,6 +136,46 @@ dangerousModeIntegration.initialize();
 dangerousModeIntegration.registerDefaultRecipients();
 console.log('✅ Dangerous mode integration initialized');
 
+// Initialize process queue system
+import { processQueueManager } from './queue/index.js';
+processQueueManager.initialize().catch(error => {
+  console.warn('⚠️ Queue system initialization failed (Redis may not be available):', error.message);
+  console.log('📝 Queue system will work with in-memory fallback');
+});
+
+// Initialize process lifecycle management
+import { processLifecycleManager } from './processes/lifecycle-manager.js';
+processLifecycleManager.initialize();
+console.log('✅ Process lifecycle manager initialized');
+
+// Initialize process cleanup handler
+import { processCleanupHandler } from './processes/cleanup-handler.js';
+processCleanupHandler.initialize();
+console.log('✅ Process cleanup handler initialized');
+
+// Initialize adapter lifecycle manager
+import { createAdapterLifecycleManager } from './adapters/lifecycle-manager.js';
+const adapterLifecycleManagerInstance = createAdapterLifecycleManager(adapterRegistry);
+adapterLifecycleManagerInstance.initialize();
+console.log('✅ Adapter lifecycle manager initialized');
+
+// Initialize adapter configuration manager
+import { adapterConfigManager } from './services/adapter-config-manager.js';
+import { registerDefaultSchemas } from './services/adapter-schemas.js';
+adapterConfigManager.initialize().then(async () => {
+  await registerDefaultSchemas(adapterConfigManager);
+}).catch(error => {
+  console.warn('⚠️ Adapter configuration manager initialization failed:', error.message);
+});
+console.log('✅ Adapter configuration manager initialized');
+
+// Initialize MCP bridge service
+import { mcpBridge } from './services/mcp-bridge.js';
+mcpBridge.initialize().catch(error => {
+  console.warn('⚠️ MCP bridge service initialization failed:', error.message);
+});
+console.log('✅ MCP bridge service initialized');
+
 // Routes
 setupRoutes(app, { adapterRegistry, processManager });
 
@@ -151,6 +191,7 @@ const PORT = process.env.PORT || 3000;
 // Graceful shutdown
 process.on('SIGTERM', () => {
   structuredLogger.info('SIGTERM received, shutting down gracefully');
+  mcpBridge.cleanup();
   server.close(() => {
     structuredLogger.info('Server closed');
     process.exit(0);
@@ -159,6 +200,7 @@ process.on('SIGTERM', () => {
 
 process.on('SIGINT', () => {
   structuredLogger.info('SIGINT received, shutting down gracefully');
+  mcpBridge.cleanup();
   server.close(() => {
     structuredLogger.info('Server closed');
     process.exit(0);

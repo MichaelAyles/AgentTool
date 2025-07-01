@@ -14,6 +14,14 @@ import rolesRouter from './roles.js';
 import securityRouter from './security.js';
 import dangerousTimeoutRouter from './dangerous-timeout.js';
 import notificationsRouter from './notifications.js';
+import queueRouter from './queue.js';
+import processLifecycleRouter from './process-lifecycle.js';
+import processCleanupRouter from './process-cleanup.js';
+import adapterLifecycleRouter from './adapter-lifecycle.js';
+import websocketPoolRouter from './websocket-pool.js';
+import customScriptsRouter from './custom-scripts.js';
+import adapterConfigRouter from './adapter-config.js';
+import mcpRouter from './mcp.js';
 
 interface Services {
   adapterRegistry: AdapterRegistry;
@@ -46,6 +54,30 @@ export function setupRoutes(app: Express, services: Services): void {
 
   // Security notifications
   app.use('/api/notifications', notificationsRouter);
+
+  // Queue management
+  app.use('/api/queue', queueRouter);
+
+  // Process lifecycle management
+  app.use('/api/process-lifecycle', processLifecycleRouter);
+
+  // Process cleanup management
+  app.use('/api/process-cleanup', processCleanupRouter);
+
+  // Adapter lifecycle management
+  app.use('/api/adapter-lifecycle', adapterLifecycleRouter);
+
+  // WebSocket connection pool management
+  app.use('/api/websocket-pool', websocketPoolRouter);
+
+  // Custom script execution and management
+  app.use('/api/custom-scripts', customScriptsRouter);
+
+  // Adapter configuration management
+  app.use('/api/adapter-config', adapterConfigRouter);
+
+  // MCP bridge service
+  app.use('/api/mcp', mcpRouter);
 
   // Adapters
   app.get('/api/adapters', (req, res) => {

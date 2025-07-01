@@ -2,6 +2,12 @@ import { Router } from 'express';
 import simpleGit, { SimpleGit } from 'simple-git';
 import { join } from 'path';
 import { promises as fs } from 'fs';
+import { GitStatusVisualizer } from '../services/git-status-visualizer.js';
+import { GitOperations } from '../services/git-operations.js';
+import { authenticate } from '../auth/middleware.js';
+import { requirePermission } from '../auth/permissions.js';
+import { comprehensiveAuditLogger, AuditCategory } from '../security/audit-logger.js';
+import { SecurityLevel } from '../security/types.js';
 
 const router = Router();
 
@@ -16,8 +22,8 @@ async function getGitInstance(projectPath: string): Promise<SimpleGit> {
   }
 }
 
-// GET /api/git/:projectId/status - Get git status for project
-router.get('/status/:projectPath(*)', async (req, res) => {
+// GET /api/git/:projectPath/status - Get basic git status
+router.get('/status/:projectPath(*)', authenticate, requirePermission('git', 'read'), async (req, res) => {
   try {
     const projectPath = decodeURIComponent(req.params.projectPath);
     const git = await getGitInstance(projectPath);
@@ -50,8 +56,105 @@ router.get('/status/:projectPath(*)', async (req, res) => {
   }
 });
 
+// GET /api/git/:projectPath/status/visualization - Get enhanced git status with visualization
+router.get('/status/:projectPath(*)/visualization', authenticate, requirePermission('git', 'read'), async (req, res) => {
+  try {
+    const projectPath = decodeURIComponent(req.params.projectPath);
+    const git = await getGitInstance(projectPath);
+    const visualizer = new GitStatusVisualizer(git, projectPath);
+    
+    const visualization = await visualizer.generateVisualization();
+    
+    await comprehensiveAuditLogger.logAuditEvent({
+      category: AuditCategory.DATA_ACCESS,
+      action: 'git_status_visualization_accessed',
+      resourceType: 'git_repository',
+      resourceId: projectPath,
+      userId: req.user?.id,
+      sessionId: req.session?.id || req.sessionID,
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent'),
+      outcome: 'success',
+      severity: SecurityLevel.SAFE,
+      details: {
+        projectPath,
+        branch: visualization.branch.current,
+        totalChanges: visualization.workingTree.totalChanges,
+      },
+    });
+    
+    res.json({
+      success: true,
+      data: visualization,
+    });
+  } catch (error) {
+    console.error('Git status visualization error:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get git status visualization'
+    });
+  }
+});
+
+// GET /api/git/:projectPath/tree - Get git change tree structure
+router.get('/tree/:projectPath(*)', authenticate, requirePermission('git', 'read'), async (req, res) => {
+  try {
+    const projectPath = decodeURIComponent(req.params.projectPath);
+    const git = await getGitInstance(projectPath);
+    const visualizer = new GitStatusVisualizer(git, projectPath);
+    
+    const tree = await visualizer.buildChangeTree();
+    
+    res.json({
+      success: true,
+      data: tree,
+    });
+  } catch (error) {
+    console.error('Git tree error:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get git tree'
+    });
+  }
+});
+
+// GET /api/git/:projectPath/diff/:filePath - Get file diff
+router.get('/diff/:projectPath(*)', authenticate, requirePermission('git', 'read'), async (req, res) => {
+  try {
+    const projectPath = decodeURIComponent(req.params.projectPath);
+    const { file, staged = 'false' } = req.query;
+    
+    if (!file || typeof file !== 'string') {
+      return res.status(400).json({
+        success: false,
+        error: 'File parameter is required'
+      });
+    }
+    
+    const git = await getGitInstance(projectPath);
+    const visualizer = new GitStatusVisualizer(git, projectPath);
+    
+    const diff = await visualizer.getFileDiff(file, staged === 'true');
+    
+    res.json({
+      success: true,
+      data: {
+        file,
+        staged: staged === 'true',
+        ...diff,
+      },
+    });
+  } catch (error) {
+    console.error('Git diff error:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get file diff'
+    });
+  }
+});
+
 // GET /api/git/:projectPath/branches - Get all branches
-router.get('/branches/:projectPath(*)', async (req, res) => {
+router.get('/branches/:projectPath(*)', authenticate, requirePermission('git', 'read'), async (req, res) => {
   try {
     const projectPath = decodeURIComponent(req.params.projectPath);
     const git = await getGitInstance(projectPath);
@@ -75,8 +178,44 @@ router.get('/branches/:projectPath(*)', async (req, res) => {
   }
 });
 
-// GET /api/git/:projectPath/log - Get commit history
-router.get('/log/:projectPath(*)', async (req, res) => {
+// GET /api/git/:projectPath/history - Get enhanced commit history
+router.get('/history/:projectPath(*)', authenticate, requirePermission('git', 'read'), async (req, res) => {
+  try {
+    const projectPath = decodeURIComponent(req.params.projectPath);
+    const { maxCount, since, until, author, path } = req.query;
+    
+    const git = await getGitInstance(projectPath);
+    const visualizer = new GitStatusVisualizer(git, projectPath);
+    
+    const options = {
+      maxCount: maxCount ? parseInt(maxCount as string, 10) : undefined,
+      since: since as string,
+      until: until as string,
+      author: author as string,
+      path: path as string,
+    };
+    
+    const commits = await visualizer.getCommitHistory(options);
+    
+    res.json({
+      success: true,
+      data: {
+        commits,
+        count: commits.length,
+        filters: options,
+      },
+    });
+  } catch (error) {
+    console.error('Git commit history error:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get commit history'
+    });
+  }
+});
+
+// GET /api/git/:projectPath/log - Get basic commit history (legacy)
+router.get('/log/:projectPath(*)', authenticate, requirePermission('git', 'read'), async (req, res) => {
   try {
     const projectPath = decodeURIComponent(req.params.projectPath);
     const git = await getGitInstance(projectPath);
@@ -815,6 +954,366 @@ router.delete('/tag/:projectPath(*)/:tagName', async (req, res) => {
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to delete tag'
+    });
+  }
+});
+
+// Enhanced Git Operations with GitOperations service
+
+// POST /api/git/:projectPath/operations/stage - Stage files
+router.post('/operations/stage/:projectPath(*)', authenticate, requirePermission('git', 'write'), async (req, res) => {
+  try {
+    const projectPath = decodeURIComponent(req.params.projectPath);
+    const { files, all = false, update = false } = req.body;
+    const userId = req.user?.id || 'unknown';
+    
+    if (!all && (!files || !Array.isArray(files) || files.length === 0)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Files array is required when not staging all files'
+      });
+    }
+    
+    const git = await getGitInstance(projectPath);
+    const operations = new GitOperations(git, projectPath, userId);
+    
+    const result = await operations.stageFiles({ files: files || [], all, update });
+    
+    res.json({
+      success: result.success,
+      data: result,
+    });
+  } catch (error) {
+    console.error('Git stage error:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to stage files'
+    });
+  }
+});
+
+// POST /api/git/:projectPath/operations/unstage - Unstage files
+router.post('/operations/unstage/:projectPath(*)', authenticate, requirePermission('git', 'write'), async (req, res) => {
+  try {
+    const projectPath = decodeURIComponent(req.params.projectPath);
+    const { files, all = false } = req.body;
+    const userId = req.user?.id || 'unknown';
+    
+    if (!all && (!files || !Array.isArray(files) || files.length === 0)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Files array is required when not unstaging all files'
+      });
+    }
+    
+    const git = await getGitInstance(projectPath);
+    const operations = new GitOperations(git, projectPath, userId);
+    
+    const result = await operations.unstageFiles({ files: files || [], all });
+    
+    res.json({
+      success: result.success,
+      data: result,
+    });
+  } catch (error) {
+    console.error('Git unstage error:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to unstage files'
+    });
+  }
+});
+
+// POST /api/git/:projectPath/operations/commit - Create commit with enhanced features
+router.post('/operations/commit/:projectPath(*)', authenticate, requirePermission('git', 'write'), async (req, res) => {
+  try {
+    const projectPath = decodeURIComponent(req.params.projectPath);
+    const { message, author, files, allStaged = true, amend = false, allowEmpty = false } = req.body;
+    const userId = req.user?.id || 'unknown';
+    
+    if (!message || message.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Commit message is required'
+      });
+    }
+    
+    const git = await getGitInstance(projectPath);
+    const operations = new GitOperations(git, projectPath, userId);
+    
+    const result = await operations.commit({
+      message: message.trim(),
+      author,
+      files,
+      allStaged,
+      amend,
+      allowEmpty,
+    });
+    
+    res.json({
+      success: result.success,
+      data: result,
+    });
+  } catch (error) {
+    console.error('Git commit error:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to create commit'
+    });
+  }
+});
+
+// POST /api/git/:projectPath/operations/push - Push with enhanced features
+router.post('/operations/push/:projectPath(*)', authenticate, requirePermission('git', 'dangerous'), async (req, res) => {
+  try {
+    const projectPath = decodeURIComponent(req.params.projectPath);
+    const { remote, branch, force = false, setUpstream = false, tags = false } = req.body;
+    const userId = req.user?.id || 'unknown';
+    
+    const git = await getGitInstance(projectPath);
+    const operations = new GitOperations(git, projectPath, userId);
+    
+    const result = await operations.push({
+      remote,
+      branch,
+      force,
+      setUpstream,
+      tags,
+    });
+    
+    res.json({
+      success: result.success,
+      data: result,
+    });
+  } catch (error) {
+    console.error('Git push error:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to push to remote'
+    });
+  }
+});
+
+// POST /api/git/:projectPath/operations/pull - Pull with enhanced features
+router.post('/operations/pull/:projectPath(*)', authenticate, requirePermission('git', 'write'), async (req, res) => {
+  try {
+    const projectPath = decodeURIComponent(req.params.projectPath);
+    const { remote, branch, rebase = false, strategy } = req.body;
+    const userId = req.user?.id || 'unknown';
+    
+    const git = await getGitInstance(projectPath);
+    const operations = new GitOperations(git, projectPath, userId);
+    
+    const result = await operations.pull({
+      remote,
+      branch,
+      rebase,
+      strategy,
+    });
+    
+    res.json({
+      success: result.success,
+      data: result,
+    });
+  } catch (error) {
+    console.error('Git pull error:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to pull from remote'
+    });
+  }
+});
+
+// POST /api/git/:projectPath/operations/branch/create - Create branch with enhanced features
+router.post('/operations/branch/create/:projectPath(*)', authenticate, requirePermission('git', 'write'), async (req, res) => {
+  try {
+    const projectPath = decodeURIComponent(req.params.projectPath);
+    const { name, startPoint, force = false, track = false, upstream } = req.body;
+    const userId = req.user?.id || 'unknown';
+    
+    if (!name || name.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Branch name is required'
+      });
+    }
+    
+    const git = await getGitInstance(projectPath);
+    const operations = new GitOperations(git, projectPath, userId);
+    
+    const result = await operations.createBranch({
+      name: name.trim(),
+      startPoint,
+      force,
+      track,
+      upstream,
+    });
+    
+    res.json({
+      success: result.success,
+      data: result,
+    });
+  } catch (error) {
+    console.error('Git create branch error:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to create branch'
+    });
+  }
+});
+
+// POST /api/git/:projectPath/operations/branch/checkout - Checkout branch
+router.post('/operations/branch/checkout/:projectPath(*)', authenticate, requirePermission('git', 'write'), async (req, res) => {
+  try {
+    const projectPath = decodeURIComponent(req.params.projectPath);
+    const { branchName } = req.body;
+    const userId = req.user?.id || 'unknown';
+    
+    if (!branchName || branchName.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Branch name is required'
+      });
+    }
+    
+    const git = await getGitInstance(projectPath);
+    const operations = new GitOperations(git, projectPath, userId);
+    
+    const result = await operations.checkoutBranch(branchName.trim());
+    
+    res.json({
+      success: result.success,
+      data: result,
+    });
+  } catch (error) {
+    console.error('Git checkout error:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to checkout branch'
+    });
+  }
+});
+
+// POST /api/git/:projectPath/operations/merge - Merge branch with enhanced features
+router.post('/operations/merge/:projectPath(*)', authenticate, requirePermission('git', 'write'), async (req, res) => {
+  try {
+    const projectPath = decodeURIComponent(req.params.projectPath);
+    const { branch, strategy, noFf = false, squash = false, message } = req.body;
+    const userId = req.user?.id || 'unknown';
+    
+    if (!branch || branch.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Branch name is required'
+      });
+    }
+    
+    const git = await getGitInstance(projectPath);
+    const operations = new GitOperations(git, projectPath, userId);
+    
+    const result = await operations.merge({
+      branch: branch.trim(),
+      strategy,
+      noFf,
+      squash,
+      message,
+    });
+    
+    res.json({
+      success: result.success,
+      data: result,
+    });
+  } catch (error) {
+    console.error('Git merge error:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to merge branch'
+    });
+  }
+});
+
+// POST /api/git/:projectPath/operations/reset - Reset repository state
+router.post('/operations/reset/:projectPath(*)', authenticate, requirePermission('git', 'dangerous'), async (req, res) => {
+  try {
+    const projectPath = decodeURIComponent(req.params.projectPath);
+    const { mode, commit, files } = req.body;
+    const userId = req.user?.id || 'unknown';
+    
+    if (!mode || !['soft', 'mixed', 'hard'].includes(mode)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Valid reset mode is required (soft, mixed, hard)'
+      });
+    }
+    
+    const git = await getGitInstance(projectPath);
+    const operations = new GitOperations(git, projectPath, userId);
+    
+    const result = await operations.reset({
+      mode,
+      commit,
+      files,
+    });
+    
+    res.json({
+      success: result.success,
+      data: result,
+    });
+  } catch (error) {
+    console.error('Git reset error:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to reset repository'
+    });
+  }
+});
+
+// POST /api/git/:projectPath/operations/stash - Create stash
+router.post('/operations/stash/:projectPath(*)', authenticate, requirePermission('git', 'write'), async (req, res) => {
+  try {
+    const projectPath = decodeURIComponent(req.params.projectPath);
+    const { message, includeUntracked = false } = req.body;
+    const userId = req.user?.id || 'unknown';
+    
+    const git = await getGitInstance(projectPath);
+    const operations = new GitOperations(git, projectPath, userId);
+    
+    const result = await operations.stash(message, includeUntracked);
+    
+    res.json({
+      success: result.success,
+      data: result,
+    });
+  } catch (error) {
+    console.error('Git stash error:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to create stash'
+    });
+  }
+});
+
+// POST /api/git/:projectPath/operations/stash/pop - Apply stash
+router.post('/operations/stash/pop/:projectPath(*)', authenticate, requirePermission('git', 'write'), async (req, res) => {
+  try {
+    const projectPath = decodeURIComponent(req.params.projectPath);
+    const { index = 0 } = req.body;
+    const userId = req.user?.id || 'unknown';
+    
+    const git = await getGitInstance(projectPath);
+    const operations = new GitOperations(git, projectPath, userId);
+    
+    const result = await operations.stashPop(parseInt(index, 10));
+    
+    res.json({
+      success: result.success,
+      data: result,
+    });
+  } catch (error) {
+    console.error('Git stash pop error:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to apply stash'
     });
   }
 });

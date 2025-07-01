@@ -2,6 +2,8 @@ import { Server, Socket } from 'socket.io';
 import { AdapterRegistry } from '@vibecode/adapter-sdk';
 import type { ProcessManager } from '../processes/index.js';
 import { TerminalHandler } from './terminal-handler.js';
+import { createConnectionPool, getConnectionPool } from './connection-pool.js';
+import { structuredLogger } from '../middleware/logging.js';
 
 interface Services {
   adapterRegistry: AdapterRegistry;
@@ -9,19 +11,48 @@ interface Services {
 }
 
 export function setupWebSocket(io: Server, services: Services): void {
+  // Initialize connection pool
+  const connectionPool = createConnectionPool({
+    maxConnections: 1000,
+    maxConnectionsPerUser: 10,
+    maxConnectionsPerIP: 50,
+    enableConnectionUpgrade: true,
+    enableCompression: true,
+    enableRateLimiting: true,
+  });
+  connectionPool.initialize();
+
   const terminalHandler = new TerminalHandler(io, services.adapterRegistry);
 
   // Set up process monitoring event forwarding
   setupProcessMonitoring(io, services.processManager);
 
-  io.on('connection', (socket: Socket) => {
-    console.log(`Client connected: ${socket.id}`);
+  // Set up connection pool event handlers
+  setupConnectionPoolHandlers(io, connectionPool);
+
+  io.on('connection', async (socket: Socket) => {
+    structuredLogger.info('WebSocket connection attempt', { socketId: socket.id });
+
+    // Try to add connection to pool
+    const added = await connectionPool.addConnection(socket);
+    if (!added) {
+      socket.emit('connection_rejected', { 
+        reason: 'Pool capacity exceeded or rate limit',
+        message: 'Too many connections. Please try again later.'
+      });
+      socket.disconnect(true);
+      return;
+    }
 
     // Authentication middleware
     socket.use((packet, next) => {
       // TODO: Implement proper authentication
-      // For now, just set a default user
-      socket.data.user = { id: 'default-user', username: 'user' };
+      // For now, just set a default user and authenticate in pool
+      const userId = 'default-user'; // This should come from actual auth
+      socket.data.user = { id: userId, username: 'user' };
+      
+      // Authenticate connection in pool
+      connectionPool.authenticateConnection(socket.id, userId);
       next();
     });
 
@@ -56,8 +87,27 @@ export function setupWebSocket(io: Server, services: Services): void {
       }
     });
 
-    socket.on('disconnect', () => {
-      console.log(`Client disconnected: ${socket.id}`);
+    socket.on('disconnect', (reason) => {
+      structuredLogger.info('WebSocket client disconnected', { 
+        socketId: socket.id, 
+        reason,
+        userId: socket.data.user?.id 
+      });
+      // Connection pool will handle cleanup automatically
+    });
+
+    // Handle connection pool specific events
+    socket.on('join_room', (data: { room: string }) => {
+      connectionPool.joinRoom(socket.id, data.room);
+    });
+
+    socket.on('leave_room', (data: { room: string }) => {
+      connectionPool.leaveRoom(socket.id, data.room);
+    });
+
+    socket.on('get_connection_info', () => {
+      const connectionInfo = connectionPool.getConnection(socket.id);
+      socket.emit('connection_info', connectionInfo);
     });
   });
 
@@ -66,6 +116,69 @@ export function setupWebSocket(io: Server, services: Services): void {
     console.log('Shutting down WebSocket server...');
     terminalHandler.cleanup();
     io.close();
+  });
+}
+
+function setupConnectionPoolHandlers(io: Server, connectionPool: any): void {
+  // Broadcast pool statistics periodically
+  connectionPool.on('heartbeat', (stats: any) => {
+    io.emit('pool:stats', {
+      timestamp: new Date().toISOString(),
+      ...stats,
+    });
+  });
+
+  // Handle connection events
+  connectionPool.on('connectionAdded', ({ socketId, metadata }: any) => {
+    // Notify admins about new connections
+    io.to('admin_room').emit('pool:connection_added', {
+      socketId,
+      userId: metadata.userId,
+      ipAddress: metadata.ipAddress,
+      connectionType: metadata.connectionType,
+    });
+  });
+
+  connectionPool.on('connectionRemoved', ({ socketId, metadata, reason }: any) => {
+    // Notify admins about disconnections
+    io.to('admin_room').emit('pool:connection_removed', {
+      socketId,
+      userId: metadata.userId,
+      reason,
+      connectionDuration: Date.now() - metadata.connectedAt.getTime(),
+    });
+  });
+
+  connectionPool.on('connectionAuthenticated', ({ socketId, userId }: any) => {
+    // Notify about successful authentications
+    io.to('admin_room').emit('pool:connection_authenticated', {
+      socketId,
+      userId,
+    });
+  });
+
+  connectionPool.on('messageRateLimitExceeded', ({ socketId, metadata }: any) => {
+    // Notify admins about rate limit violations
+    io.to('admin_room').emit('pool:rate_limit_exceeded', {
+      socketId,
+      userId: metadata.userId,
+      ipAddress: metadata.ipAddress,
+    });
+  });
+
+  // Global pool events
+  connectionPool.on('poolInitialized', () => {
+    structuredLogger.info('WebSocket connection pool initialized');
+  });
+
+  // Optimized broadcasting for room events
+  connectionPool.on('roomBroadcast', ({ roomName, event, messageSize, connectionCount }: any) => {
+    structuredLogger.debug('Room broadcast completed', {
+      roomName,
+      event,
+      messageSize,
+      connectionCount,
+    });
   });
 }
 
