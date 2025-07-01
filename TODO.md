@@ -102,13 +102,13 @@
 - [x] **ui-1**: Implement advanced terminal features (tabs, splits) - ✅ Complete
 - [x] **ui-2**: Add git visualization components (diff, history) - ✅ Complete
 - [x] **ui-3**: Create settings and configuration UI - ✅ Complete
-- [ ] **ui-4**: Implement adapter management interface
-- [ ] **ui-5**: Add dashboard and monitoring views
+- [x] **ui-4**: Implement adapter management interface - ✅ Complete
+- [x] **ui-5**: Add dashboard and monitoring views - ✅ Complete (commit: defb0db)
 
 ## Performance
 
-- [ ] **perf-1**: Implement output streaming optimizations
-- [ ] **perf-2**: Add connection pooling and message batching
+- [x] **perf-1**: Implement output streaming optimizations - ✅ Complete (commit: cfdcca4)
+- [x] **perf-2**: Add connection pooling and message batching - ✅ Complete (commit: fac1bf2)
 - [ ] **perf-3**: Optimize database queries and indexing
 - [ ] **perf-4**: Implement caching strategies (Redis)
 - [ ] **perf-5**: Add performance monitoring and metrics
@@ -139,9 +139,9 @@
 
 ## Progress Summary
 
-**Completed**: 61/81 tasks  
+**Completed**: 65/81 tasks  
 **In Progress**: 0/81 tasks
-**Remaining**: 20/81 tasks
+**Remaining**: 16/81 tasks
 
 **Current Status**: ✅ Comprehensive backend infrastructure with process management, adapter system, and MCP integration implemented
 
