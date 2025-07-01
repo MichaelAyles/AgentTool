@@ -7,7 +7,9 @@
   "scripts": {
     "build": "bun --bun tsc",
     "dev": "bun --bun tsc --watch",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "test": "node dist/test.js",
+    "test:dev": "bun --bun tsc && npm run test"
   },
   "dependencies": {
     "@vibecode/adapter-sdk": "workspace:*",

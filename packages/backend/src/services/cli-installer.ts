@@ -615,6 +615,288 @@ export class CLIInstallerService {
   getCLIInfo(cliName: string): CLIInfo | undefined {
     return CLI_TOOLS[cliName];
   }
+
+  async getFallbackMethods(cliName: string): Promise<Array<{
+    method: 'docker' | 'wsl' | 'manual';
+    available: boolean;
+    description: string;
+    instructions?: string;
+  }>> {
+    const cliInfo = CLI_TOOLS[cliName];
+    if (!cliInfo) {
+      return [];
+    }
+
+    const platform = await this.detectPlatform();
+    const fallbacks: Array<{
+      method: 'docker' | 'wsl' | 'manual';
+      available: boolean;
+      description: string;
+      instructions?: string;
+    }> = [];
+
+    // Add platform-specific fallbacks
+    if (cliInfo.fallbackMethod) {
+      const applicableFallbacks = cliInfo.fallbackMethod.filter(
+        fallback => fallback.platform === platform
+      );
+
+      for (const fallback of applicableFallbacks) {
+        if (fallback.method === 'docker') {
+          const dockerAvailable = await this.isDockerAvailable();
+          fallbacks.push({
+            method: 'docker',
+            available: dockerAvailable,
+            description: `Run ${cliInfo.name} in Docker container (${fallback.dockerImage})`,
+            instructions: dockerAvailable ? undefined : 'Install Docker Desktop and ensure it\'s running',
+          });
+        }
+
+        if (fallback.method === 'wsl') {
+          const wslAvailable = await this.isWSLAvailable();
+          fallbacks.push({
+            method: 'wsl',
+            available: wslAvailable,
+            description: `Run ${cliInfo.name} via Windows Subsystem for Linux`,
+            instructions: wslAvailable ? undefined : 'Enable WSL and install a Linux distribution',
+          });
+        }
+      }
+    }
+
+    // Always add manual installation as final fallback
+    fallbacks.push({
+      method: 'manual',
+      available: true,
+      description: `Manual installation of ${cliInfo.name}`,
+      instructions: this.getManualInstallInstructions(cliName, platform),
+    });
+
+    return fallbacks;
+  }
+
+  private getManualInstallInstructions(cliName: string, platform: string): string {
+    const cliInfo = CLI_TOOLS[cliName];
+    
+    switch (cliName) {
+      case 'claude-code':
+        if (platform === 'linux') {
+          return `
+1. Install Node.js: curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash - && sudo apt-get install -y nodejs
+2. Install Claude Code: npx @anthropic-ai/claude-code@latest --help
+3. Verify: claude-code --version`;
+        } else if (platform === 'darwin') {
+          return `
+Claude Code is currently Linux-only. Recommended alternatives:
+1. Use Docker: docker run -it ubuntu:22.04 bash, then install Node.js and Claude Code
+2. Use a Linux VM or remote server
+3. Wait for official macOS support from Anthropic`;
+        } else if (platform === 'win32') {
+          return `
+Claude Code is currently Linux-only. Recommended alternatives:
+1. Enable WSL2: wsl --install
+2. Install Ubuntu in WSL: wsl --install -d Ubuntu
+3. In WSL: curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash - && sudo apt-get install -y nodejs
+4. In WSL: npx @anthropic-ai/claude-code@latest --help`;
+        }
+        break;
+
+      case 'gemini-cli':
+        if (platform === 'linux' || platform === 'darwin') {
+          return `
+1. Install Python: curl https://pyenv.run | bash (or use system package manager)
+2. Install Gemini CLI: pip install google-generativeai
+3. Set up API key: export GOOGLE_API_KEY=your_api_key
+4. Verify: python -c "import google.generativeai"`;
+        } else if (platform === 'win32') {
+          return `
+1. Install Python from python.org or Microsoft Store
+2. Install Gemini CLI: pip install google-generativeai
+3. Set up API key: set GOOGLE_API_KEY=your_api_key
+4. Verify: python -c "import google.generativeai"`;
+        }
+        break;
+    }
+
+    return `Please refer to the official documentation for ${cliInfo?.name || cliName} installation instructions.`;
+  }
+
+  async installWithFallback(cliName: string, preferredMethod?: 'native' | 'docker' | 'wsl'): Promise<{
+    success: boolean;
+    message: string;
+    method: 'native' | 'docker' | 'wsl' | 'manual';
+    error?: string;
+  }> {
+    const cliInfo = CLI_TOOLS[cliName];
+    if (!cliInfo) {
+      return {
+        success: false,
+        message: `Unknown CLI tool: ${cliName}`,
+        method: 'native',
+      };
+    }
+
+    const platform = await this.detectPlatform();
+    console.log(`🔧 Attempting to install ${cliInfo.name} on ${platform} with fallback support...`);
+
+    // Try preferred method first if specified and supported
+    if (preferredMethod && preferredMethod !== 'manual') {
+      if (preferredMethod === 'native' && cliInfo.platformSupport?.[platform]) {
+        const result = await this.installNative(cliName, cliInfo);
+        if (result.success) {
+          return { ...result, method: 'native' };
+        }
+      } else if (preferredMethod === 'docker') {
+        const dockerAvailable = await this.isDockerAvailable();
+        if (dockerAvailable) {
+          const fallback = cliInfo.fallbackMethod?.find(f => f.method === 'docker' && f.platform === platform);
+          if (fallback) {
+            const result = await this.installViaDocker(cliName, cliInfo, fallback);
+            if (result.success) {
+              return { ...result, method: 'docker' };
+            }
+          }
+        }
+      } else if (preferredMethod === 'wsl') {
+        const wslAvailable = await this.isWSLAvailable();
+        if (wslAvailable) {
+          const fallback = cliInfo.fallbackMethod?.find(f => f.method === 'wsl' && f.platform === platform);
+          if (fallback) {
+            const result = await this.installViaWSL(cliName, cliInfo, fallback);
+            if (result.success) {
+              return { ...result, method: 'wsl' };
+            }
+          }
+        }
+      }
+    }
+
+    // Fall back to automatic method selection
+    const installResult = await this.installCLI(cliName);
+    
+    if (installResult.success) {
+      return {
+        success: true,
+        message: installResult.message,
+        method: installResult.method || 'native',
+      };
+    }
+
+    // If all automated methods fail, provide manual instructions
+    const instructions = this.getManualInstallInstructions(cliName, platform);
+    
+    return {
+      success: false,
+      message: `Automated installation failed. Manual installation required.`,
+      method: 'manual',
+      error: `${installResult.message}\n\nManual installation instructions:\n${instructions}`,
+    };
+  }
+
+  async diagnoseInstallationIssues(cliName: string): Promise<{
+    platform: string;
+    issues: Array<{
+      category: 'platform' | 'dependencies' | 'permissions' | 'network';
+      severity: 'error' | 'warning' | 'info';
+      message: string;
+      suggestion?: string;
+    }>;
+    supportedMethods: string[];
+  }> {
+    const platform = await this.detectPlatform();
+    const cliInfo = CLI_TOOLS[cliName];
+    const issues: Array<{
+      category: 'platform' | 'dependencies' | 'permissions' | 'network';
+      severity: 'error' | 'warning' | 'info';
+      message: string;
+      suggestion?: string;
+    }> = [];
+
+    if (!cliInfo) {
+      issues.push({
+        category: 'platform',
+        severity: 'error',
+        message: `Unknown CLI tool: ${cliName}`,
+      });
+      return { platform, issues, supportedMethods: [] };
+    }
+
+    // Check platform support
+    if (!cliInfo.platformSupport?.[platform]) {
+      issues.push({
+        category: 'platform',
+        severity: 'error',
+        message: `${cliInfo.name} does not natively support ${platform}`,
+        suggestion: 'Consider using Docker or WSL for compatibility',
+      });
+    }
+
+    // Check dependencies
+    const installerAvailable = await this.checkInstallerAvailability(cliInfo.installMethod);
+    if (!installerAvailable) {
+      issues.push({
+        category: 'dependencies',
+        severity: 'error',
+        message: `Required installer ${cliInfo.installMethod} is not available`,
+        suggestion: `Install ${cliInfo.installMethod} first`,
+      });
+    }
+
+    // Check Docker availability
+    const dockerAvailable = await this.isDockerAvailable();
+    if (!dockerAvailable) {
+      issues.push({
+        category: 'dependencies',
+        severity: 'warning',
+        message: 'Docker is not available',
+        suggestion: 'Install Docker for container-based fallback',
+      });
+    }
+
+    // Check WSL availability (Windows only)
+    if (platform === 'win32') {
+      const wslAvailable = await this.isWSLAvailable();
+      if (!wslAvailable) {
+        issues.push({
+          category: 'dependencies',
+          severity: 'warning',
+          message: 'WSL is not available',
+          suggestion: 'Enable WSL for Linux compatibility',
+        });
+      }
+    }
+
+    // Check network connectivity (basic test)
+    try {
+      await execAsync('ping -c 1 google.com', { timeout: 5000 });
+    } catch {
+      issues.push({
+        category: 'network',
+        severity: 'warning',
+        message: 'Network connectivity may be limited',
+        suggestion: 'Check internet connection and firewall settings',
+      });
+    }
+
+    // Determine supported methods
+    const supportedMethods: string[] = [];
+    if (cliInfo.platformSupport?.[platform] && installerAvailable) {
+      supportedMethods.push('native');
+    }
+    if (dockerAvailable) {
+      supportedMethods.push('docker');
+    }
+    if (platform === 'win32' && await this.isWSLAvailable()) {
+      supportedMethods.push('wsl');
+    }
+    supportedMethods.push('manual');
+
+    return {
+      platform,
+      issues,
+      supportedMethods,
+    };
+  }
 }
 
 // Singleton instance

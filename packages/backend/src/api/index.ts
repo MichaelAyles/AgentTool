@@ -4,6 +4,8 @@ import type { ProcessManager } from '../processes/index.js';
 import { db } from '../database/index.js';
 import { v4 as uuidv4 } from 'uuid';
 import { cliInstaller } from '../services/cli-installer.js';
+import { projectManager } from '../services/project-manager.js';
+import { asyncHandler } from '../middleware/error-handler.js';
 import gitRouter from './git.js';
 
 interface Services {
@@ -44,42 +46,81 @@ export function setupRoutes(app: Express, services: Services): void {
     }
   });
 
-  app.post('/api/projects', (req, res) => {
-    try {
-      const { name, path, activeAdapter } = req.body;
-      
-      if (!name || !path || !activeAdapter) {
-        return res.status(400).json({ error: 'Name, path, and activeAdapter are required' });
-      }
-
-      // For now, use a temporary user ID - this will be replaced with proper auth
-      const userId = 'temp-user';
-      const projectId = uuidv4();
-      
-      const project = {
-        id: projectId,
-        name,
-        path,
-        activeAdapter,
-        settings: {},
-        gitRemote: undefined,
-      };
-      
-      db.createProject(project, userId);
-      
-      // Return the created project with timestamps
-      const createdProject = {
-        ...project,
-        created: new Date(),
-        lastAccessed: new Date(),
-      };
-      
-      res.status(201).json(createdProject);
-    } catch (error) {
-      console.error('Error creating project:', error);
-      res.status(500).json({ error: 'Failed to create project' });
+  app.post('/api/projects', asyncHandler(async (req, res) => {
+    const { name, path, activeAdapter, gitRemote, description } = req.body;
+    
+    if (!name || !path || !activeAdapter) {
+      return res.status(400).json({ error: 'Name, path, and activeAdapter are required' });
     }
-  });
+
+    const userId = 'temp-user';
+    const project = await projectManager.createProject({
+      name,
+      path,
+      activeAdapter,
+      gitRemote,
+      description,
+    }, userId);
+    
+    res.status(201).json(project);
+  }));
+
+  app.post('/api/projects/clone', asyncHandler(async (req, res) => {
+    const { repoUrl, localPath, branch, activeAdapter, name, depth } = req.body;
+    
+    if (!repoUrl || !localPath || !activeAdapter) {
+      return res.status(400).json({ error: 'repoUrl, localPath, and activeAdapter are required' });
+    }
+
+    const userId = 'temp-user';
+    const project = await projectManager.cloneProject({
+      repoUrl,
+      localPath,
+      branch,
+      activeAdapter,
+      name,
+      depth,
+    }, userId);
+    
+    res.status(201).json(project);
+  }));
+
+  app.post('/api/projects/init', asyncHandler(async (req, res) => {
+    const { path, name, activeAdapter, gitInit, template, description } = req.body;
+    
+    if (!path || !name || !activeAdapter) {
+      return res.status(400).json({ error: 'path, name, and activeAdapter are required' });
+    }
+
+    const userId = 'temp-user';
+    const project = await projectManager.initializeProject({
+      path,
+      name,
+      activeAdapter,
+      gitInit,
+      template,
+      description,
+    }, userId);
+    
+    res.status(201).json(project);
+  }));
+
+  app.get('/api/projects/:projectPath(*)/info', asyncHandler(async (req, res) => {
+    const projectPath = decodeURIComponent(req.params.projectPath);
+    const info = await projectManager.getProjectInfo(projectPath);
+    res.json({ success: true, info });
+  }));
+
+  app.post('/api/projects/validate-path', asyncHandler(async (req, res) => {
+    const { path } = req.body;
+    
+    if (!path) {
+      return res.status(400).json({ error: 'path is required' });
+    }
+
+    const validation = await projectManager.validateProjectPath(path);
+    res.json({ success: true, validation });
+  }));
 
   // Sessions
   app.post('/api/sessions', (req, res) => {
@@ -219,6 +260,41 @@ export function setupRoutes(app: Express, services: Services): void {
     } catch (error) {
       console.error('Error ensuring CLI availability:', error);
       res.status(500).json({ error: 'Failed to ensure CLI availability' });
+    }
+  });
+
+  app.get('/api/cli/:cliName/fallbacks', async (req, res) => {
+    try {
+      const { cliName } = req.params;
+      const fallbacks = await cliInstaller.getFallbackMethods(cliName);
+      res.json({ success: true, fallbacks });
+    } catch (error) {
+      console.error('Error getting fallback methods:', error);
+      res.status(500).json({ error: 'Failed to get fallback methods' });
+    }
+  });
+
+  app.post('/api/cli/:cliName/install-fallback', async (req, res) => {
+    try {
+      const { cliName } = req.params;
+      const { method } = req.body;
+      
+      const result = await cliInstaller.installWithFallback(cliName, method);
+      res.json(result);
+    } catch (error) {
+      console.error('Error installing with fallback:', error);
+      res.status(500).json({ error: 'Failed to install with fallback' });
+    }
+  });
+
+  app.get('/api/cli/:cliName/diagnose', async (req, res) => {
+    try {
+      const { cliName } = req.params;
+      const diagnosis = await cliInstaller.diagnoseInstallationIssues(cliName);
+      res.json({ success: true, diagnosis });
+    } catch (error) {
+      console.error('Error diagnosing installation issues:', error);
+      res.status(500).json({ error: 'Failed to diagnose installation issues' });
     }
   });
 
