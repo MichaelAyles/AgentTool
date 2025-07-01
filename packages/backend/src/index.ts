@@ -130,6 +130,12 @@ import { createSecuritySessionTracker } from './security/session-tracker.js';
 const securityTracker = createSecuritySessionTracker(db);
 app.set('securityTracker', securityTracker);
 
+// Initialize dangerous mode integration
+import { dangerousModeIntegration } from './dangerous/integration.js';
+dangerousModeIntegration.initialize();
+dangerousModeIntegration.registerDefaultRecipients();
+console.log('✅ Dangerous mode integration initialized');
+
 // Routes
 setupRoutes(app, { adapterRegistry, processManager });
 

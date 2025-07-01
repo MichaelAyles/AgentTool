@@ -13,6 +13,7 @@ import authRouter from './auth.js';
 import rolesRouter from './roles.js';
 import securityRouter from './security.js';
 import dangerousTimeoutRouter from './dangerous-timeout.js';
+import notificationsRouter from './notifications.js';
 
 interface Services {
   adapterRegistry: AdapterRegistry;
@@ -42,6 +43,9 @@ export function setupRoutes(app: Express, services: Services): void {
 
   // Dangerous mode timeout and auto-disable
   app.use('/api/dangerous/timeout', dangerousTimeoutRouter);
+
+  // Security notifications
+  app.use('/api/notifications', notificationsRouter);
 
   // Adapters
   app.get('/api/adapters', (req, res) => {
