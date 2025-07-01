@@ -1,8 +1,15 @@
 import { EventEmitter } from 'events';
 import { SecurityLevel } from '../security/types.js';
-import { dangerousModeController, DangerousModeSession, DangerousModeState } from './controller.js';
+import {
+  dangerousModeController,
+  DangerousModeSession,
+  DangerousModeState,
+} from './controller.js';
 import { dangerousSecurityMonitor } from './monitoring.js';
-import { comprehensiveAuditLogger, AuditCategory } from '../security/audit-logger.js';
+import {
+  comprehensiveAuditLogger,
+  AuditCategory,
+} from '../security/audit-logger.js';
 import { SecurityWarningService, WarningType } from './warnings.js';
 
 // Timeout trigger types
@@ -15,7 +22,7 @@ export enum TimeoutTrigger {
   SUSPICIOUS_ACTIVITY = 'suspicious_activity',
   SYSTEM_LOAD = 'system_load',
   EMERGENCY = 'emergency',
-  ADMIN_OVERRIDE = 'admin_override'
+  ADMIN_OVERRIDE = 'admin_override',
 }
 
 // Timeout configuration
@@ -58,10 +65,10 @@ const DEFAULT_CONFIG: TimeoutConfig = {
   maxCommandsPerMinute: 15,
   maxFailedCommands: 5,
   warningIntervals: [
-    5 * 60 * 1000,  // 5 minutes
-    2 * 60 * 1000,  // 2 minutes
-    1 * 60 * 1000,  // 1 minute
-    30 * 1000,      // 30 seconds
+    5 * 60 * 1000, // 5 minutes
+    2 * 60 * 1000, // 2 minutes
+    1 * 60 * 1000, // 1 minute
+    30 * 1000, // 30 seconds
   ],
   emergencyDisableEnabled: true,
   systemLoadThreshold: 85,
@@ -95,15 +102,16 @@ export class DangerousTimeoutManager extends EventEmitter {
     this.clearTimeouts(session.sessionId);
 
     const remainingTime = session.expiresAt.getTime() - Date.now();
-    
+
     // Set main timeout
     const mainTimeout = setTimeout(() => {
       this.triggerTimeout(session.sessionId, TimeoutTrigger.DURATION_EXCEEDED, {
         originalDuration: this.config.maxDuration,
-        actualDuration: Date.now() - (session.enabledAt?.getTime() || Date.now()),
+        actualDuration:
+          Date.now() - (session.enabledAt?.getTime() || Date.now()),
       });
     }, remainingTime);
-    
+
     this.sessionTimers.set(session.sessionId, mainTimeout);
 
     // Set warning timers
@@ -121,7 +129,7 @@ export class DangerousTimeoutManager extends EventEmitter {
    */
   updateActivity(sessionId: string): void {
     this.lastActivity.set(sessionId, new Date());
-    
+
     // Restart inactivity timer
     this.startInactivityTimer(sessionId);
   }
@@ -169,9 +177,12 @@ export class DangerousTimeoutManager extends EventEmitter {
     }
 
     // Admin approval required for long extensions
-    if (request.requestedDuration > 15 * 60 * 1000 && request.userRole !== 'admin') {
+    if (
+      request.requestedDuration > 15 * 60 * 1000 &&
+      request.userRole !== 'admin'
+    ) {
       this.extensionRequests.set(request.sessionId, request);
-      
+
       this.emit('extensionRequiresApproval', {
         sessionId: request.sessionId,
         userId: request.userId,
@@ -247,8 +258,8 @@ export class DangerousTimeoutManager extends EventEmitter {
    * Trigger automatic timeout
    */
   async triggerTimeout(
-    sessionId: string, 
-    trigger: TimeoutTrigger, 
+    sessionId: string,
+    trigger: TimeoutTrigger,
     metadata: Record<string, any> = {}
   ): Promise<void> {
     const session = dangerousModeController.getSessionStatus(sessionId);
@@ -260,7 +271,9 @@ export class DangerousTimeoutManager extends EventEmitter {
       sessionId,
       userId: session.userId,
       trigger,
-      remainingTime: session.expiresAt ? session.expiresAt.getTime() - Date.now() : 0,
+      remainingTime: session.expiresAt
+        ? session.expiresAt.getTime() - Date.now()
+        : 0,
       canExtend: this.canExtendSession(session, {
         sessionId,
         userId: session.userId,
@@ -283,7 +296,10 @@ export class DangerousTimeoutManager extends EventEmitter {
 
     // Disable dangerous mode
     const disableReason = this.mapTriggerToDisableReason(trigger);
-    await dangerousModeController.disableDangerousMode(sessionId, disableReason);
+    await dangerousModeController.disableDangerousMode(
+      sessionId,
+      disableReason
+    );
 
     // Clean up timers
     this.clearTimeouts(sessionId);
@@ -345,9 +361,13 @@ export class DangerousTimeoutManager extends EventEmitter {
       return null;
     }
 
-    const remainingTime = session.expiresAt ? Math.max(0, session.expiresAt.getTime() - Date.now()) : 0;
+    const remainingTime = session.expiresAt
+      ? Math.max(0, session.expiresAt.getTime() - Date.now())
+      : 0;
     const lastActivity = this.lastActivity.get(sessionId);
-    const inactivityTime = lastActivity ? Date.now() - lastActivity.getTime() : 0;
+    const inactivityTime = lastActivity
+      ? Date.now() - lastActivity.getTime()
+      : 0;
 
     // Find next warning
     let nextWarning = 0;
@@ -391,13 +411,17 @@ export class DangerousTimeoutManager extends EventEmitter {
     });
 
     // Listen for security monitoring events
-    dangerousSecurityMonitor.on('securityAlert', (alert) => {
+    dangerousSecurityMonitor.on('securityAlert', alert => {
       if (alert.action === 'disable' || alert.action === 'emergency') {
-        this.triggerTimeout(alert.sessionId, TimeoutTrigger.SUSPICIOUS_ACTIVITY, {
-          alertId: alert.id,
-          alertType: alert.type,
-          severity: alert.severity,
-        });
+        this.triggerTimeout(
+          alert.sessionId,
+          TimeoutTrigger.SUSPICIOUS_ACTIVITY,
+          {
+            alertId: alert.id,
+            alertType: alert.type,
+            severity: alert.severity,
+          }
+        );
       }
     });
   }
@@ -435,7 +459,10 @@ export class DangerousTimeoutManager extends EventEmitter {
     this.inactivityTimers.set(sessionId, timer);
   }
 
-  private async showTimeoutWarning(sessionId: string, remainingTime: number): Promise<void> {
+  private async showTimeoutWarning(
+    sessionId: string,
+    remainingTime: number
+  ): Promise<void> {
     const session = dangerousModeController.getSessionStatus(sessionId);
     if (!session) return;
 
@@ -478,7 +505,7 @@ export class DangerousTimeoutManager extends EventEmitter {
   }
 
   private canExtendSession(
-    session: DangerousModeSession, 
+    session: DangerousModeSession,
     request: Partial<ExtensionRequest>
   ): { allowed: boolean; reason: string } {
     // Check activation count
@@ -494,13 +521,22 @@ export class DangerousTimeoutManager extends EventEmitter {
     // Check if too many extensions already granted
     const maxExtensions = 2;
     if (session.activationCount > maxExtensions) {
-      return { allowed: false, reason: 'Maximum extensions per session exceeded' };
+      return {
+        allowed: false,
+        reason: 'Maximum extensions per session exceeded',
+      };
     }
 
     // Check requested duration
     const maxExtensionDuration = 30 * 60 * 1000; // 30 minutes
-    if (request.requestedDuration && request.requestedDuration > maxExtensionDuration) {
-      return { allowed: false, reason: 'Requested extension duration too long' };
+    if (
+      request.requestedDuration &&
+      request.requestedDuration > maxExtensionDuration
+    ) {
+      return {
+        allowed: false,
+        reason: 'Requested extension duration too long',
+      };
     }
 
     return { allowed: true, reason: 'Extension allowed' };
@@ -514,8 +550,8 @@ export class DangerousTimeoutManager extends EventEmitter {
   }
 
   private async provideGracePeriod(
-    sessionId: string, 
-    trigger: TimeoutTrigger, 
+    sessionId: string,
+    trigger: TimeoutTrigger,
     metadata: Record<string, any>
   ): Promise<void> {
     this.emit('gracePeriodStarted', {
@@ -535,12 +571,17 @@ export class DangerousTimeoutManager extends EventEmitter {
 
       // If no action taken, disable
       const disableReason = this.mapTriggerToDisableReason(trigger);
-      await dangerousModeController.disableDangerousMode(sessionId, disableReason);
+      await dangerousModeController.disableDangerousMode(
+        sessionId,
+        disableReason
+      );
       this.clearTimeouts(sessionId);
     }, this.config.gracePeriod);
   }
 
-  private mapTriggerToDisableReason(trigger: TimeoutTrigger): 'timeout' | 'suspicious_activity' | 'emergency' {
+  private mapTriggerToDisableReason(
+    trigger: TimeoutTrigger
+  ): 'timeout' | 'suspicious_activity' | 'emergency' {
     switch (trigger) {
       case TimeoutTrigger.SUSPICIOUS_ACTIVITY:
       case TimeoutTrigger.RISK_THRESHOLD:
@@ -598,13 +639,18 @@ export class DangerousTimeoutManager extends EventEmitter {
         const lastActivity = this.lastActivity.get(sessionId);
         if (lastActivity) {
           const timeSinceLastActivity = Date.now() - lastActivity.getTime();
-          const commandsPerMinute = session.commandsExecuted / (timeSinceLastActivity / 60000);
-          
+          const commandsPerMinute =
+            session.commandsExecuted / (timeSinceLastActivity / 60000);
+
           if (commandsPerMinute > this.config.maxCommandsPerMinute) {
-            await this.triggerTimeout(sessionId, TimeoutTrigger.COMMAND_FREQUENCY, {
-              commandsPerMinute,
-              threshold: this.config.maxCommandsPerMinute,
-            });
+            await this.triggerTimeout(
+              sessionId,
+              TimeoutTrigger.COMMAND_FREQUENCY,
+              {
+                commandsPerMinute,
+                threshold: this.config.maxCommandsPerMinute,
+              }
+            );
           }
         }
       }

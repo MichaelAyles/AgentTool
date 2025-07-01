@@ -94,10 +94,10 @@ export class ServiceMesh extends EventEmitter {
   private trafficPolicies = new Map<string, TrafficPolicy>();
   private circuitBreakers = new Map<string, CircuitBreakerState>();
   private metrics = new Map<string, MetricsData>();
-  
+
   private healthCheckInterval: NodeJS.Timeout;
   private metricsCollectionInterval: NodeJS.Timeout;
-  
+
   private config = {
     healthCheckInterval: 30000,
     metricsInterval: 10000,
@@ -109,10 +109,10 @@ export class ServiceMesh extends EventEmitter {
 
   constructor() {
     super();
-    
+
     this.startHealthChecking();
     this.startMetricsCollection();
-    
+
     structuredLogger.info('Service mesh initialized');
   }
 
@@ -123,16 +123,16 @@ export class ServiceMesh extends EventEmitter {
     if (!this.services.has(endpoint.serviceName)) {
       this.services.set(endpoint.serviceName, []);
     }
-    
+
     const endpoints = this.services.get(endpoint.serviceName)!;
     const existingIndex = endpoints.findIndex(e => e.id === endpoint.id);
-    
+
     if (existingIndex >= 0) {
       endpoints[existingIndex] = endpoint;
     } else {
       endpoints.push(endpoint);
     }
-    
+
     this.emit('serviceRegistered', endpoint);
     structuredLogger.info('Service endpoint registered', {
       serviceName: endpoint.serviceName,
@@ -148,24 +148,24 @@ export class ServiceMesh extends EventEmitter {
   deregisterService(serviceName: string, endpointId: string): boolean {
     const endpoints = this.services.get(serviceName);
     if (!endpoints) return false;
-    
+
     const index = endpoints.findIndex(e => e.id === endpointId);
     if (index >= 0) {
       const removed = endpoints.splice(index, 1)[0];
-      
+
       if (endpoints.length === 0) {
         this.services.delete(serviceName);
       }
-      
+
       this.emit('serviceDeregistered', removed);
       structuredLogger.info('Service endpoint deregistered', {
         serviceName,
         endpointId,
       });
-      
+
       return true;
     }
-    
+
     return false;
   }
 
@@ -174,7 +174,7 @@ export class ServiceMesh extends EventEmitter {
    */
   createRoute(route: ServiceRoute): void {
     this.routes.set(route.id, route);
-    
+
     this.emit('routeCreated', route);
     structuredLogger.info('Service route created', {
       routeId: route.id,
@@ -203,7 +203,7 @@ export class ServiceMesh extends EventEmitter {
    */
   setTrafficPolicy(policy: TrafficPolicy): void {
     this.trafficPolicies.set(policy.serviceName, policy);
-    
+
     this.emit('trafficPolicySet', policy);
     structuredLogger.info('Traffic policy set', {
       serviceName: policy.serviceName,
@@ -229,7 +229,11 @@ export class ServiceMesh extends EventEmitter {
   }> {
     try {
       // Find matching route
-      const route = this.findMatchingRoute(serviceName, request.path, request.method);
+      const route = this.findMatchingRoute(
+        serviceName,
+        request.path,
+        request.method
+      );
       if (!route) {
         return {
           endpoint: null,
@@ -255,7 +259,10 @@ export class ServiceMesh extends EventEmitter {
       }
 
       // Get healthy endpoint
-      const endpoint = this.selectEndpoint(serviceName, route.loadBalancing.strategy);
+      const endpoint = this.selectEndpoint(
+        serviceName,
+        route.loadBalancing.strategy
+      );
       if (!endpoint) {
         return {
           endpoint: null,
@@ -287,7 +294,7 @@ export class ServiceMesh extends EventEmitter {
         path: request.path,
         method: request.method,
       });
-      
+
       return {
         endpoint: null,
         route: null,
@@ -306,10 +313,10 @@ export class ServiceMesh extends EventEmitter {
   ): void {
     // Update circuit breaker state
     this.updateCircuitBreaker(endpointId, success);
-    
+
     // Update metrics
     this.updateMetrics(endpointId, success, latency);
-    
+
     this.emit('requestRecorded', {
       endpointId,
       success,
@@ -328,7 +335,7 @@ export class ServiceMesh extends EventEmitter {
       const endpoints = this.services.get(serviceName) || [];
       return [{ serviceName, endpoints }];
     }
-    
+
     return Array.from(this.services.entries()).map(([name, endpoints]) => ({
       serviceName: name,
       endpoints,
@@ -342,17 +349,17 @@ export class ServiceMesh extends EventEmitter {
     if (serviceName) {
       const serviceMetrics: Record<string, MetricsData> = {};
       const endpoints = this.services.get(serviceName) || [];
-      
+
       for (const endpoint of endpoints) {
         const metrics = this.metrics.get(endpoint.id);
         if (metrics) {
           serviceMetrics[endpoint.id] = metrics;
         }
       }
-      
+
       return serviceMetrics;
     }
-    
+
     return Object.fromEntries(this.metrics.entries());
   }
 
@@ -366,21 +373,24 @@ export class ServiceMesh extends EventEmitter {
   /**
    * Force circuit breaker state change
    */
-  setCircuitBreakerState(endpointId: string, state: 'open' | 'closed'): boolean {
+  setCircuitBreakerState(
+    endpointId: string,
+    state: 'open' | 'closed'
+  ): boolean {
     const circuitBreaker = this.circuitBreakers.get(endpointId);
     if (!circuitBreaker) return false;
-    
+
     circuitBreaker.state = state;
     if (state === 'closed') {
       circuitBreaker.failureCount = 0;
       circuitBreaker.successCount = 0;
     }
-    
+
     structuredLogger.info('Circuit breaker state changed', {
       endpointId,
       state,
     });
-    
+
     return true;
   }
 
@@ -391,17 +401,21 @@ export class ServiceMesh extends EventEmitter {
     path: string,
     method: string
   ): ServiceRoute | null {
-    const routes = Array.from(this.routes.values())
-      .filter(r => r.serviceName === serviceName);
-    
+    const routes = Array.from(this.routes.values()).filter(
+      r => r.serviceName === serviceName
+    );
+
     for (const route of routes) {
-      if (route.method.includes(method.toUpperCase()) || route.method.includes('*')) {
+      if (
+        route.method.includes(method.toUpperCase()) ||
+        route.method.includes('*')
+      ) {
         if (this.pathMatches(route.path, path)) {
           return route;
         }
       }
     }
-    
+
     return null;
   }
 
@@ -427,26 +441,32 @@ export class ServiceMesh extends EventEmitter {
       if (this.matchesRule(rule.match, request)) {
         // Apply fault injection
         if (rule.fault) {
-          if (rule.fault.delay && Math.random() < rule.fault.delay.percentage / 100) {
+          if (
+            rule.fault.delay &&
+            Math.random() < rule.fault.delay.percentage / 100
+          ) {
             // Would add delay here
           }
-          if (rule.fault.abort && Math.random() < rule.fault.abort.percentage / 100) {
+          if (
+            rule.fault.abort &&
+            Math.random() < rule.fault.abort.percentage / 100
+          ) {
             return { fault: `HTTP ${rule.fault.abort.httpStatus}` };
           }
         }
-        
+
         // Apply traffic splitting/redirection
         if (rule.destination.service !== policy.serviceName) {
           return { redirect: rule.destination.service };
         }
-        
+
         // Apply mirroring
         if (rule.mirror) {
           return { mirror: rule.mirror.service };
         }
       }
     }
-    
+
     return {};
   }
 
@@ -459,7 +479,7 @@ export class ServiceMesh extends EventEmitter {
         }
       }
     }
-    
+
     return true;
   }
 
@@ -469,50 +489,52 @@ export class ServiceMesh extends EventEmitter {
   ): ServiceEndpoint | null {
     const endpoints = this.services.get(serviceName) || [];
     const healthyEndpoints = endpoints.filter(e => e.health === 'healthy');
-    
+
     if (healthyEndpoints.length === 0) {
       return null;
     }
-    
+
     switch (strategy) {
       case 'round_robin':
         // Simple round-robin (stateless)
         const index = Math.floor(Math.random() * healthyEndpoints.length);
         return healthyEndpoints[index];
-      
+
       case 'weighted':
         return this.selectWeightedEndpoint(healthyEndpoints);
-      
+
       case 'least_connections':
         // Would need to track active connections
         return healthyEndpoints[0];
-      
+
       case 'ip_hash':
         // Would need client IP for consistent hashing
         return healthyEndpoints[0];
-      
+
       default:
         return healthyEndpoints[0];
     }
   }
 
-  private selectWeightedEndpoint(endpoints: ServiceEndpoint[]): ServiceEndpoint {
+  private selectWeightedEndpoint(
+    endpoints: ServiceEndpoint[]
+  ): ServiceEndpoint {
     const totalWeight = endpoints.reduce((sum, e) => sum + e.weight, 0);
     let random = Math.random() * totalWeight;
-    
+
     for (const endpoint of endpoints) {
       random -= endpoint.weight;
       if (random <= 0) {
         return endpoint;
       }
     }
-    
+
     return endpoints[0];
   }
 
   private updateCircuitBreaker(endpointId: string, success: boolean): void {
     let circuitBreaker = this.circuitBreakers.get(endpointId);
-    
+
     if (!circuitBreaker) {
       circuitBreaker = {
         serviceId: endpointId,
@@ -524,7 +546,7 @@ export class ServiceMesh extends EventEmitter {
       };
       this.circuitBreakers.set(endpointId, circuitBreaker);
     }
-    
+
     if (success) {
       if (circuitBreaker.state === 'half-open') {
         circuitBreaker.successCount++;
@@ -540,15 +562,17 @@ export class ServiceMesh extends EventEmitter {
     } else {
       circuitBreaker.failureCount++;
       circuitBreaker.lastFailureTime = new Date();
-      
-      if (circuitBreaker.state === 'closed' && 
-          circuitBreaker.failureCount >= this.config.circuitBreakerThreshold) {
+
+      if (
+        circuitBreaker.state === 'closed' &&
+        circuitBreaker.failureCount >= this.config.circuitBreakerThreshold
+      ) {
         // Open the circuit breaker
         circuitBreaker.state = 'open';
         circuitBreaker.nextAttemptTime = new Date(
           Date.now() + this.config.circuitBreakerTimeout
         );
-        
+
         this.emit('circuitBreakerOpened', { endpointId });
       } else if (circuitBreaker.state === 'half-open') {
         // Go back to open state
@@ -560,9 +584,13 @@ export class ServiceMesh extends EventEmitter {
     }
   }
 
-  private updateMetrics(endpointId: string, success: boolean, latency: number): void {
+  private updateMetrics(
+    endpointId: string,
+    success: boolean,
+    latency: number
+  ): void {
     let metrics = this.metrics.get(endpointId);
-    
+
     if (!metrics) {
       metrics = {
         requests: {
@@ -582,18 +610,24 @@ export class ServiceMesh extends EventEmitter {
       };
       this.metrics.set(endpointId, metrics);
     }
-    
+
     metrics.requests.total++;
     if (success) {
       metrics.requests.success++;
     } else {
       metrics.requests.error++;
     }
-    
+
     // Update latency percentiles (simplified)
     metrics.requests.latency.p50 = (metrics.requests.latency.p50 + latency) / 2;
-    metrics.requests.latency.p95 = Math.max(metrics.requests.latency.p95, latency);
-    metrics.requests.latency.p99 = Math.max(metrics.requests.latency.p99, latency);
+    metrics.requests.latency.p95 = Math.max(
+      metrics.requests.latency.p95,
+      latency
+    );
+    metrics.requests.latency.p99 = Math.max(
+      metrics.requests.latency.p99,
+      latency
+    );
   }
 
   private startHealthChecking(): void {
@@ -611,10 +645,10 @@ export class ServiceMesh extends EventEmitter {
       // Simple health check - in a real implementation, this would make an HTTP request
       // or check if the container/process is running
       const isHealthy = Math.random() > 0.1; // 90% success rate for simulation
-      
+
       const oldHealth = endpoint.health;
       endpoint.health = isHealthy ? 'healthy' : 'unhealthy';
-      
+
       if (oldHealth !== endpoint.health) {
         this.emit('healthChanged', endpoint);
         structuredLogger.info('Endpoint health changed', {
@@ -634,15 +668,19 @@ export class ServiceMesh extends EventEmitter {
   private startMetricsCollection(): void {
     this.metricsCollectionInterval = setInterval(() => {
       // Collect and aggregate metrics
-      const totalRequests = Array.from(this.metrics.values())
-        .reduce((sum, m) => sum + m.requests.total, 0);
-      
+      const totalRequests = Array.from(this.metrics.values()).reduce(
+        (sum, m) => sum + m.requests.total,
+        0
+      );
+
       this.emit('metricsCollected', {
         timestamp: new Date(),
         totalRequests,
         totalServices: this.services.size,
-        totalEndpoints: Array.from(this.services.values())
-          .reduce((sum, endpoints) => sum + endpoints.length, 0),
+        totalEndpoints: Array.from(this.services.values()).reduce(
+          (sum, endpoints) => sum + endpoints.length,
+          0
+        ),
       });
     }, this.config.metricsInterval);
   }
@@ -657,7 +695,7 @@ export class ServiceMesh extends EventEmitter {
     if (this.metricsCollectionInterval) {
       clearInterval(this.metricsCollectionInterval);
     }
-    
+
     this.removeAllListeners();
     structuredLogger.info('Service mesh closed');
   }

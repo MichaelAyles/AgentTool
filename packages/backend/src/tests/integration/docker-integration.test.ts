@@ -1,4 +1,12 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'bun:test';
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  afterAll,
+  beforeEach,
+  afterEach,
+} from 'bun:test';
 import { Express } from 'express';
 import request from 'supertest';
 import { setupRoutes } from '../../api/index.js';
@@ -15,11 +23,13 @@ const mockSandboxManager = {
   })),
   listSandboxes: jest.fn(() => []),
   destroySandbox: jest.fn(() => Promise.resolve(true)),
-  executeCommand: jest.fn(() => Promise.resolve({
-    stdout: 'command output',
-    stderr: '',
-    exitCode: 0,
-  })),
+  executeCommand: jest.fn(() =>
+    Promise.resolve({
+      stdout: 'command output',
+      stderr: '',
+      exitCode: 0,
+    })
+  ),
 };
 
 const mockOrchestrationManager = {
@@ -43,11 +53,30 @@ const mockResourceMonitor = {
       containerId: 'container-123',
       timestamp: new Date(),
       cpu: { usage: 25.5, throttled: 0, system: 1000000, user: 2000000 },
-      memory: { usage: 134217728, limit: 268435456, percentage: 50, cache: 16777216, rss: 117440512, swap: 0 },
-      network: { rxBytes: 1024000, txBytes: 512000, rxPackets: 1000, txPackets: 500, rxErrors: 0, txErrors: 0 },
-      disk: { readBytes: 2048000, writeBytes: 1024000, readOps: 200, writeOps: 100 },
+      memory: {
+        usage: 134217728,
+        limit: 268435456,
+        percentage: 50,
+        cache: 16777216,
+        rss: 117440512,
+        swap: 0,
+      },
+      network: {
+        rxBytes: 1024000,
+        txBytes: 512000,
+        rxPackets: 1000,
+        txPackets: 500,
+        rxErrors: 0,
+        txErrors: 0,
+      },
+      disk: {
+        readBytes: 2048000,
+        writeBytes: 1024000,
+        readOps: 200,
+        writeOps: 100,
+      },
       processes: { running: 5, sleeping: 10, stopped: 0, zombie: 0 },
-    }
+    },
   ]),
   setResourceLimits: jest.fn(() => Promise.resolve(true)),
   getUtilizationSummary: jest.fn(() => ({
@@ -70,44 +99,54 @@ const mockContainerCleanup = {
       schedule: '0 2 * * *',
       conditions: { maxAge: 86400000 },
       actions: { remove: true },
-    }
+    },
   ]),
-  executeRule: jest.fn(() => Promise.resolve({
-    ruleId: 'rule-1',
-    ruleName: 'Clean Exited Containers',
-    timestamp: new Date(),
-    containersRemoved: 2,
-    volumesRemoved: 0,
-    bytesFreed: 1024000,
-    errors: [],
-    dryRun: false,
-  })),
+  executeRule: jest.fn(() =>
+    Promise.resolve({
+      ruleId: 'rule-1',
+      ruleName: 'Clean Exited Containers',
+      timestamp: new Date(),
+      containersRemoved: 2,
+      volumesRemoved: 0,
+      bytesFreed: 1024000,
+      errors: [],
+      dryRun: false,
+    })
+  ),
   addRule: jest.fn(),
   removeRule: jest.fn(() => true),
   toggleRule: jest.fn(() => true),
 };
 
 // Mock modules
-jest.mock('../../docker/sandbox-manager.js', () => ({ sandboxManager: mockSandboxManager }));
-jest.mock('../../docker/orchestration-manager.js', () => ({ orchestrationManager: mockOrchestrationManager }));
-jest.mock('../../docker/resource-monitor.js', () => ({ resourceMonitor: mockResourceMonitor }));
-jest.mock('../../docker/container-cleanup.js', () => ({ containerCleanup: mockContainerCleanup }));
+jest.mock('../../docker/sandbox-manager.js', () => ({
+  sandboxManager: mockSandboxManager,
+}));
+jest.mock('../../docker/orchestration-manager.js', () => ({
+  orchestrationManager: mockOrchestrationManager,
+}));
+jest.mock('../../docker/resource-monitor.js', () => ({
+  resourceMonitor: mockResourceMonitor,
+}));
+jest.mock('../../docker/container-cleanup.js', () => ({
+  containerCleanup: mockContainerCleanup,
+}));
 
 function createTestApp(): Express {
   const express = require('express');
   const app = express();
-  
+
   app.use(express.json());
   app.use((req: any, res: any, next: any) => {
     req.session = { id: 'test-session-id' };
     next();
   });
-  
+
   setupRoutes(app, {
     adapterRegistry: {} as any,
     processManager: {} as any,
   });
-  
+
   return app;
 }
 
@@ -117,16 +156,14 @@ describe('Docker Integration Tests', () => {
 
   beforeAll(async () => {
     app = createTestApp();
-    
+
     // Get admin token
     const admin = createTestAdmin();
-    const loginResponse = await request(app)
-      .post('/api/auth/login')
-      .send({
-        username: admin.username,
-        password: 'adminpassword123',
-      });
-    
+    const loginResponse = await request(app).post('/api/auth/login').send({
+      username: admin.username,
+      password: 'adminpassword123',
+    });
+
     adminToken = loginResponse.body.data.token;
   });
 
@@ -170,7 +207,9 @@ describe('Docker Integration Tests', () => {
       });
 
       it('should handle sandbox creation failures', async () => {
-        mockSandboxManager.createSandbox.mockRejectedValueOnce(new Error('Image not found'));
+        mockSandboxManager.createSandbox.mockRejectedValueOnce(
+          new Error('Image not found')
+        );
 
         const response = await request(app)
           .post('/api/docker/sandboxes')
@@ -211,7 +250,9 @@ describe('Docker Integration Tests', () => {
       });
 
       it('should handle command execution timeouts', async () => {
-        mockSandboxManager.executeCommand.mockRejectedValueOnce(new Error('Command timeout'));
+        mockSandboxManager.executeCommand.mockRejectedValueOnce(
+          new Error('Command timeout')
+        );
 
         const response = await request(app)
           .post('/api/docker/sandboxes/sandbox-123/execute')
@@ -295,7 +336,9 @@ describe('Docker Integration Tests', () => {
 
         expect(response.body.success).toBe(true);
         expect(response.body.data.deploymentId).toBe('deployment-123');
-        expect(mockOrchestrationManager.deploy).toHaveBeenCalledWith(deploymentConfig);
+        expect(mockOrchestrationManager.deploy).toHaveBeenCalledWith(
+          deploymentConfig
+        );
       });
 
       it('should validate deployment configuration', async () => {
@@ -318,7 +361,9 @@ describe('Docker Integration Tests', () => {
     describe('POST /api/orchestration/deployments/:deploymentId/services/:serviceName/scale', () => {
       it('should scale service replicas', async () => {
         const response = await request(app)
-          .post('/api/orchestration/deployments/deployment-123/services/backend/scale')
+          .post(
+            '/api/orchestration/deployments/deployment-123/services/backend/scale'
+          )
           .set('Authorization', `Bearer ${adminToken}`)
           .send({ replicas: 5 })
           .expect(200);
@@ -333,7 +378,9 @@ describe('Docker Integration Tests', () => {
 
       it('should validate replica count', async () => {
         const response = await request(app)
-          .post('/api/orchestration/deployments/deployment-123/services/backend/scale')
+          .post(
+            '/api/orchestration/deployments/deployment-123/services/backend/scale'
+          )
           .set('Authorization', `Bearer ${adminToken}`)
           .send({ replicas: -1 })
           .expect(400);
@@ -353,14 +400,17 @@ describe('Docker Integration Tests', () => {
           readyReplicas: 4,
           version: 'v1.2.3',
           instances: new Map([
-            ['instance-1', {
-              id: 'instance-1',
-              status: 'running',
-              health: 'healthy',
-              restarts: 0,
-              node: 'node-1',
-              serviceDefinition: { name: 'frontend' },
-            }],
+            [
+              'instance-1',
+              {
+                id: 'instance-1',
+                status: 'running',
+                health: 'healthy',
+                restarts: 0,
+                node: 'node-1',
+                serviceDefinition: { name: 'frontend' },
+              },
+            ],
           ]),
           config: {
             name: 'web-app',
@@ -370,7 +420,7 @@ describe('Docker Integration Tests', () => {
                 replicas: 2,
                 image: 'nginx:alpine',
                 securityProfile: 'SECURE',
-              }
+              },
             ],
           },
           createdAt: new Date(),
@@ -401,9 +451,7 @@ describe('Docker Integration Tests', () => {
             { timestamp: new Date(), value: 50 },
             { timestamp: new Date(), value: 55 },
           ],
-          network: [
-            { timestamp: new Date(), rx: 1024000, tx: 512000 },
-          ],
+          network: [{ timestamp: new Date(), rx: 1024000, tx: 512000 }],
         });
 
         mockResourceMonitor.predictResourceUsage.mockReturnValueOnce({
@@ -428,13 +476,13 @@ describe('Docker Integration Tests', () => {
       it('should set and enforce resource limits', async () => {
         const limits = {
           cpu: { cores: 2, percentage: 80 },
-          memory: { 
+          memory: {
             limit: 512 * 1024 * 1024,
             swap: 1024 * 1024 * 1024,
             reservation: 256 * 1024 * 1024,
           },
           network: { bandwidth: 100 * 1024 * 1024, connections: 1000 },
-          disk: { 
+          disk: {
             readRate: 50 * 1024 * 1024,
             writeRate: 30 * 1024 * 1024,
             space: 10 * 1024 * 1024 * 1024,
@@ -466,7 +514,9 @@ describe('Docker Integration Tests', () => {
         expect(response.body.success).toBe(true);
         expect(response.body.data.summary.totalContainers).toBe(3);
         expect(response.body.data.healthScore).toBeGreaterThan(0);
-        expect(response.body.data.healthStatus).toMatch(/healthy|warning|critical/);
+        expect(response.body.data.healthStatus).toMatch(
+          /healthy|warning|critical/
+        );
         expect(response.body.data.systemMetrics.containers).toBe(3);
       });
     });
@@ -520,16 +570,23 @@ describe('Docker Integration Tests', () => {
         expect(response.body.success).toBe(true);
         expect(response.body.data.containersRemoved).toBe(2);
         expect(response.body.data.bytesFreed).toBe(1024000);
-        expect(mockContainerCleanup.executeRule).toHaveBeenCalledWith('rule-1', false);
+        expect(mockContainerCleanup.executeRule).toHaveBeenCalledWith(
+          'rule-1',
+          false
+        );
       });
     });
 
     describe('POST /api/cleanup/force-cleanup', () => {
       it('should force cleanup specific containers', async () => {
-        mockContainerCleanup.forceCleanup = jest.fn(() => Promise.resolve({
-          successful: ['container-1', 'container-2'],
-          failed: [{ containerId: 'container-3', error: 'Permission denied' }],
-        }));
+        mockContainerCleanup.forceCleanup = jest.fn(() =>
+          Promise.resolve({
+            successful: ['container-1', 'container-2'],
+            failed: [
+              { containerId: 'container-3', error: 'Permission denied' },
+            ],
+          })
+        );
 
         const response = await request(app)
           .post('/api/cleanup/force-cleanup')
@@ -585,7 +642,11 @@ describe('Docker Integration Tests', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
           cpu: { cores: 1, percentage: 50 },
-          memory: { limit: 128 * 1024 * 1024, swap: 256 * 1024 * 1024, reservation: 64 * 1024 * 1024 },
+          memory: {
+            limit: 128 * 1024 * 1024,
+            swap: 256 * 1024 * 1024,
+            reservation: 64 * 1024 * 1024,
+          },
           processes: { max: 50 },
         })
         .expect(200);
@@ -611,7 +672,7 @@ describe('Docker Integration Tests', () => {
               image: 'nginx:alpine',
               replicas: 2,
               resources: { memory: 128 * 1024 * 1024, cpu: 0.25 },
-            }
+            },
           ],
         })
         .expect(201);
@@ -626,7 +687,9 @@ describe('Docker Integration Tests', () => {
 
       // 3. Scale service
       await request(app)
-        .post(`/api/orchestration/deployments/${deploymentId}/services/web/scale`)
+        .post(
+          `/api/orchestration/deployments/${deploymentId}/services/web/scale`
+        )
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ replicas: 4 })
         .expect(200);
@@ -651,7 +714,8 @@ describe('Docker Integration Tests', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .expect(200);
 
-      const initialContainers = overviewResponse.body.data.summary.totalContainers;
+      const initialContainers =
+        overviewResponse.body.data.summary.totalContainers;
 
       // 2. Create cleanup rule for test containers
       await request(app)
@@ -662,7 +726,7 @@ describe('Docker Integration Tests', () => {
           name: 'Test Container Cleanup',
           enabled: true,
           schedule: '* * * * *', // Every minute
-          conditions: { labels: { 'test': 'true' } },
+          conditions: { labels: { test: 'true' } },
           actions: { remove: true },
           dryRun: false,
         })
@@ -675,7 +739,9 @@ describe('Docker Integration Tests', () => {
         .send({ dryRun: false })
         .expect(200);
 
-      expect(cleanupResponse.body.data.containersProcessed).toBeGreaterThanOrEqual(0);
+      expect(
+        cleanupResponse.body.data.containersProcessed
+      ).toBeGreaterThanOrEqual(0);
 
       // 4. Get cleanup history
       await request(app)
@@ -696,7 +762,9 @@ describe('Docker Integration Tests', () => {
   describe('Error Recovery and Resilience', () => {
     it('should handle Docker daemon failures gracefully', async () => {
       // Simulate Docker daemon unavailable
-      mockSandboxManager.createSandbox.mockRejectedValueOnce(new Error('Cannot connect to Docker daemon'));
+      mockSandboxManager.createSandbox.mockRejectedValueOnce(
+        new Error('Cannot connect to Docker daemon')
+      );
 
       const response = await request(app)
         .post('/api/docker/sandboxes')
@@ -713,7 +781,9 @@ describe('Docker Integration Tests', () => {
 
     it('should handle resource exhaustion', async () => {
       // Simulate out of memory
-      mockSandboxManager.createSandbox.mockRejectedValueOnce(new Error('Insufficient memory'));
+      mockSandboxManager.createSandbox.mockRejectedValueOnce(
+        new Error('Insufficient memory')
+      );
 
       const response = await request(app)
         .post('/api/docker/sandboxes')
@@ -730,7 +800,9 @@ describe('Docker Integration Tests', () => {
 
     it('should handle network isolation failures', async () => {
       // Test network-related errors
-      mockOrchestrationManager.deploy.mockRejectedValueOnce(new Error('Network not found'));
+      mockOrchestrationManager.deploy.mockRejectedValueOnce(
+        new Error('Network not found')
+      );
 
       const response = await request(app)
         .post('/api/orchestration/deployments')
@@ -738,11 +810,13 @@ describe('Docker Integration Tests', () => {
         .send({
           name: 'network-test',
           namespace: 'test',
-          services: [{
-            name: 'isolated-service',
-            image: 'alpine:latest',
-            replicas: 1,
-          }],
+          services: [
+            {
+              name: 'isolated-service',
+              image: 'alpine:latest',
+              replicas: 1,
+            },
+          ],
         })
         .expect(500);
 
@@ -756,12 +830,14 @@ describe('Docker Integration Tests', () => {
       const dangerousDeployment = {
         name: 'dangerous-app',
         namespace: 'test',
-        services: [{
-          name: 'privileged-service',
-          image: 'alpine:latest',
-          replicas: 1,
-          securityProfile: 'DANGEROUS',
-        }],
+        services: [
+          {
+            name: 'privileged-service',
+            image: 'alpine:latest',
+            replicas: 1,
+            securityProfile: 'DANGEROUS',
+          },
+        ],
       };
 
       // Should require admin role for dangerous profiles

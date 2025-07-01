@@ -1,17 +1,24 @@
 /**
  * Cache Integration Examples
- * 
+ *
  * This file demonstrates how to integrate Redis caching throughout the application
  */
 
 import { cacheManager } from './redis-cache-manager.js';
-import { cacheMiddleware, apiCacheMiddleware, sessionCacheMiddleware } from './cache-middleware.js';
-import { Cacheable, CacheEvict, CacheKeyGenerators } from './cache-decorators.js';
+import {
+  cacheMiddleware,
+  apiCacheMiddleware,
+  sessionCacheMiddleware,
+} from './cache-middleware.js';
+import {
+  Cacheable,
+  CacheEvict,
+  CacheKeyGenerators,
+} from './cache-decorators.js';
 import { cacheService } from '../services/cache-service.js';
 
 // Example 1: Database Service with Caching
 export class DatabaseServiceExample {
-  
   @Cacheable({
     strategy: 'query-results',
     ttl: 1800, // 30 minutes
@@ -59,13 +66,12 @@ export class DatabaseServiceExample {
 
 // Example 2: API Service with Manual Caching
 export class ApiServiceExample {
-  
   async getAdapterList() {
     const cacheKey = 'adapters:list';
-    
+
     // Try cache first
     let adapters = await cacheManager.get(cacheKey, 'api-responses');
-    
+
     if (!adapters) {
       // Fetch from source
       console.log('Fetching adapters from registry');
@@ -73,7 +79,7 @@ export class ApiServiceExample {
         { name: 'claude-code', version: '1.0.0', status: 'active' },
         { name: 'gemini-cli', version: '0.9.0', status: 'active' },
       ];
-      
+
       // Cache for 5 minutes
       await cacheManager.set(cacheKey, adapters, {
         strategyName: 'api-responses',
@@ -81,16 +87,16 @@ export class ApiServiceExample {
         tags: ['adapters', 'registry'],
       });
     }
-    
+
     return adapters;
   }
 
   async getProjectMetrics(projectId: string) {
     const cacheKey = CacheKeyGenerators.byProject(projectId, 'metrics');
-    
+
     // Check cache
     let metrics = await cacheManager.get(cacheKey, 'process-metrics');
-    
+
     if (!metrics) {
       console.log('Computing project metrics:', projectId);
       metrics = {
@@ -99,7 +105,7 @@ export class ApiServiceExample {
         uptime: '2h 30m',
         lastActivity: new Date().toISOString(),
       };
-      
+
       // Cache for 1 minute (metrics change frequently)
       await cacheManager.set(cacheKey, metrics, {
         strategyName: 'process-metrics',
@@ -107,7 +113,7 @@ export class ApiServiceExample {
         tags: ['metrics', 'projects'],
       });
     }
-    
+
     return metrics;
   }
 
@@ -120,9 +126,9 @@ export class ApiServiceExample {
 
 // Example 3: Express Middleware Usage
 export function setupCacheMiddleware(app: any) {
-  
   // Cache all GET requests to /api/adapters for 5 minutes
-  app.get('/api/adapters', 
+  app.get(
+    '/api/adapters',
     apiCacheMiddleware({ ttl: 300, tags: ['adapters'] }),
     (req: any, res: any) => {
       res.json([
@@ -133,13 +139,14 @@ export function setupCacheMiddleware(app: any) {
   );
 
   // Cache user-specific project lists for 10 minutes
-  app.get('/api/projects',
+  app.get(
+    '/api/projects',
     cacheMiddleware({
       strategy: 'api-responses',
       ttl: 600,
       tags: ['projects'],
-      keyGenerator: (req) => `user:${req.user?.id}:projects`,
-      skipCondition: (req) => req.user?.role === 'admin', // Don't cache for admins
+      keyGenerator: req => `user:${req.user?.id}:projects`,
+      skipCondition: req => req.user?.role === 'admin', // Don't cache for admins
     }),
     (req: any, res: any) => {
       // Fetch user projects
@@ -148,12 +155,13 @@ export function setupCacheMiddleware(app: any) {
   );
 
   // Session-specific caching
-  app.get('/api/session-data',
+  app.get(
+    '/api/session-data',
     sessionCacheMiddleware({ ttl: 3600 }),
     (req: any, res: any) => {
-      res.json({ 
+      res.json({
         sessionId: req.session?.id,
-        preferences: { theme: 'dark', layout: 'compact' }
+        preferences: { theme: 'dark', layout: 'compact' },
       });
     }
   );
@@ -161,7 +169,6 @@ export function setupCacheMiddleware(app: any) {
 
 // Example 4: Process Manager with Caching
 export class ProcessManagerExample {
-  
   @Cacheable({
     strategy: 'process-metrics',
     ttl: 60, // 1 minute
@@ -183,7 +190,8 @@ export class ProcessManagerExample {
     strategy: 'process-metrics',
     ttl: 30, // 30 seconds
     tags: ['processes', 'session'],
-    keyGenerator: (sessionId: string) => CacheKeyGenerators.bySession(sessionId, 'metrics'),
+    keyGenerator: (sessionId: string) =>
+      CacheKeyGenerators.bySession(sessionId, 'metrics'),
   })
   async getSessionMetrics(sessionId: string) {
     console.log('Computing session metrics:', sessionId);
@@ -208,12 +216,12 @@ export class ProcessManagerExample {
 
 // Example 5: File System Service with Caching
 export class FileSystemServiceExample {
-  
   @Cacheable({
     strategy: 'file-system',
     ttl: 900, // 15 minutes
     tags: ['filesystem', 'directories'],
-    keyGenerator: (path: string) => `fs:dir:${Buffer.from(path).toString('base64')}`,
+    keyGenerator: (path: string) =>
+      `fs:dir:${Buffer.from(path).toString('base64')}`,
   })
   async getDirectoryContents(path: string) {
     console.log('Reading directory:', path);
@@ -238,17 +246,16 @@ export class FileSystemServiceExample {
 
 // Example 6: Background Cache Management
 export class CacheMaintenanceExample {
-  
   async performMaintenanceTasks() {
     // Clear expired entries
     await this.clearExpiredEntries();
-    
+
     // Warm frequently accessed data
     await this.warmFrequentData();
-    
+
     // Optimize cache strategies
     await this.optimizeStrategies();
-    
+
     // Generate cache report
     return this.generateCacheReport();
   }
@@ -261,11 +268,11 @@ export class CacheMaintenanceExample {
   private async warmFrequentData() {
     // Preload commonly accessed data
     const frequentUsers = ['user1', 'user2', 'user3'];
-    
+
     for (const userId of frequentUsers) {
       await cacheService.warmCache('projects', [userId]);
     }
-    
+
     console.log('Cache warming completed');
   }
 
@@ -277,7 +284,7 @@ export class CacheMaintenanceExample {
   private async generateCacheReport() {
     const stats = cacheManager.getStats();
     const health = await cacheManager.getHealth();
-    
+
     return {
       summary: {
         hitRatio: `${(stats.hitRatio * 100).toFixed(1)}%`,
@@ -298,16 +305,15 @@ export class CacheMaintenanceExample {
 
 // Example 7: Cache Event Handling
 export function setupCacheEventHandlers() {
-  
-  cacheManager.on('hit', (data) => {
+  cacheManager.on('hit', data => {
     console.log('Cache hit:', data.key, `(${data.responseTime}ms)`);
   });
 
-  cacheManager.on('miss', (data) => {
+  cacheManager.on('miss', data => {
     console.log('Cache miss:', data.key, `(${data.responseTime}ms)`);
   });
 
-  cacheManager.on('error', (error) => {
+  cacheManager.on('error', error => {
     console.error('Cache error:', error.message);
     // Could trigger alerts or fallback mechanisms
   });
@@ -317,7 +323,9 @@ export function setupCacheEventHandlers() {
   });
 
   cacheManager.on('disconnected', () => {
-    console.warn('Cache disconnected - operations will fall back to direct calls');
+    console.warn(
+      'Cache disconnected - operations will fall back to direct calls'
+    );
   });
 }
 

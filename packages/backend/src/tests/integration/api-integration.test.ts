@@ -1,35 +1,49 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'bun:test';
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  afterAll,
+  beforeEach,
+  afterEach,
+} from 'bun:test';
 import { Express } from 'express';
 import request from 'supertest';
 import { AdapterRegistry } from '@vibecode/adapter-sdk';
 import { setupRoutes } from '../../api/index.js';
 import { ProcessManager } from '../../processes/process-manager.js';
-import { createTestUser, createTestAdmin, mockDb, seedTestData, clearTestData } from '../test-setup.js';
+import {
+  createTestUser,
+  createTestAdmin,
+  mockDb,
+  seedTestData,
+  clearTestData,
+} from '../test-setup.js';
 
 // Create test app
 function createTestApp(): Express {
   const express = require('express');
   const app = express();
-  
+
   // Middleware
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
-  
+
   // Mock session middleware
   app.use((req: any, res: any, next: any) => {
     req.session = { id: 'test-session-id' };
     next();
   });
-  
+
   // Mock services
   const mockAdapterRegistry = new AdapterRegistry();
   const mockProcessManager = new ProcessManager();
-  
+
   setupRoutes(app, {
     adapterRegistry: mockAdapterRegistry,
     processManager: mockProcessManager,
   });
-  
+
   return app;
 }
 
@@ -59,9 +73,7 @@ describe('API Integration Tests', () => {
 
   describe('Health Check', () => {
     it('should return health status', async () => {
-      const response = await request(app)
-        .get('/health')
-        .expect(200);
+      const response = await request(app).get('/health').expect(200);
 
       expect(response.body.status).toBe('ok');
       expect(response.body.timestamp).toBeDefined();
@@ -171,13 +183,11 @@ describe('API Integration Tests', () => {
 
     beforeEach(async () => {
       // Get auth token for authenticated requests
-      const loginResponse = await request(app)
-        .post('/api/auth/login')
-        .send({
-          username: testUser.username,
-          password: 'testpassword123',
-        });
-      
+      const loginResponse = await request(app).post('/api/auth/login').send({
+        username: testUser.username,
+        password: 'testpassword123',
+      });
+
       authToken = loginResponse.body.data.token;
     });
 
@@ -192,9 +202,7 @@ describe('API Integration Tests', () => {
       });
 
       it('should require authentication', async () => {
-        await request(app)
-          .get('/api/projects')
-          .expect(401);
+        await request(app).get('/api/projects').expect(401);
       });
     });
 
@@ -301,13 +309,11 @@ describe('API Integration Tests', () => {
     let authToken: string;
 
     beforeEach(async () => {
-      const loginResponse = await request(app)
-        .post('/api/auth/login')
-        .send({
-          username: testUser.username,
-          password: 'testpassword123',
-        });
-      
+      const loginResponse = await request(app).post('/api/auth/login').send({
+        username: testUser.username,
+        password: 'testpassword123',
+      });
+
       authToken = loginResponse.body.data.token;
     });
 
@@ -346,7 +352,10 @@ describe('API Integration Tests', () => {
 
         await request(app)
           .get('/api/processes/metrics')
-          .set('Authorization', `Bearer ${limitedLoginResponse.body.data.token}`)
+          .set(
+            'Authorization',
+            `Bearer ${limitedLoginResponse.body.data.token}`
+          )
           .expect(403);
       });
     });
@@ -400,7 +409,7 @@ describe('API Integration Tests', () => {
           username: testAdmin.username,
           password: 'adminpassword123',
         });
-      
+
       adminToken = adminLoginResponse.body.data.token;
     });
 
@@ -474,20 +483,16 @@ describe('API Integration Tests', () => {
     let adminToken: string;
 
     beforeEach(async () => {
-      const userLogin = await request(app)
-        .post('/api/auth/login')
-        .send({
-          username: testUser.username,
-          password: 'testpassword123',
-        });
+      const userLogin = await request(app).post('/api/auth/login').send({
+        username: testUser.username,
+        password: 'testpassword123',
+      });
       userToken = userLogin.body.data.token;
 
-      const adminLogin = await request(app)
-        .post('/api/auth/login')
-        .send({
-          username: testAdmin.username,
-          password: 'adminpassword123',
-        });
+      const adminLogin = await request(app).post('/api/auth/login').send({
+        username: testAdmin.username,
+        password: 'adminpassword123',
+      });
       adminToken = adminLogin.body.data.token;
     });
 
@@ -523,24 +528,18 @@ describe('API Integration Tests', () => {
 
     describe('Authentication Requirements', () => {
       it('should require authentication for protected endpoints', async () => {
-        await request(app)
-          .get('/api/projects')
-          .expect(401);
+        await request(app).get('/api/projects').expect(401);
 
         await request(app)
           .post('/api/projects')
           .send({ name: 'Test', path: '/tmp', activeAdapter: 'claude-code' })
           .expect(401);
 
-        await request(app)
-          .get('/api/processes/metrics')
-          .expect(401);
+        await request(app).get('/api/processes/metrics').expect(401);
       });
 
       it('should allow access to public endpoints', async () => {
-        await request(app)
-          .get('/health')
-          .expect(200);
+        await request(app).get('/health').expect(200);
       });
     });
 
@@ -582,13 +581,11 @@ describe('API Integration Tests', () => {
     let authToken: string;
 
     beforeEach(async () => {
-      const loginResponse = await request(app)
-        .post('/api/auth/login')
-        .send({
-          username: testUser.username,
-          password: 'testpassword123',
-        });
-      
+      const loginResponse = await request(app).post('/api/auth/login').send({
+        username: testUser.username,
+        password: 'testpassword123',
+      });
+
       authToken = loginResponse.body.data.token;
     });
 
@@ -642,23 +639,19 @@ describe('API Integration Tests', () => {
     let authToken: string;
 
     beforeEach(async () => {
-      const loginResponse = await request(app)
-        .post('/api/auth/login')
-        .send({
-          username: testUser.username,
-          password: 'testpassword123',
-        });
-      
+      const loginResponse = await request(app).post('/api/auth/login').send({
+        username: testUser.username,
+        password: 'testpassword123',
+      });
+
       authToken = loginResponse.body.data.token;
     });
 
     it('should respond quickly to simple requests', async () => {
       const startTime = Date.now();
-      
-      await request(app)
-        .get('/health')
-        .expect(200);
-        
+
+      await request(app).get('/health').expect(200);
+
       const responseTime = Date.now() - startTime;
       expect(responseTime).toBeLessThan(100); // Less than 100ms
     });
@@ -671,7 +664,7 @@ describe('API Integration Tests', () => {
       );
 
       const responses = await Promise.all(requests);
-      
+
       expect(responses.every(r => r.status === 200)).toBe(true);
     });
 
@@ -690,13 +683,11 @@ describe('API Integration Tests', () => {
     let authToken: string;
 
     beforeEach(async () => {
-      const loginResponse = await request(app)
-        .post('/api/auth/login')
-        .send({
-          username: testUser.username,
-          password: 'testpassword123',
-        });
-      
+      const loginResponse = await request(app).post('/api/auth/login').send({
+        username: testUser.username,
+        password: 'testpassword123',
+      });
+
       authToken = loginResponse.body.data.token;
     });
 
@@ -705,11 +696,13 @@ describe('API Integration Tests', () => {
         .post('/api/projects')
         .set('Authorization', `Bearer ${authToken}`)
         .set('Content-Type', 'application/json')
-        .send(JSON.stringify({
-          name: 'JSON Test',
-          path: '/tmp/json-test',
-          activeAdapter: 'claude-code',
-        }))
+        .send(
+          JSON.stringify({
+            name: 'JSON Test',
+            path: '/tmp/json-test',
+            activeAdapter: 'claude-code',
+          })
+        )
         .expect(201);
     });
 

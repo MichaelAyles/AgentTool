@@ -22,22 +22,34 @@ export function metricsMiddleware() {
     const originalEnd = res.end;
     let isFinished = false;
 
-    res.end = function(chunk?: any, encoding?: any, cb?: any) {
+    res.end = function (chunk?: any, encoding?: any, cb?: any) {
       if (!isFinished) {
         isFinished = true;
-        
+
         const responseTime = performance.now() - startTime;
-        const responseSize = Buffer.isBuffer(chunk) ? chunk.length : 
-                           typeof chunk === 'string' ? Buffer.byteLength(chunk) : 0;
+        const responseSize = Buffer.isBuffer(chunk)
+          ? chunk.length
+          : typeof chunk === 'string'
+            ? Buffer.byteLength(chunk)
+            : 0;
 
         // Record detailed metrics
-        performanceMonitor.recordRequest(responseTime, res.statusCode, req.path);
-        
-        performanceMonitor.recordMetric('http.response.size', responseSize, 'bytes', {
-          method: req.method,
-          status_code: res.statusCode.toString(),
-          path: sanitizePath(req.path),
-        });
+        performanceMonitor.recordRequest(
+          responseTime,
+          res.statusCode,
+          req.path
+        );
+
+        performanceMonitor.recordMetric(
+          'http.response.size',
+          responseSize,
+          'bytes',
+          {
+            method: req.method,
+            status_code: res.statusCode.toString(),
+            path: sanitizePath(req.path),
+          }
+        );
 
         performanceMonitor.recordMetric('http.response.completed', 1, 'count', {
           method: req.method,
@@ -102,16 +114,30 @@ export function apiUsageMiddleware() {
 export function databaseMetricsMiddleware() {
   return (req: Request, res: Response, next: NextFunction) => {
     // Add query tracking to request context
-    (req as any).trackQuery = (queryName: string, executionTime: number, rowCount?: number) => {
-      performanceMonitor.recordMetric('database.query.duration', executionTime, 'ms', {
-        query_name: queryName,
-        endpoint: sanitizePath(req.path),
-      });
+    (req as any).trackQuery = (
+      queryName: string,
+      executionTime: number,
+      rowCount?: number
+    ) => {
+      performanceMonitor.recordMetric(
+        'database.query.duration',
+        executionTime,
+        'ms',
+        {
+          query_name: queryName,
+          endpoint: sanitizePath(req.path),
+        }
+      );
 
       if (rowCount !== undefined) {
-        performanceMonitor.recordMetric('database.query.rows', rowCount, 'count', {
-          query_name: queryName,
-        });
+        performanceMonitor.recordMetric(
+          'database.query.rows',
+          rowCount,
+          'count',
+          {
+            query_name: queryName,
+          }
+        );
       }
 
       // Track slow queries
@@ -133,17 +159,26 @@ export function databaseMetricsMiddleware() {
 export function cacheMetricsMiddleware() {
   return (req: Request, res: Response, next: NextFunction) => {
     // Add cache tracking to request context
-    (req as any).trackCache = (operation: 'hit' | 'miss' | 'set' | 'delete', key: string, responseTime?: number) => {
+    (req as any).trackCache = (
+      operation: 'hit' | 'miss' | 'set' | 'delete',
+      key: string,
+      responseTime?: number
+    ) => {
       performanceMonitor.recordMetric(`cache.${operation}`, 1, 'count', {
         cache_key: key.substring(0, 50), // Truncate long keys
         endpoint: sanitizePath(req.path),
       });
 
       if (responseTime !== undefined) {
-        performanceMonitor.recordMetric('cache.response_time', responseTime, 'ms', {
-          operation,
-          endpoint: sanitizePath(req.path),
-        });
+        performanceMonitor.recordMetric(
+          'cache.response_time',
+          responseTime,
+          'ms',
+          {
+            operation,
+            endpoint: sanitizePath(req.path),
+          }
+        );
       }
     };
 
@@ -169,17 +204,27 @@ export function processMetricsMiddleware() {
       });
 
       if (metadata?.executionTime) {
-        performanceMonitor.recordMetric('process.execution_time', metadata.executionTime, 'ms', {
-          session_id: sessionId,
-          adapter: metadata.adapter || 'unknown',
-        });
+        performanceMonitor.recordMetric(
+          'process.execution_time',
+          metadata.executionTime,
+          'ms',
+          {
+            session_id: sessionId,
+            adapter: metadata.adapter || 'unknown',
+          }
+        );
       }
 
       if (metadata?.memoryUsage) {
-        performanceMonitor.recordMetric('process.memory_usage', metadata.memoryUsage, 'bytes', {
-          session_id: sessionId,
-          adapter: metadata.adapter || 'unknown',
-        });
+        performanceMonitor.recordMetric(
+          'process.memory_usage',
+          metadata.memoryUsage,
+          'bytes',
+          {
+            session_id: sessionId,
+            adapter: metadata.adapter || 'unknown',
+          }
+        );
       }
     };
 
@@ -204,16 +249,26 @@ export function websocketMetricsMiddleware() {
       });
 
       if (metadata?.messageSize) {
-        performanceMonitor.recordMetric('websocket.message_size', metadata.messageSize, 'bytes', {
-          socket_id: socketId,
-          message_type: metadata.messageType || 'unknown',
-        });
+        performanceMonitor.recordMetric(
+          'websocket.message_size',
+          metadata.messageSize,
+          'bytes',
+          {
+            socket_id: socketId,
+            message_type: metadata.messageType || 'unknown',
+          }
+        );
       }
 
       if (metadata?.latency) {
-        performanceMonitor.recordMetric('websocket.latency', metadata.latency, 'ms', {
-          socket_id: socketId,
-        });
+        performanceMonitor.recordMetric(
+          'websocket.latency',
+          metadata.latency,
+          'ms',
+          {
+            socket_id: socketId,
+          }
+        );
       }
     };
 
@@ -263,7 +318,11 @@ export function errorMetricsMiddleware() {
 export function businessMetricsMiddleware() {
   return (req: Request, res: Response, next: NextFunction) => {
     // Add business metrics tracking to request context
-    (req as any).trackBusiness = (metric: string, value: number, tags: Record<string, string> = {}) => {
+    (req as any).trackBusiness = (
+      metric: string,
+      value: number,
+      tags: Record<string, string> = {}
+    ) => {
       performanceMonitor.recordMetric(`business.${metric}`, value, 'count', {
         ...tags,
         endpoint: sanitizePath(req.path),
@@ -321,7 +380,11 @@ function getResponseTimeBucket(responseTime: number): string {
  * Performance timing decorator for service methods
  */
 export function timed(metricName?: string) {
-  return function (target: any, propertyName: string, descriptor: PropertyDescriptor) {
+  return function (
+    target: any,
+    propertyName: string,
+    descriptor: PropertyDescriptor
+  ) {
     const originalMethod = descriptor.value;
     const name = metricName || `${target.constructor.name}.${propertyName}`;
 
@@ -333,17 +396,17 @@ export function timed(metricName?: string) {
 
       try {
         const result = await originalMethod.apply(this, args);
-        
+
         // Track success
         performanceMonitor.recordMetric(`${name}.success`, 1, 'count');
-        
+
         return result;
       } catch (error) {
         // Track error
         performanceMonitor.recordMetric(`${name}.error`, 1, 'count', {
           error_type: (error as Error).constructor.name,
         });
-        
+
         throw error;
       } finally {
         timer();
@@ -360,8 +423,8 @@ export function timed(metricName?: string) {
 export function rateLimitMetricsMiddleware() {
   return (req: Request, res: Response, next: NextFunction) => {
     const originalJson = res.json;
-    
-    res.json = function(body: any) {
+
+    res.json = function (body: any) {
       // Check if this is a rate limit response
       if (res.statusCode === 429) {
         performanceMonitor.recordMetric('rate_limit.exceeded', 1, 'count', {
@@ -370,10 +433,10 @@ export function rateLimitMetricsMiddleware() {
           ip: req.ip || 'unknown',
         });
       }
-      
+
       return originalJson.call(this, body);
     };
-    
+
     next();
   };
 }

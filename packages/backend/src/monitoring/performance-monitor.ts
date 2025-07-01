@@ -99,7 +99,7 @@ export class PerformanceMonitor extends EventEmitter {
   private thresholds = new Map<string, { warning: number; critical: number }>();
   private collectors = new Map<string, () => Promise<any>>();
   private timers = new Map<string, NodeJS.Timeout>();
-  
+
   private config = {
     collectionInterval: 30000, // 30 seconds
     retentionPeriod: 86400000, // 24 hours
@@ -119,15 +119,17 @@ export class PerformanceMonitor extends EventEmitter {
     lastReset: Date.now(),
   };
 
-  constructor(config: Partial<typeof PerformanceMonitor.prototype.config> = {}) {
+  constructor(
+    config: Partial<typeof PerformanceMonitor.prototype.config> = {}
+  ) {
     super();
-    
+
     Object.assign(this.config, config);
-    
+
     this.setupDefaultThresholds();
     this.setupDefaultCollectors();
     this.startCollection();
-    
+
     structuredLogger.info('Performance monitor initialized', {
       collectionInterval: this.config.collectionInterval,
       retentionPeriod: this.config.retentionPeriod,
@@ -177,7 +179,7 @@ export class PerformanceMonitor extends EventEmitter {
    */
   startTimer(name: string, tags: Record<string, string> = {}): () => void {
     const startTime = performance.now();
-    
+
     return () => {
       const duration = performance.now() - startTime;
       this.recordMetric(`${name}.duration`, duration, 'ms', tags);
@@ -190,7 +192,7 @@ export class PerformanceMonitor extends EventEmitter {
   recordRequest(responseTime: number, statusCode: number, path: string): void {
     this.requestStats.total++;
     this.requestStats.responseTimes.push(responseTime);
-    
+
     if (statusCode >= 400) {
       this.requestStats.errors++;
     }
@@ -262,18 +264,20 @@ export class PerformanceMonitor extends EventEmitter {
   async getApplicationMetrics(): Promise<ApplicationMetrics> {
     const now = Date.now();
     const timeSinceReset = (now - this.requestStats.lastReset) / 1000;
-    
-    const requestsPerSecond = timeSinceReset > 0 
-      ? this.requestStats.total / timeSinceReset 
-      : 0;
 
-    const avgResponseTime = this.requestStats.responseTimes.length > 0
-      ? this.requestStats.responseTimes.reduce((a, b) => a + b, 0) / this.requestStats.responseTimes.length
-      : 0;
+    const requestsPerSecond =
+      timeSinceReset > 0 ? this.requestStats.total / timeSinceReset : 0;
 
-    const errorRate = this.requestStats.total > 0
-      ? this.requestStats.errors / this.requestStats.total
-      : 0;
+    const avgResponseTime =
+      this.requestStats.responseTimes.length > 0
+        ? this.requestStats.responseTimes.reduce((a, b) => a + b, 0) /
+          this.requestStats.responseTimes.length
+        : 0;
+
+    const errorRate =
+      this.requestStats.total > 0
+        ? this.requestStats.errors / this.requestStats.total
+        : 0;
 
     return {
       requests: {
@@ -387,11 +391,11 @@ export class PerformanceMonitor extends EventEmitter {
    */
   getAlerts(level?: PerformanceAlert['level']): PerformanceAlert[] {
     const alerts = Array.from(this.alerts.values());
-    
+
     if (level) {
       return alerts.filter(alert => alert.level === level);
     }
-    
+
     return alerts;
   }
 
@@ -411,11 +415,7 @@ export class PerformanceMonitor extends EventEmitter {
   /**
    * Set custom threshold for a metric
    */
-  setThreshold(
-    metricName: string,
-    warning: number,
-    critical: number
-  ): void {
+  setThreshold(metricName: string, warning: number, critical: number): void {
     this.thresholds.set(metricName, { warning, critical });
     structuredLogger.info('Threshold set', { metricName, warning, critical });
   }
@@ -429,20 +429,25 @@ export class PerformanceMonitor extends EventEmitter {
     interval?: number
   ): void {
     this.collectors.set(name, collector);
-    
+
     if (interval) {
       const timer = setInterval(async () => {
         try {
           await collector();
         } catch (error) {
-          structuredLogger.error('Collector error', error as Error, { collector: name });
+          structuredLogger.error('Collector error', error as Error, {
+            collector: name,
+          });
         }
       }, interval);
-      
+
       this.timers.set(name, timer);
     }
-    
-    structuredLogger.info('Metric collector registered', { name, hasInterval: !!interval });
+
+    structuredLogger.info('Metric collector registered', {
+      name,
+      hasInterval: !!interval,
+    });
   }
 
   /**
@@ -450,7 +455,7 @@ export class PerformanceMonitor extends EventEmitter {
    */
   exportMetrics(format: 'json' | 'csv' | 'prometheus' = 'json'): string {
     const allMetrics: PerformanceMetric[] = [];
-    
+
     for (const metricArray of this.metrics.values()) {
       allMetrics.push(...metricArray);
     }
@@ -461,12 +466,16 @@ export class PerformanceMonitor extends EventEmitter {
       case 'prometheus':
         return this.exportAsPrometheus(allMetrics);
       default:
-        return JSON.stringify({
-          timestamp: new Date().toISOString(),
-          totalMetrics: allMetrics.length,
-          metrics: allMetrics,
-          alerts: Array.from(this.alerts.values()),
-        }, null, 2);
+        return JSON.stringify(
+          {
+            timestamp: new Date().toISOString(),
+            totalMetrics: allMetrics.length,
+            metrics: allMetrics,
+            alerts: Array.from(this.alerts.values()),
+          },
+          null,
+          2
+        );
     }
   }
 
@@ -480,7 +489,7 @@ export class PerformanceMonitor extends EventEmitter {
     for (const [name, metricArray] of this.metrics.entries()) {
       const originalLength = metricArray.length;
       const filtered = metricArray.filter(m => m.timestamp > cutoff);
-      
+
       if (filtered.length !== originalLength) {
         this.metrics.set(name, filtered);
         cleaned += originalLength - filtered.length;
@@ -507,10 +516,10 @@ export class PerformanceMonitor extends EventEmitter {
     for (const timer of this.timers.values()) {
       clearInterval(timer);
     }
-    
+
     this.timers.clear();
     this.removeAllListeners();
-    
+
     structuredLogger.info('Performance monitor closed');
   }
 
@@ -527,24 +536,52 @@ export class PerformanceMonitor extends EventEmitter {
 
   private setupDefaultCollectors(): void {
     if (this.config.enableSystemMetrics) {
-      this.registerCollector('system-metrics', async () => {
-        const metrics = await this.getSystemMetrics();
-        
-        this.recordMetric('cpu.usage', metrics.cpu.usage, 'percent');
-        this.recordMetric('memory.percentage', metrics.memory.percentage, 'percent');
-        this.recordMetric('memory.used', metrics.memory.used, 'bytes');
-        this.recordMetric('load.average', metrics.cpu.loadAverage[0], 'count');
-      }, this.config.collectionInterval);
+      this.registerCollector(
+        'system-metrics',
+        async () => {
+          const metrics = await this.getSystemMetrics();
+
+          this.recordMetric('cpu.usage', metrics.cpu.usage, 'percent');
+          this.recordMetric(
+            'memory.percentage',
+            metrics.memory.percentage,
+            'percent'
+          );
+          this.recordMetric('memory.used', metrics.memory.used, 'bytes');
+          this.recordMetric(
+            'load.average',
+            metrics.cpu.loadAverage[0],
+            'count'
+          );
+        },
+        this.config.collectionInterval
+      );
     }
 
     if (this.config.enableApplicationMetrics) {
-      this.registerCollector('app-metrics', async () => {
-        const metrics = await this.getApplicationMetrics();
-        
-        this.recordMetric('requests.per_second', metrics.requests.perSecond, 'rps');
-        this.recordMetric('requests.avg_response_time', metrics.requests.averageResponseTime, 'ms');
-        this.recordMetric('requests.error_rate', metrics.requests.errorRate, 'percent');
-      }, this.config.collectionInterval);
+      this.registerCollector(
+        'app-metrics',
+        async () => {
+          const metrics = await this.getApplicationMetrics();
+
+          this.recordMetric(
+            'requests.per_second',
+            metrics.requests.perSecond,
+            'rps'
+          );
+          this.recordMetric(
+            'requests.avg_response_time',
+            metrics.requests.averageResponseTime,
+            'ms'
+          );
+          this.recordMetric(
+            'requests.error_rate',
+            metrics.requests.errorRate,
+            'percent'
+          );
+        },
+        this.config.collectionInterval
+      );
     }
   }
 
@@ -575,17 +612,20 @@ export class PerformanceMonitor extends EventEmitter {
     if (level) {
       const alertId = `${metricName}-${level}`;
       const existingAlert = this.alerts.get(alertId);
-      
+
       // Only create new alert if none exists or if it's been acknowledged and enough time has passed
-      if (!existingAlert || 
-          (existingAlert.acknowledged && 
-           Date.now() - existingAlert.timestamp.getTime() > this.config.alertCooldown)) {
-        
+      if (
+        !existingAlert ||
+        (existingAlert.acknowledged &&
+          Date.now() - existingAlert.timestamp.getTime() >
+            this.config.alertCooldown)
+      ) {
         const alert: PerformanceAlert = {
           id: alertId,
           level,
           metric: metricName,
-          threshold: level === 'critical' ? threshold.critical : threshold.warning,
+          threshold:
+            level === 'critical' ? threshold.critical : threshold.warning,
           currentValue: value,
           message,
           timestamp: new Date(),
@@ -594,7 +634,7 @@ export class PerformanceMonitor extends EventEmitter {
 
         this.alerts.set(alertId, alert);
         this.emit('alert', alert);
-        
+
         structuredLogger.warn('Performance alert triggered', {
           alertId,
           level,
@@ -606,7 +646,10 @@ export class PerformanceMonitor extends EventEmitter {
     }
   }
 
-  private calculateCpuUsage(oldCpus: os.CpuInfo[], newCpus: os.CpuInfo[]): number {
+  private calculateCpuUsage(
+    oldCpus: os.CpuInfo[],
+    newCpus: os.CpuInfo[]
+  ): number {
     if (oldCpus.length !== newCpus.length) return 0;
 
     let totalOldIdle = 0;
@@ -663,7 +706,7 @@ export class PerformanceMonitor extends EventEmitter {
 
   private exportAsPrometheus(metrics: PerformanceMetric[]): string {
     const metricGroups = new Map<string, PerformanceMetric[]>();
-    
+
     for (const metric of metrics) {
       if (!metricGroups.has(metric.name)) {
         metricGroups.set(metric.name, []);
@@ -672,18 +715,18 @@ export class PerformanceMonitor extends EventEmitter {
     }
 
     let output = '';
-    
+
     for (const [name, metricArray] of metricGroups) {
       const latest = metricArray[metricArray.length - 1];
       const prometheusName = name.replace(/[^a-zA-Z0-9_]/g, '_');
-      
+
       output += `# HELP ${prometheusName} ${latest.unit}\n`;
       output += `# TYPE ${prometheusName} gauge\n`;
-      
+
       const tags = Object.entries(latest.tags)
         .map(([k, v]) => `${k}="${v}"`)
         .join(',');
-      
+
       output += `${prometheusName}{${tags}} ${latest.value} ${latest.timestamp.getTime()}\n`;
     }
 

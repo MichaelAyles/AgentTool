@@ -47,7 +47,7 @@ export class TerminalHandler {
             exitCode,
             timestamp: new Date().toISOString(),
           });
-          
+
           // Update session in database
           db.updateSessionState(sessionId, 'stopped');
           this.sessions.delete(sessionId);
@@ -59,7 +59,7 @@ export class TerminalHandler {
 
   handleConnection(socket: Socket): void {
     // Create terminal session
-    socket.on('terminal:create', async (data) => {
+    socket.on('terminal:create', async data => {
       try {
         const { projectId, adapter, cols = 80, rows = 24 } = data;
         const userId = socket.data.user?.id || 'anonymous';
@@ -120,13 +120,13 @@ export class TerminalHandler {
     });
 
     // Handle terminal input
-    socket.on('terminal:input', (data) => {
+    socket.on('terminal:input', data => {
       const { sessionId, input } = data;
       const session = this.sessions.get(sessionId);
-      
+
       if (session && session.ptyId) {
         this.ptyManager.write(session.ptyId, input);
-        
+
         // Save command to database if it's a complete command (ends with \r)
         if (input.includes('\r')) {
           const cleanInput = input.replace(/\r\n?/g, '').trim();
@@ -143,21 +143,21 @@ export class TerminalHandler {
     });
 
     // Handle terminal resize
-    socket.on('terminal:resize', (data) => {
+    socket.on('terminal:resize', data => {
       const { sessionId, cols, rows } = data;
       const session = this.sessions.get(sessionId);
-      
+
       if (session && session.ptyId) {
         this.ptyManager.resize(session.ptyId, cols, rows);
       }
     });
 
     // Execute command through adapter
-    socket.on('terminal:execute', async (data) => {
+    socket.on('terminal:execute', async data => {
       try {
         const { sessionId, command } = data;
         const session = this.sessions.get(sessionId);
-        
+
         if (!session) {
           socket.emit('terminal:error', {
             sessionId,
@@ -198,10 +198,10 @@ export class TerminalHandler {
     });
 
     // Join existing session
-    socket.on('terminal:join', (data) => {
+    socket.on('terminal:join', data => {
       const { sessionId } = data;
       const session = this.sessions.get(sessionId);
-      
+
       if (session) {
         socket.join(`session:${sessionId}`);
         socket.emit('terminal:joined', { sessionId });
@@ -214,23 +214,23 @@ export class TerminalHandler {
     });
 
     // Leave session
-    socket.on('terminal:leave', (data) => {
+    socket.on('terminal:leave', data => {
       const { sessionId } = data;
       socket.leave(`session:${sessionId}`);
     });
 
     // Kill session
-    socket.on('terminal:kill', (data) => {
+    socket.on('terminal:kill', data => {
       const { sessionId } = data;
       const session = this.sessions.get(sessionId);
-      
+
       if (session && session.ptyId) {
         this.ptyManager.kill(session.ptyId);
         this.sessions.delete(sessionId);
-        
+
         // Update database
         db.updateSessionState(sessionId, 'stopped');
-        
+
         // Notify all clients in the session
         this.io.to(`session:${sessionId}`).emit('terminal:killed', {
           sessionId,

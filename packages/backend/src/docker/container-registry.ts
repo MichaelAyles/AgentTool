@@ -45,7 +45,7 @@ export class ContainerRegistry extends EventEmitter {
 
   constructor() {
     super();
-    
+
     this.docker = new Docker({
       socketPath: process.env.DOCKER_SOCKET_PATH || '/var/run/docker.sock',
     });
@@ -66,10 +66,12 @@ export class ContainerRegistry extends EventEmitter {
    * Get specific image information
    */
   getImage(nameOrId: string): ContainerImage | undefined {
-    return this.images.get(nameOrId) || 
-           Array.from(this.images.values()).find(img => 
-             img.fullName === nameOrId || img.digest === nameOrId
-           );
+    return (
+      this.images.get(nameOrId) ||
+      Array.from(this.images.values()).find(
+        img => img.fullName === nameOrId || img.digest === nameOrId
+      )
+    );
   }
 
   /**
@@ -88,7 +90,7 @@ export class ContainerRegistry extends EventEmitter {
 
       // Add to build queue
       this.buildQueue.push({ id: buildId, options });
-      
+
       if (this.isBuilding) {
         logs.push('Build queued - another build in progress');
         return { success: false, logs };
@@ -97,67 +99,87 @@ export class ContainerRegistry extends EventEmitter {
       this.isBuilding = true;
 
       // Build the image
-      const stream = await this.docker.buildImage(
-        options.context,
-        {
-          t: `${name}:${tag}`,
-          dockerfile: options.dockerfile,
-          buildargs: options.buildArgs,
-          labels: {
-            ...options.labels,
-            'vibe.build.id': buildId,
-            'vibe.build.timestamp': new Date().toISOString(),
-          },
-          target: options.target,
-          nocache: options.noCache || false,
-          pull: options.pull || false,
-          platform: options.platform,
-        }
-      );
+      const stream = await this.docker.buildImage(options.context, {
+        t: `${name}:${tag}`,
+        dockerfile: options.dockerfile,
+        buildargs: options.buildArgs,
+        labels: {
+          ...options.labels,
+          'vibe.build.id': buildId,
+          'vibe.build.timestamp': new Date().toISOString(),
+        },
+        target: options.target,
+        nocache: options.noCache || false,
+        pull: options.pull || false,
+        platform: options.platform,
+      });
 
       // Parse build output
-      return new Promise((resolve) => {
+      return new Promise(resolve => {
         let imageId: string | undefined;
 
-        this.docker.modem.followProgress(stream, (err, output) => {
-          this.isBuilding = false;
-          
-          if (err) {
-            logs.push(`Build failed: ${err.message}`);
-            structuredLogger.error('Image build failed', err, { name, tag, buildId });
-            resolve({ success: false, logs });
-          } else {
-            // Extract image ID from output
-            if (output) {
-              const successLine = output.find((line: any) => line.stream?.includes('Successfully built'));
-              if (successLine) {
-                imageId = successLine.stream.split(' ').pop()?.trim();
+        this.docker.modem.followProgress(
+          stream,
+          (err, output) => {
+            this.isBuilding = false;
+
+            if (err) {
+              logs.push(`Build failed: ${err.message}`);
+              structuredLogger.error('Image build failed', err, {
+                name,
+                tag,
+                buildId,
+              });
+              resolve({ success: false, logs });
+            } else {
+              // Extract image ID from output
+              if (output) {
+                const successLine = output.find((line: any) =>
+                  line.stream?.includes('Successfully built')
+                );
+                if (successLine) {
+                  imageId = successLine.stream.split(' ').pop()?.trim();
+                }
               }
+
+              logs.push(`Build completed successfully`);
+              structuredLogger.info('Image build completed', {
+                name,
+                tag,
+                buildId,
+                imageId,
+              });
+
+              // Refresh image list
+              this.refreshImageList();
+
+              resolve({ success: true, imageId, logs });
+            }
+          },
+          (event: any) => {
+            if (event.stream) {
+              logs.push(event.stream.trim());
+            }
+            if (event.error) {
+              logs.push(`ERROR: ${event.error}`);
             }
 
-            logs.push(`Build completed successfully`);
-            structuredLogger.info('Image build completed', { name, tag, buildId, imageId });
-            
-            // Refresh image list
-            this.refreshImageList();
-            
-            resolve({ success: true, imageId, logs });
+            this.emit('buildProgress', {
+              buildId,
+              event,
+              logs: logs.slice(-10),
+            });
           }
-        }, (event: any) => {
-          if (event.stream) {
-            logs.push(event.stream.trim());
-          }
-          if (event.error) {
-            logs.push(`ERROR: ${event.error}`);
-          }
-          
-          this.emit('buildProgress', { buildId, event, logs: logs.slice(-10) });
-        });
+        );
       });
     } catch (error) {
       this.isBuilding = false;
       logs.push(`Build error: ${(error as Error).message}`);
-      structuredLogger.error('Image build error', error as Error, { name, tag, buildId });
+      structuredLogger.error('Image build error', error as Error, {
+        name,
+        tag,
+        buildId,
+      });
       return { success: false, logs };
     }
   }
@@ -165,7 +187,10 @@ export class ContainerRegistry extends EventEmitter {
   /**
    * Pull an image from a registry
    */
-  async pullImage(name: string, tag: string = 'latest'): Promise<{
+  async pullImage(
+    name: string,
+    tag: string = 'latest'
+  ): Promise<{
     success: boolean;
     logs: string[];
   }> {
@@ -176,29 +201,37 @@ export class ContainerRegistry extends EventEmitter {
       structuredLogger.info('Pulling image', { name, tag, fullName });
 
       const stream = await this.docker.pull(fullName);
-      
-      return new Promise((resolve) => {
-        this.docker.modem.followProgress(stream, (err, output) => {
-          if (err) {
-            logs.push(`Pull failed: ${err.message}`);
-            structuredLogger.error('Image pull failed', err, { fullName });
-            resolve({ success: false, logs });
-          } else {
-            logs.push(`Image ${fullName} pulled successfully`);
-            structuredLogger.info('Image pull completed', { fullName });
-            
-            // Refresh image list
-            this.refreshImageList();
-            
-            resolve({ success: true, logs });
+
+      return new Promise(resolve => {
+        this.docker.modem.followProgress(
+          stream,
+          (err, output) => {
+            if (err) {
+              logs.push(`Pull failed: ${err.message}`);
+              structuredLogger.error('Image pull failed', err, { fullName });
+              resolve({ success: false, logs });
+            } else {
+              logs.push(`Image ${fullName} pulled successfully`);
+              structuredLogger.info('Image pull completed', { fullName });
+
+              // Refresh image list
+              this.refreshImageList();
+
+              resolve({ success: true, logs });
+            }
+          },
+          (event: any) => {
+            if (event.status) {
+              logs.push(`${event.status}${event.id ? ` ${event.id}` : ''}`);
+            }
+
+            this.emit('pullProgress', {
+              fullName,
+              event,
+              logs: logs.slice(-10),
+            });
           }
-        }, (event: any) => {
-          if (event.status) {
-            logs.push(`${event.status}${event.id ? ` ${event.id}` : ''}`);
-          }
-          
-          this.emit('pullProgress', { fullName, event, logs: logs.slice(-10) });
-        });
+        );
       });
     } catch (error) {
       logs.push(`Pull error: ${(error as Error).message}`);
@@ -210,18 +243,23 @@ export class ContainerRegistry extends EventEmitter {
   /**
    * Remove an image
    */
-  async removeImage(nameOrId: string, force: boolean = false): Promise<boolean> {
+  async removeImage(
+    nameOrId: string,
+    force: boolean = false
+  ): Promise<boolean> {
     try {
       const image = this.docker.getImage(nameOrId);
       await image.remove({ force });
-      
+
       this.images.delete(nameOrId);
       this.emit('imageRemoved', { nameOrId });
-      
+
       structuredLogger.info('Image removed', { nameOrId, force });
       return true;
     } catch (error) {
-      structuredLogger.error('Failed to remove image', error as Error, { nameOrId });
+      structuredLogger.error('Failed to remove image', error as Error, {
+        nameOrId,
+      });
       return false;
     }
   }
@@ -235,7 +273,9 @@ export class ContainerRegistry extends EventEmitter {
       const history = await image.history();
       return history;
     } catch (error) {
-      structuredLogger.error('Failed to get image history', error as Error, { nameOrId });
+      structuredLogger.error('Failed to get image history', error as Error, {
+        nameOrId,
+      });
       return [];
     }
   }
@@ -249,7 +289,9 @@ export class ContainerRegistry extends EventEmitter {
       const details = await image.inspect();
       return details;
     } catch (error) {
-      structuredLogger.error('Failed to inspect image', error as Error, { nameOrId });
+      structuredLogger.error('Failed to inspect image', error as Error, {
+        nameOrId,
+      });
       return null;
     }
   }
@@ -262,7 +304,9 @@ export class ContainerRegistry extends EventEmitter {
       const results = await this.docker.searchImages({ term, limit });
       return results;
     } catch (error) {
-      structuredLogger.error('Failed to search images', error as Error, { term });
+      structuredLogger.error('Failed to search images', error as Error, {
+        term,
+      });
       return [];
     }
   }
@@ -270,9 +314,12 @@ export class ContainerRegistry extends EventEmitter {
   /**
    * Create optimized sandbox images
    */
-  async createSandboxImages(): Promise<{ success: boolean; created: string[] }> {
+  async createSandboxImages(): Promise<{
+    success: boolean;
+    created: string[];
+  }> {
     const created: string[] = [];
-    
+
     try {
       // Base sandbox image with security hardening
       const baseImageDockerfile = `
@@ -323,20 +370,17 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \\
 CMD ["/bin/bash"]
 `;
 
-      const buildResult = await this.buildImage(
-        'vibe-sandbox',
-        'base',
-        {
-          dockerfile: 'Dockerfile',
-          context: '/tmp',
-          buildArgs: {},
-          labels: {
-            'vibe.image.type': 'sandbox',
-            'vibe.image.profile': 'base',
-            'vibe.image.description': 'Base sandbox image with security hardening',
-          },
-        }
-      );
+      const buildResult = await this.buildImage('vibe-sandbox', 'base', {
+        dockerfile: 'Dockerfile',
+        context: '/tmp',
+        buildArgs: {},
+        labels: {
+          'vibe.image.type': 'sandbox',
+          'vibe.image.profile': 'base',
+          'vibe.image.description':
+            'Base sandbox image with security hardening',
+        },
+      });
 
       if (buildResult.success) {
         created.push('vibe-sandbox:base');
@@ -389,7 +433,8 @@ CMD ["/bin/bash"]
           labels: {
             'vibe.image.type': 'sandbox',
             'vibe.image.profile': 'development',
-            'vibe.image.description': 'Development sandbox with additional tools',
+            'vibe.image.description':
+              'Development sandbox with additional tools',
           },
         }
       );
@@ -443,7 +488,8 @@ CMD ["/bin/bash"]
           labels: {
             'vibe.image.type': 'sandbox',
             'vibe.image.profile': 'educational',
-            'vibe.image.description': 'Educational sandbox for learning environments',
+            'vibe.image.description':
+              'Educational sandbox for learning environments',
           },
         }
       );
@@ -463,7 +509,10 @@ CMD ["/bin/bash"]
   /**
    * Clean up unused images
    */
-  async cleanupUnusedImages(): Promise<{ removed: string[]; spaceReclaimed: number }> {
+  async cleanupUnusedImages(): Promise<{
+    removed: string[];
+    spaceReclaimed: number;
+  }> {
     try {
       const pruneResult = await this.docker.pruneImages({
         filters: {
@@ -471,12 +520,18 @@ CMD ["/bin/bash"]
         },
       });
 
-      const removed = pruneResult.ImagesDeleted?.map((img: any) => img.Deleted || img.Untagged) || [];
+      const removed =
+        pruneResult.ImagesDeleted?.map(
+          (img: any) => img.Deleted || img.Untagged
+        ) || [];
       const spaceReclaimed = pruneResult.SpaceReclaimed || 0;
 
       this.refreshImageList();
-      
-      structuredLogger.info('Image cleanup completed', { removed: removed.length, spaceReclaimed });
+
+      structuredLogger.info('Image cleanup completed', {
+        removed: removed.length,
+        spaceReclaimed,
+      });
       return { removed, spaceReclaimed };
     } catch (error) {
       structuredLogger.error('Image cleanup failed', error as Error);
@@ -495,17 +550,20 @@ CMD ["/bin/bash"]
     newestImage: Date | null;
   }> {
     await this.refreshImageList();
-    
+
     const images = Array.from(this.images.values());
     const totalImages = images.length;
     const totalSize = images.reduce((sum, img) => sum + img.size, 0);
-    
+
     const byProfile: Record<string, number> = {};
     for (const image of images) {
-      byProfile[image.securityProfile] = (byProfile[image.securityProfile] || 0) + 1;
+      byProfile[image.securityProfile] =
+        (byProfile[image.securityProfile] || 0) + 1;
     }
-    
-    const dates = images.map(img => img.created).sort((a, b) => a.getTime() - b.getTime());
+
+    const dates = images
+      .map(img => img.created)
+      .sort((a, b) => a.getTime() - b.getTime());
     const oldestImage = dates.length > 0 ? dates[0] : null;
     const newestImage = dates.length > 0 ? dates[dates.length - 1] : null;
 
@@ -531,7 +589,7 @@ CMD ["/bin/bash"]
 
         for (const repoTag of dockerImage.RepoTags) {
           const [name, tag] = repoTag.split(':');
-          
+
           const image: ContainerImage = {
             name,
             tag,
@@ -542,15 +600,20 @@ CMD ["/bin/bash"]
             architecture: dockerImage.Architecture || 'unknown',
             os: dockerImage.Os || 'unknown',
             digest: dockerImage.Id,
-            securityProfile: dockerImage.Labels?.['vibe.image.profile'] || 'unknown',
-            capabilities: (dockerImage.Labels?.['vibe.image.capabilities'] || '').split(',').filter(Boolean),
+            securityProfile:
+              dockerImage.Labels?.['vibe.image.profile'] || 'unknown',
+            capabilities: (
+              dockerImage.Labels?.['vibe.image.capabilities'] || ''
+            )
+              .split(',')
+              .filter(Boolean),
             metadata: {
               version: dockerImage.Labels?.['version'] || '1.0.0',
               maintainer: dockerImage.Labels?.['maintainer'] || 'unknown',
               labels: dockerImage.Labels || {},
-              exposedPorts: Object.keys(dockerImage.Config?.ExposedPorts || {}).map(port => 
-                parseInt(port.split('/')[0])
-              ),
+              exposedPorts: Object.keys(
+                dockerImage.Config?.ExposedPorts || {}
+              ).map(port => parseInt(port.split('/')[0])),
               entrypoint: dockerImage.Config?.Entrypoint || [],
               cmd: dockerImage.Config?.Cmd || [],
               workdir: dockerImage.Config?.WorkingDir || '/',

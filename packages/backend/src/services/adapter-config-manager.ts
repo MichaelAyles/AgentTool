@@ -3,7 +3,10 @@ import { promises as fs } from 'fs';
 import { join, dirname } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 import { v4 as uuidv4 } from 'uuid';
-import { comprehensiveAuditLogger, AuditCategory } from '../security/audit-logger.js';
+import {
+  comprehensiveAuditLogger,
+  AuditCategory,
+} from '../security/audit-logger.js';
 import { SecurityLevel } from '../security/types.js';
 
 // Configuration schema validation
@@ -19,7 +22,15 @@ export interface AdapterConfigSchema {
 }
 
 export interface ConfigProperty {
-  type: 'string' | 'number' | 'boolean' | 'array' | 'object' | 'select' | 'file' | 'directory';
+  type:
+    | 'string'
+    | 'number'
+    | 'boolean'
+    | 'array'
+    | 'object'
+    | 'select'
+    | 'file'
+    | 'directory';
   description?: string;
   default?: any;
   required?: boolean;
@@ -96,7 +107,14 @@ export interface ConfigurationHistory {
 
 // Configuration events
 export interface ConfigurationEvent {
-  type: 'created' | 'updated' | 'deleted' | 'activated' | 'deactivated' | 'validated' | 'deployed';
+  type:
+    | 'created'
+    | 'updated'
+    | 'deleted'
+    | 'activated'
+    | 'deactivated'
+    | 'validated'
+    | 'deployed';
   configurationId: string;
   adapterId: string;
   userId: string;
@@ -138,13 +156,16 @@ export class AdapterConfigurationManager extends EventEmitter {
       await this.loadConfigurations();
       await this.loadTemplates();
       await this.loadHistory();
-      
+
       this.initialized = true;
       this.emit('initialized');
-      
+
       console.log('✅ Adapter configuration manager initialized');
     } catch (error) {
-      console.error('❌ Failed to initialize adapter configuration manager:', error);
+      console.error(
+        '❌ Failed to initialize adapter configuration manager:',
+        error
+      );
       throw error;
     }
   }
@@ -152,19 +173,22 @@ export class AdapterConfigurationManager extends EventEmitter {
   /**
    * Register a configuration schema for an adapter
    */
-  async registerSchema(adapterId: string, schema: AdapterConfigSchema): Promise<void> {
+  async registerSchema(
+    adapterId: string,
+    schema: AdapterConfigSchema
+  ): Promise<void> {
     try {
       // Validate schema
       this.validateSchema(schema);
-      
+
       // Store schema
       this.schemas.set(adapterId, schema);
-      
+
       // Persist to file
       await this.saveSchema(adapterId, schema);
-      
+
       this.emit('schemaRegistered', { adapterId, schema });
-      
+
       await comprehensiveAuditLogger.logAuditEvent({
         category: AuditCategory.SYSTEM_CHANGES,
         action: 'adapter_schema_registered',
@@ -212,7 +236,7 @@ export class AdapterConfigurationManager extends EventEmitter {
 
     const configId = uuidv4();
     const now = new Date();
-    
+
     const configuration: AdapterConfiguration = {
       ...config,
       id: configId,
@@ -224,20 +248,25 @@ export class AdapterConfigurationManager extends EventEmitter {
 
     // Store configuration
     this.configurations.set(configId, configuration);
-    
+
     // Save to file
     await this.saveConfiguration(configuration);
-    
+
     // Create history entry
-    await this.addHistoryEntry(configId, configuration.configuration, userId, 'Initial configuration');
-    
+    await this.addHistoryEntry(
+      configId,
+      configuration.configuration,
+      userId,
+      'Initial configuration'
+    );
+
     // Set as active if it's the default or first configuration
     if (configuration.isDefault || !this.activeConfigs.has(adapterId)) {
       await this.setActiveConfiguration(adapterId, configId, userId);
     }
 
     this.emit('configurationCreated', configuration);
-    
+
     await comprehensiveAuditLogger.logAuditEvent({
       category: AuditCategory.SYSTEM_CHANGES,
       action: 'adapter_configuration_created',
@@ -262,7 +291,12 @@ export class AdapterConfigurationManager extends EventEmitter {
    */
   async updateConfiguration(
     configId: string,
-    updates: Partial<Pick<AdapterConfiguration, 'name' | 'description' | 'configuration' | 'tags' | 'metadata'>>,
+    updates: Partial<
+      Pick<
+        AdapterConfiguration,
+        'name' | 'description' | 'configuration' | 'tags' | 'metadata'
+      >
+    >,
     userId: string,
     changeReason?: string
   ): Promise<AdapterConfiguration> {
@@ -278,12 +312,25 @@ export class AdapterConfigurationManager extends EventEmitter {
 
     // Validate new configuration if provided
     if (updates.configuration) {
-      await this.validateConfiguration(updates.configuration, schema, existing.adapterId);
+      await this.validateConfiguration(
+        updates.configuration,
+        schema,
+        existing.adapterId
+      );
     }
 
     // Create history entry before updating
-    if (updates.configuration && JSON.stringify(updates.configuration) !== JSON.stringify(existing.configuration)) {
-      await this.addHistoryEntry(configId, updates.configuration, userId, changeReason);
+    if (
+      updates.configuration &&
+      JSON.stringify(updates.configuration) !==
+        JSON.stringify(existing.configuration)
+    ) {
+      await this.addHistoryEntry(
+        configId,
+        updates.configuration,
+        userId,
+        changeReason
+      );
     }
 
     // Update configuration
@@ -297,7 +344,7 @@ export class AdapterConfigurationManager extends EventEmitter {
     await this.saveConfiguration(updated);
 
     this.emit('configurationUpdated', { previous: existing, current: updated });
-    
+
     await comprehensiveAuditLogger.logAuditEvent({
       category: AuditCategory.SYSTEM_CHANGES,
       action: 'adapter_configuration_updated',
@@ -328,18 +375,20 @@ export class AdapterConfigurationManager extends EventEmitter {
 
     // Don't allow deletion of active configuration
     if (this.activeConfigs.get(configuration.adapterId) === configId) {
-      throw new Error('Cannot delete active configuration. Set another configuration as active first.');
+      throw new Error(
+        'Cannot delete active configuration. Set another configuration as active first.'
+      );
     }
 
     // Remove from memory
     this.configurations.delete(configId);
     this.history.delete(configId);
-    
+
     // Remove files
     await this.deleteConfigurationFile(configId);
 
     this.emit('configurationDeleted', configuration);
-    
+
     await comprehensiveAuditLogger.logAuditEvent({
       category: AuditCategory.SYSTEM_CHANGES,
       action: 'adapter_configuration_deleted',
@@ -358,7 +407,11 @@ export class AdapterConfigurationManager extends EventEmitter {
   /**
    * Set active configuration for an adapter
    */
-  async setActiveConfiguration(adapterId: string, configId: string, userId: string): Promise<void> {
+  async setActiveConfiguration(
+    adapterId: string,
+    configId: string,
+    userId: string
+  ): Promise<void> {
     const configuration = this.configurations.get(configId);
     if (!configuration) {
       throw new Error(`Configuration not found: ${configId}`);
@@ -369,10 +422,10 @@ export class AdapterConfigurationManager extends EventEmitter {
     }
 
     const previousActiveId = this.activeConfigs.get(adapterId);
-    
+
     // Update active configuration
     this.activeConfigs.set(adapterId, configId);
-    
+
     // Update configuration status
     if (previousActiveId) {
       const prevConfig = this.configurations.get(previousActiveId);
@@ -381,12 +434,16 @@ export class AdapterConfigurationManager extends EventEmitter {
         await this.saveConfiguration(prevConfig);
       }
     }
-    
+
     configuration.isActive = true;
     await this.saveConfiguration(configuration);
 
-    this.emit('activeConfigurationChanged', { adapterId, configId, previousActiveId });
-    
+    this.emit('activeConfigurationChanged', {
+      adapterId,
+      configId,
+      previousActiveId,
+    });
+
     await comprehensiveAuditLogger.logAuditEvent({
       category: AuditCategory.SYSTEM_CHANGES,
       action: 'adapter_active_configuration_changed',
@@ -409,7 +466,7 @@ export class AdapterConfigurationManager extends EventEmitter {
   getActiveConfiguration(adapterId: string): AdapterConfiguration | null {
     const activeConfigId = this.activeConfigs.get(adapterId);
     if (!activeConfigId) return null;
-    
+
     return this.configurations.get(activeConfigId) || null;
   }
 
@@ -456,7 +513,11 @@ export class AdapterConfigurationManager extends EventEmitter {
     }
 
     // Validate template configuration
-    await this.validateConfiguration(template.configuration, schema, template.adapterId);
+    await this.validateConfiguration(
+      template.configuration,
+      schema,
+      template.adapterId
+    );
 
     const templateId = uuidv4();
     const newTemplate: ConfigurationTemplate = {
@@ -496,7 +557,11 @@ export class AdapterConfigurationManager extends EventEmitter {
       // Check required properties
       if (schema.required) {
         for (const required of schema.required) {
-          if (!(required in config) || config[required] === undefined || config[required] === null) {
+          if (
+            !(required in config) ||
+            config[required] === undefined ||
+            config[required] === null
+          ) {
             errors.push(`Missing required property: ${required}`);
           }
         }
@@ -516,11 +581,16 @@ export class AdapterConfigurationManager extends EventEmitter {
 
       // Check dependencies
       if (schema.dependencies) {
-        for (const [depKey, dependency] of Object.entries(schema.dependencies)) {
+        for (const [depKey, dependency] of Object.entries(
+          schema.dependencies
+        )) {
           if (this.evaluateCondition(dependency.condition, config)) {
             for (const prop of dependency.properties) {
               if (!(prop in config)) {
-                errors.push(dependency.message || `Property ${prop} is required when ${depKey} condition is met`);
+                errors.push(
+                  dependency.message ||
+                    `Property ${prop} is required when ${depKey} condition is met`
+                );
               }
             }
           }
@@ -539,7 +609,6 @@ export class AdapterConfigurationManager extends EventEmitter {
           }
         }
       }
-
     } catch (error) {
       errors.push(`Validation error: ${(error as Error).message}`);
     }
@@ -584,7 +653,7 @@ export class AdapterConfigurationManager extends EventEmitter {
           config.createdAt = new Date(config.createdAt);
           config.updatedAt = new Date(config.updatedAt);
           this.configurations.set(config.id, config);
-          
+
           if (config.isActive) {
             this.activeConfigs.set(config.adapterId, config.id);
           }
@@ -630,13 +699,18 @@ export class AdapterConfigurationManager extends EventEmitter {
     }
   }
 
-  private async saveSchema(adapterId: string, schema: AdapterConfigSchema): Promise<void> {
+  private async saveSchema(
+    adapterId: string,
+    schema: AdapterConfigSchema
+  ): Promise<void> {
     const schemasPath = join(this.configDir, 'schemas.json');
     const schemas = Object.fromEntries(this.schemas);
     await fs.writeFile(schemasPath, JSON.stringify(schemas, null, 2));
   }
 
-  private async saveConfiguration(configuration: AdapterConfiguration): Promise<void> {
+  private async saveConfiguration(
+    configuration: AdapterConfiguration
+  ): Promise<void> {
     const configsPath = join(this.configDir, 'configurations.json');
     const configs = Array.from(this.configurations.values());
     await fs.writeFile(configsPath, JSON.stringify(configs, null, 2));
@@ -661,7 +735,7 @@ export class AdapterConfigurationManager extends EventEmitter {
   ): Promise<void> {
     const history = this.history.get(configId) || [];
     const version = history.length + 1;
-    
+
     const entry: ConfigurationHistory = {
       configurationId: configId,
       version,
@@ -674,7 +748,7 @@ export class AdapterConfigurationManager extends EventEmitter {
 
     history.push(entry);
     this.history.set(configId, history);
-    
+
     // Save history
     const historyPath = join(this.configDir, 'history.json');
     const allHistory = Object.fromEntries(this.history);
@@ -685,7 +759,7 @@ export class AdapterConfigurationManager extends EventEmitter {
     if (!schema.name || !schema.version) {
       throw new Error('Schema must have name and version');
     }
-    
+
     if (!schema.properties || Object.keys(schema.properties).length === 0) {
       throw new Error('Schema must have at least one property');
     }
@@ -695,15 +769,28 @@ export class AdapterConfigurationManager extends EventEmitter {
       if (!property.type) {
         throw new Error(`Property ${key} must have a type`);
       }
-      
-      const validTypes = ['string', 'number', 'boolean', 'array', 'object', 'select', 'file', 'directory'];
+
+      const validTypes = [
+        'string',
+        'number',
+        'boolean',
+        'array',
+        'object',
+        'select',
+        'file',
+        'directory',
+      ];
       if (!validTypes.includes(property.type)) {
         throw new Error(`Property ${key} has invalid type: ${property.type}`);
       }
     }
   }
 
-  private validateProperty(key: string, value: any, property: ConfigProperty): string[] {
+  private validateProperty(
+    key: string,
+    value: any,
+    property: ConfigProperty
+  ): string[] {
     const errors: string[] = [];
 
     // Type validation
@@ -716,14 +803,18 @@ export class AdapterConfigurationManager extends EventEmitter {
             errors.push(`Property ${key} does not match required pattern`);
           }
           if (property.min !== undefined && value.length < property.min) {
-            errors.push(`Property ${key} must be at least ${property.min} characters long`);
+            errors.push(
+              `Property ${key} must be at least ${property.min} characters long`
+            );
           }
           if (property.max !== undefined && value.length > property.max) {
-            errors.push(`Property ${key} must be at most ${property.max} characters long`);
+            errors.push(
+              `Property ${key} must be at most ${property.max} characters long`
+            );
           }
         }
         break;
-        
+
       case 'number':
         if (typeof value !== 'number') {
           errors.push(`Property ${key} must be a number`);
@@ -736,28 +827,34 @@ export class AdapterConfigurationManager extends EventEmitter {
           }
         }
         break;
-        
+
       case 'boolean':
         if (typeof value !== 'boolean') {
           errors.push(`Property ${key} must be a boolean`);
         }
         break;
-        
+
       case 'array':
         if (!Array.isArray(value)) {
           errors.push(`Property ${key} must be an array`);
         }
         break;
-        
+
       case 'object':
-        if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+        if (
+          typeof value !== 'object' ||
+          value === null ||
+          Array.isArray(value)
+        ) {
           errors.push(`Property ${key} must be an object`);
         }
         break;
-        
+
       case 'select':
         if (property.options && !property.options.includes(value)) {
-          errors.push(`Property ${key} must be one of: ${property.options.join(', ')}`);
+          errors.push(
+            `Property ${key} must be one of: ${property.options.join(', ')}`
+          );
         }
         break;
     }
@@ -765,7 +862,10 @@ export class AdapterConfigurationManager extends EventEmitter {
     return errors;
   }
 
-  private evaluateCondition(condition: string, config: Record<string, any>): boolean {
+  private evaluateCondition(
+    condition: string,
+    config: Record<string, any>
+  ): boolean {
     try {
       // Simple condition evaluation (in production, use a safe expression evaluator)
       const func = new Function('config', `return ${condition}`);

@@ -59,7 +59,11 @@ export class OutputStreamOptimizer extends EventEmitter {
   /**
    * Add output data to the streaming pipeline
    */
-  addOutput(sessionId: string, data: Buffer | string, type: 'stdout' | 'stderr' | 'system' = 'stdout'): void {
+  addOutput(
+    sessionId: string,
+    data: Buffer | string,
+    type: 'stdout' | 'stderr' | 'system' = 'stdout'
+  ): void {
     const buffer = Buffer.isBuffer(data) ? data : Buffer.from(data, 'utf8');
     const startTime = Date.now();
 
@@ -77,12 +81,17 @@ export class OutputStreamOptimizer extends EventEmitter {
     this.metrics.chunksProcessed++;
 
     // Check if we should flush immediately
-    const totalBufferSize = sessionBuffers.reduce((sum, buf) => sum + buf.length, 0);
+    const totalBufferSize = sessionBuffers.reduce(
+      (sum, buf) => sum + buf.length,
+      0
+    );
     const timeSinceLastFlush = Date.now() - this.lastFlush.get(sessionId)!;
 
-    if (totalBufferSize >= this.config.bufferSize || 
-        timeSinceLastFlush >= this.config.flushInterval ||
-        !this.config.enableBatching) {
+    if (
+      totalBufferSize >= this.config.bufferSize ||
+      timeSinceLastFlush >= this.config.flushInterval ||
+      !this.config.enableBatching
+    ) {
       this.flushSession(sessionId, type);
     } else {
       // Set flush timer if not already set
@@ -103,7 +112,10 @@ export class OutputStreamOptimizer extends EventEmitter {
   /**
    * Flush buffered output for a session
    */
-  private flushSession(sessionId: string, type: 'stdout' | 'stderr' | 'system'): void {
+  private flushSession(
+    sessionId: string,
+    type: 'stdout' | 'stderr' | 'system'
+  ): void {
     const sessionBuffers = this.buffers.get(sessionId);
     if (!sessionBuffers || sessionBuffers.length === 0) {
       return;
@@ -111,7 +123,7 @@ export class OutputStreamOptimizer extends EventEmitter {
 
     // Combine all buffers
     const combinedBuffer = Buffer.concat(sessionBuffers);
-    
+
     // Clear session buffers
     sessionBuffers.length = 0;
     this.lastFlush.set(sessionId, Date.now());
@@ -130,7 +142,11 @@ export class OutputStreamOptimizer extends EventEmitter {
   /**
    * Process a chunk of output data
    */
-  private processChunk(sessionId: string, data: Buffer, type: 'stdout' | 'stderr' | 'system'): void {
+  private processChunk(
+    sessionId: string,
+    data: Buffer,
+    type: 'stdout' | 'stderr' | 'system'
+  ): void {
     let processedData = data;
     let compressed = false;
     let delta = false;
@@ -145,7 +161,10 @@ export class OutputStreamOptimizer extends EventEmitter {
     }
 
     // Apply compression if enabled and data is large enough
-    if (this.config.enableCompression && processedData.length >= this.config.compressionThreshold) {
+    if (
+      this.config.enableCompression &&
+      processedData.length >= this.config.compressionThreshold
+    ) {
       const compressedResult = this.compressData(processedData);
       if (compressedResult && compressedResult.length < processedData.length) {
         processedData = compressedResult;
@@ -155,8 +174,14 @@ export class OutputStreamOptimizer extends EventEmitter {
     }
 
     // Split into chunks if too large
-    const chunks = this.splitIntoChunks(processedData, sessionId, type, compressed, delta);
-    
+    const chunks = this.splitIntoChunks(
+      processedData,
+      sessionId,
+      type,
+      compressed,
+      delta
+    );
+
     // Emit chunks
     for (const chunk of chunks) {
       this.emit('chunk', chunk);
@@ -170,7 +195,10 @@ export class OutputStreamOptimizer extends EventEmitter {
   /**
    * Apply delta compression by comparing with last output
    */
-  private applyDeltaCompression(sessionId: string, data: Buffer): Buffer | null {
+  private applyDeltaCompression(
+    sessionId: string,
+    data: Buffer
+  ): Buffer | null {
     const lastOutput = this.lastOutput.get(sessionId);
     if (!lastOutput) {
       this.lastOutput.set(sessionId, data);
@@ -196,10 +224,10 @@ export class OutputStreamOptimizer extends EventEmitter {
     // Simple implementation - in practice, you'd use a more sophisticated diff algorithm
     const commonPrefix = this.findCommonPrefix(oldData, newData);
     const commonSuffix = this.findCommonSuffix(oldData, newData);
-    
+
     const deltaStart = commonPrefix;
     const deltaEnd = newData.length - commonSuffix;
-    
+
     if (deltaStart >= deltaEnd) {
       return Buffer.alloc(0);
     }
@@ -208,12 +236,12 @@ export class OutputStreamOptimizer extends EventEmitter {
     const operation = Buffer.from([0x01]); // REPLACE operation
     const position = Buffer.allocUnsafe(4);
     const length = Buffer.allocUnsafe(4);
-    
+
     position.writeUInt32BE(deltaStart, 0);
     length.writeUInt32BE(deltaEnd - deltaStart, 0);
-    
+
     const deltaData = newData.subarray(deltaStart, deltaEnd);
-    
+
     return Buffer.concat([operation, position, length, deltaData]);
   }
 
@@ -260,8 +288,8 @@ export class OutputStreamOptimizer extends EventEmitter {
    * Split data into appropriately sized chunks
    */
   private splitIntoChunks(
-    data: Buffer, 
-    sessionId: string, 
+    data: Buffer,
+    sessionId: string,
     type: 'stdout' | 'stderr' | 'system',
     compressed: boolean,
     delta: boolean
@@ -270,8 +298,11 @@ export class OutputStreamOptimizer extends EventEmitter {
     const maxSize = this.config.maxChunkSize;
 
     for (let offset = 0; offset < data.length; offset += maxSize) {
-      const chunkData = data.subarray(offset, Math.min(offset + maxSize, data.length));
-      
+      const chunkData = data.subarray(
+        offset,
+        Math.min(offset + maxSize, data.length)
+      );
+
       const chunk: OutputChunk = {
         id: this.generateChunkId(),
         sessionId,
@@ -302,7 +333,8 @@ export class OutputStreamOptimizer extends EventEmitter {
   private updateThroughputMetrics(): void {
     const now = Date.now();
     // Simple throughput calculation - in practice, you'd use a sliding window
-    this.metrics.throughput = this.metrics.totalBytes / ((now - (now - 60000)) / 1000);
+    this.metrics.throughput =
+      this.metrics.totalBytes / ((now - (now - 60000)) / 1000);
   }
 
   /**
@@ -310,7 +342,8 @@ export class OutputStreamOptimizer extends EventEmitter {
    */
   private updateCompressionRatio(): void {
     if (this.metrics.totalBytes > 0) {
-      this.metrics.compressionRatio = this.metrics.compressedBytes / this.metrics.totalBytes;
+      this.metrics.compressionRatio =
+        this.metrics.compressedBytes / this.metrics.totalBytes;
     }
   }
 
@@ -321,16 +354,18 @@ export class OutputStreamOptimizer extends EventEmitter {
     const now = Date.now();
     const staleThreshold = 5 * 60 * 1000; // 5 minutes
 
-    for (const [sessionId, lastFlushTime] of Array.from(this.lastFlush.entries())) {
+    for (const [sessionId, lastFlushTime] of Array.from(
+      this.lastFlush.entries()
+    )) {
       if (now - lastFlushTime > staleThreshold) {
         // Force flush any remaining data
         this.flushSession(sessionId, 'system');
-        
+
         // Clean up session data
         this.buffers.delete(sessionId);
         this.lastFlush.delete(sessionId);
         this.lastOutput.delete(sessionId);
-        
+
         const timer = this.flushTimers.get(sessionId);
         if (timer) {
           clearTimeout(timer);
@@ -340,10 +375,13 @@ export class OutputStreamOptimizer extends EventEmitter {
     }
 
     // Update buffer utilization
-    const totalBufferSize = Array.from(this.buffers.values())
-      .reduce((sum, buffers) => sum + buffers.reduce((s, b) => s + b.length, 0), 0);
-    
-    this.metrics.bufferUtilization = totalBufferSize / (this.config.bufferSize * this.buffers.size || 1);
+    const totalBufferSize = Array.from(this.buffers.values()).reduce(
+      (sum, buffers) => sum + buffers.reduce((s, b) => s + b.length, 0),
+      0
+    );
+
+    this.metrics.bufferUtilization =
+      totalBufferSize / (this.config.bufferSize * this.buffers.size || 1);
   }
 
   /**
@@ -402,7 +440,7 @@ export class OutputStreamOptimizer extends EventEmitter {
   } | null {
     const buffers = this.buffers.get(sessionId);
     const lastFlush = this.lastFlush.get(sessionId);
-    
+
     if (!buffers || lastFlush === undefined) {
       return null;
     }
@@ -422,7 +460,7 @@ export class OutputStreamOptimizer extends EventEmitter {
     if (!this.buffers.has(sessionId)) {
       return false;
     }
-    
+
     this.flushSession(sessionId, 'system');
     return true;
   }
@@ -433,13 +471,13 @@ export class OutputStreamOptimizer extends EventEmitter {
   removeSession(sessionId: string): void {
     // Force flush any remaining data
     this.flushSession(sessionId, 'system');
-    
+
     // Clean up all session data
     this.buffers.delete(sessionId);
     this.lastFlush.delete(sessionId);
     this.lastOutput.delete(sessionId);
     this.compressionCache.delete(sessionId);
-    
+
     const timer = this.flushTimers.get(sessionId);
     if (timer) {
       clearTimeout(timer);
@@ -462,9 +500,13 @@ export const defaultStreamingConfig: StreamingConfig = {
 // Singleton instance
 let optimizerInstance: OutputStreamOptimizer | null = null;
 
-export function getOutputStreamOptimizer(config?: StreamingConfig): OutputStreamOptimizer {
+export function getOutputStreamOptimizer(
+  config?: StreamingConfig
+): OutputStreamOptimizer {
   if (!optimizerInstance) {
-    optimizerInstance = new OutputStreamOptimizer(config || defaultStreamingConfig);
+    optimizerInstance = new OutputStreamOptimizer(
+      config || defaultStreamingConfig
+    );
   }
   return optimizerInstance;
 }

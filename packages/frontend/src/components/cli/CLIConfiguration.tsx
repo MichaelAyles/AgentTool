@@ -10,7 +10,7 @@ import {
   Info,
   Edit3,
   FileText,
-  Sliders
+  Sliders,
 } from 'lucide-react';
 import { api } from '../../services/api';
 import Editor from '@monaco-editor/react';
@@ -33,9 +33,15 @@ interface MonitoringConfig {
   };
 }
 
-const CLIConfiguration: React.FC<CLIConfigurationProps> = ({ selectedCLI, onSelectCLI }) => {
-  const [activeTab, setActiveTab] = useState<'monitoring' | 'adapter'>('monitoring');
-  const [monitoringConfig, setMonitoringConfig] = useState<MonitoringConfig | null>(null);
+const CLIConfiguration: React.FC<CLIConfigurationProps> = ({
+  selectedCLI,
+  onSelectCLI,
+}) => {
+  const [activeTab, setActiveTab] = useState<'monitoring' | 'adapter'>(
+    'monitoring'
+  );
+  const [monitoringConfig, setMonitoringConfig] =
+    useState<MonitoringConfig | null>(null);
   const [adapterConfig, setAdapterConfig] = useState<string>('{}');
   const [isEditing, setIsEditing] = useState(false);
   const queryClient = useQueryClient();
@@ -87,7 +93,9 @@ const CLIConfiguration: React.FC<CLIConfigurationProps> = ({ selectedCLI, onSele
 
   useEffect(() => {
     if (adapterConfigData?.configuration) {
-      setAdapterConfig(JSON.stringify(adapterConfigData.configuration, null, 2));
+      setAdapterConfig(
+        JSON.stringify(adapterConfigData.configuration, null, 2)
+      );
     }
   }, [adapterConfigData]);
 
@@ -140,11 +148,11 @@ const CLIConfiguration: React.FC<CLIConfigurationProps> = ({ selectedCLI, onSele
   };
 
   return (
-    <div className="space-y-6">
+    <div className='space-y-6'>
       {/* Configuration Tabs */}
-      <div className="bg-white rounded-lg border border-gray-200">
-        <div className="border-b border-gray-200">
-          <nav className="-mb-px flex">
+      <div className='bg-white rounded-lg border border-gray-200'>
+        <div className='border-b border-gray-200'>
+          <nav className='-mb-px flex'>
             <button
               onClick={() => setActiveTab('monitoring')}
               className={`py-3 px-6 text-sm font-medium border-b-2 ${
@@ -153,8 +161,8 @@ const CLIConfiguration: React.FC<CLIConfigurationProps> = ({ selectedCLI, onSele
                   : 'border-transparent text-gray-500 hover:text-gray-700'
               }`}
             >
-              <div className="flex items-center gap-2">
-                <Sliders className="w-4 h-4" />
+              <div className='flex items-center gap-2'>
+                <Sliders className='w-4 h-4' />
                 Monitoring Settings
               </div>
             </button>
@@ -166,140 +174,157 @@ const CLIConfiguration: React.FC<CLIConfigurationProps> = ({ selectedCLI, onSele
                   : 'border-transparent text-gray-500 hover:text-gray-700'
               }`}
             >
-              <div className="flex items-center gap-2">
-                <Settings className="w-4 h-4" />
+              <div className='flex items-center gap-2'>
+                <Settings className='w-4 h-4' />
                 Adapter Configuration
               </div>
             </button>
           </nav>
         </div>
 
-        <div className="p-6">
+        <div className='p-6'>
           {activeTab === 'monitoring' && (
-            <div className="space-y-6">
-              <div className="flex justify-between items-center">
+            <div className='space-y-6'>
+              <div className='flex justify-between items-center'>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Health Monitoring Settings</h3>
-                  <p className="text-sm text-gray-600 mt-1">
+                  <h3 className='text-lg font-semibold text-gray-900'>
+                    Health Monitoring Settings
+                  </h3>
+                  <p className='text-sm text-gray-600 mt-1'>
                     Configure how CLI health is monitored across the system
                   </p>
                 </div>
-                <div className="flex gap-2">
+                <div className='flex gap-2'>
                   <button
                     onClick={resetToDefaults}
-                    className="px-3 py-1.5 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                    className='px-3 py-1.5 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50'
                   >
                     Reset to Defaults
                   </button>
                   <button
                     onClick={() => setIsEditing(!isEditing)}
-                    className="px-3 py-1.5 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                    className='px-3 py-1.5 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50'
                   >
-                    <Edit3 className="w-4 h-4" />
+                    <Edit3 className='w-4 h-4' />
                   </button>
                 </div>
               </div>
 
               {monitoringConfig && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
                   {/* Check Settings */}
-                  <div className="space-y-4">
-                    <h4 className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                      <Clock className="w-4 h-4" />
+                  <div className='space-y-4'>
+                    <h4 className='text-sm font-medium text-gray-700 flex items-center gap-2'>
+                      <Clock className='w-4 h-4' />
                       Check Settings
                     </h4>
-                    
+
                     <div>
-                      <label className="block text-sm text-gray-600 mb-1">
+                      <label className='block text-sm text-gray-600 mb-1'>
                         Check Interval (seconds)
                       </label>
                       <input
-                        type="number"
+                        type='number'
                         value={monitoringConfig.checkInterval / 1000}
-                        onChange={(e) =>
-                          handleMonitoringConfigChange('checkInterval', parseInt(e.target.value) * 1000)
+                        onChange={e =>
+                          handleMonitoringConfigChange(
+                            'checkInterval',
+                            parseInt(e.target.value) * 1000
+                          )
                         }
                         disabled={!isEditing}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
+                        className='w-full px-3 py-2 border border-gray-300 rounded-md disabled:bg-gray-50'
                       />
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className='text-xs text-gray-500 mt-1'>
                         How often to check CLI health status
                       </p>
                     </div>
 
                     <div>
-                      <label className="block text-sm text-gray-600 mb-1">
+                      <label className='block text-sm text-gray-600 mb-1'>
                         Timeout (seconds)
                       </label>
                       <input
-                        type="number"
+                        type='number'
                         value={monitoringConfig.timeout / 1000}
-                        onChange={(e) =>
-                          handleMonitoringConfigChange('timeout', parseInt(e.target.value) * 1000)
+                        onChange={e =>
+                          handleMonitoringConfigChange(
+                            'timeout',
+                            parseInt(e.target.value) * 1000
+                          )
                         }
                         disabled={!isEditing}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
+                        className='w-full px-3 py-2 border border-gray-300 rounded-md disabled:bg-gray-50'
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm text-gray-600 mb-1">
+                      <label className='block text-sm text-gray-600 mb-1'>
                         Retry Attempts
                       </label>
                       <input
-                        type="number"
+                        type='number'
                         value={monitoringConfig.retryAttempts}
-                        onChange={(e) =>
-                          handleMonitoringConfigChange('retryAttempts', parseInt(e.target.value))
+                        onChange={e =>
+                          handleMonitoringConfigChange(
+                            'retryAttempts',
+                            parseInt(e.target.value)
+                          )
                         }
                         disabled={!isEditing}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
+                        className='w-full px-3 py-2 border border-gray-300 rounded-md disabled:bg-gray-50'
                       />
                     </div>
                   </div>
 
                   {/* Feature Toggles */}
-                  <div className="space-y-4">
-                    <h4 className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                      <Shield className="w-4 h-4" />
+                  <div className='space-y-4'>
+                    <h4 className='text-sm font-medium text-gray-700 flex items-center gap-2'>
+                      <Shield className='w-4 h-4' />
                       Features
                     </h4>
 
-                    <label className="flex items-center gap-3">
+                    <label className='flex items-center gap-3'>
                       <input
-                        type="checkbox"
+                        type='checkbox'
                         checked={monitoringConfig.enablePerformanceMonitoring}
-                        onChange={(e) =>
-                          handleMonitoringConfigChange('enablePerformanceMonitoring', e.target.checked)
+                        onChange={e =>
+                          handleMonitoringConfigChange(
+                            'enablePerformanceMonitoring',
+                            e.target.checked
+                          )
                         }
                         disabled={!isEditing}
-                        className="rounded"
+                        className='rounded'
                       />
                       <div>
-                        <span className="text-sm font-medium text-gray-700">
+                        <span className='text-sm font-medium text-gray-700'>
                           Performance Monitoring
                         </span>
-                        <p className="text-xs text-gray-500">
+                        <p className='text-xs text-gray-500'>
                           Track response times and success rates
                         </p>
                       </div>
                     </label>
 
-                    <label className="flex items-center gap-3">
+                    <label className='flex items-center gap-3'>
                       <input
-                        type="checkbox"
+                        type='checkbox'
                         checked={monitoringConfig.enableDeepHealthChecks}
-                        onChange={(e) =>
-                          handleMonitoringConfigChange('enableDeepHealthChecks', e.target.checked)
+                        onChange={e =>
+                          handleMonitoringConfigChange(
+                            'enableDeepHealthChecks',
+                            e.target.checked
+                          )
                         }
                         disabled={!isEditing}
-                        className="rounded"
+                        className='rounded'
                       />
                       <div>
-                        <span className="text-sm font-medium text-gray-700">
+                        <span className='text-sm font-medium text-gray-700'>
                           Deep Health Checks
                         </span>
-                        <p className="text-xs text-gray-500">
+                        <p className='text-xs text-gray-500'>
                           Check dependencies and configurations
                         </p>
                       </div>
@@ -307,64 +332,68 @@ const CLIConfiguration: React.FC<CLIConfigurationProps> = ({ selectedCLI, onSele
                   </div>
 
                   {/* Alert Thresholds */}
-                  <div className="space-y-4 md:col-span-2">
-                    <h4 className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4" />
+                  <div className='space-y-4 md:col-span-2'>
+                    <h4 className='text-sm font-medium text-gray-700 flex items-center gap-2'>
+                      <AlertCircle className='w-4 h-4' />
                       Alert Thresholds
                     </h4>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
                       <div>
-                        <label className="block text-sm text-gray-600 mb-1">
+                        <label className='block text-sm text-gray-600 mb-1'>
                           Response Time (ms)
                         </label>
                         <input
-                          type="number"
+                          type='number'
                           value={monitoringConfig.alertThresholds.responseTime}
-                          onChange={(e) =>
+                          onChange={e =>
                             handleMonitoringConfigChange(
                               'alertThresholds.responseTime',
                               parseInt(e.target.value)
                             )
                           }
                           disabled={!isEditing}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
+                          className='w-full px-3 py-2 border border-gray-300 rounded-md disabled:bg-gray-50'
                         />
                       </div>
 
                       <div>
-                        <label className="block text-sm text-gray-600 mb-1">
+                        <label className='block text-sm text-gray-600 mb-1'>
                           Error Rate (%)
                         </label>
                         <input
-                          type="number"
-                          value={monitoringConfig.alertThresholds.errorRate * 100}
-                          onChange={(e) =>
+                          type='number'
+                          value={
+                            monitoringConfig.alertThresholds.errorRate * 100
+                          }
+                          onChange={e =>
                             handleMonitoringConfigChange(
                               'alertThresholds.errorRate',
                               parseFloat(e.target.value) / 100
                             )
                           }
                           disabled={!isEditing}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
+                          className='w-full px-3 py-2 border border-gray-300 rounded-md disabled:bg-gray-50'
                         />
                       </div>
 
                       <div>
-                        <label className="block text-sm text-gray-600 mb-1">
+                        <label className='block text-sm text-gray-600 mb-1'>
                           Consecutive Failures
                         </label>
                         <input
-                          type="number"
-                          value={monitoringConfig.alertThresholds.consecutiveFailures}
-                          onChange={(e) =>
+                          type='number'
+                          value={
+                            monitoringConfig.alertThresholds.consecutiveFailures
+                          }
+                          onChange={e =>
                             handleMonitoringConfigChange(
                               'alertThresholds.consecutiveFailures',
                               parseInt(e.target.value)
                             )
                           }
                           disabled={!isEditing}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
+                          className='w-full px-3 py-2 border border-gray-300 rounded-md disabled:bg-gray-50'
                         />
                       </div>
                     </div>
@@ -373,23 +402,23 @@ const CLIConfiguration: React.FC<CLIConfigurationProps> = ({ selectedCLI, onSele
               )}
 
               {isEditing && (
-                <div className="flex justify-end gap-2 pt-4 border-t">
+                <div className='flex justify-end gap-2 pt-4 border-t'>
                   <button
                     onClick={() => setIsEditing(false)}
-                    className="px-4 py-2 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                    className='px-4 py-2 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50'
                   >
                     Cancel
                   </button>
                   <button
                     onClick={saveMonitoringConfig}
                     disabled={updateMonitoringConfigMutation.isLoading}
-                    className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                    className='px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50'
                   >
                     {updateMonitoringConfigMutation.isLoading ? (
-                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <RefreshCw className='w-4 h-4 animate-spin' />
                     ) : (
                       <>
-                        <Save className="w-4 h-4 inline mr-1" />
+                        <Save className='w-4 h-4 inline mr-1' />
                         Save Changes
                       </>
                     )}
@@ -400,33 +429,33 @@ const CLIConfiguration: React.FC<CLIConfigurationProps> = ({ selectedCLI, onSele
           )}
 
           {activeTab === 'adapter' && (
-            <div className="space-y-6">
+            <div className='space-y-6'>
               {selectedCLI ? (
                 <>
-                  <div className="flex justify-between items-center">
+                  <div className='flex justify-between items-center'>
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900">
+                      <h3 className='text-lg font-semibold text-gray-900'>
                         {selectedCLI} Configuration
                       </h3>
-                      <p className="text-sm text-gray-600 mt-1">
+                      <p className='text-sm text-gray-600 mt-1'>
                         Customize adapter-specific settings
                       </p>
                     </div>
                     <button
                       onClick={() => setIsEditing(!isEditing)}
-                      className="px-3 py-1.5 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                      className='px-3 py-1.5 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50'
                     >
-                      <Edit3 className="w-4 h-4" />
+                      <Edit3 className='w-4 h-4' />
                     </button>
                   </div>
 
-                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  <div className='border border-gray-200 rounded-lg overflow-hidden'>
                     <Editor
-                      height="400px"
-                      language="json"
-                      theme="vs-light"
+                      height='400px'
+                      language='json'
+                      theme='vs-light'
                       value={adapterConfig}
-                      onChange={(value) => setAdapterConfig(value || '{}')}
+                      onChange={value => setAdapterConfig(value || '{}')}
                       options={{
                         readOnly: !isEditing,
                         minimap: { enabled: false },
@@ -437,23 +466,23 @@ const CLIConfiguration: React.FC<CLIConfigurationProps> = ({ selectedCLI, onSele
                   </div>
 
                   {isEditing && (
-                    <div className="flex justify-end gap-2">
+                    <div className='flex justify-end gap-2'>
                       <button
                         onClick={() => setIsEditing(false)}
-                        className="px-4 py-2 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                        className='px-4 py-2 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50'
                       >
                         Cancel
                       </button>
                       <button
                         onClick={saveAdapterConfig}
                         disabled={updateAdapterConfigMutation.isLoading}
-                        className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                        className='px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50'
                       >
                         {updateAdapterConfigMutation.isLoading ? (
-                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          <RefreshCw className='w-4 h-4 animate-spin' />
                         ) : (
                           <>
-                            <Save className="w-4 h-4 inline mr-1" />
+                            <Save className='w-4 h-4 inline mr-1' />
                             Save Configuration
                           </>
                         )}
@@ -462,9 +491,9 @@ const CLIConfiguration: React.FC<CLIConfigurationProps> = ({ selectedCLI, onSele
                   )}
                 </>
               ) : (
-                <div className="text-center py-12">
-                  <FileText className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                  <p className="text-gray-600">
+                <div className='text-center py-12'>
+                  <FileText className='w-12 h-12 text-gray-400 mx-auto mb-3' />
+                  <p className='text-gray-600'>
                     Select a CLI from the overview tab to configure its adapter
                   </p>
                 </div>

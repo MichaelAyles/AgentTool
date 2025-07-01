@@ -2,15 +2,15 @@ import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test';
 import request from 'supertest';
 import { Express } from 'express';
 import { setupRoutes } from '../../api/index.js';
-import { 
-  createMockReq, 
-  createMockRes, 
-  createTestUser, 
+import {
+  createMockReq,
+  createMockRes,
+  createTestUser,
   createTestAdmin,
   expectSuccessResponse,
   expectErrorResponse,
   expectForbidden,
-  expectNotFound
+  expectNotFound,
 } from '../test-setup.js';
 
 // Mock resource monitor
@@ -20,11 +20,30 @@ const mockResourceMonitor = {
       containerId: 'test-container-1',
       timestamp: new Date(),
       cpu: { usage: 45.5, throttled: 0, system: 1000000, user: 2000000 },
-      memory: { usage: 134217728, limit: 268435456, percentage: 50, cache: 16777216, rss: 117440512, swap: 0 },
-      network: { rxBytes: 1024000, txBytes: 512000, rxPackets: 1000, txPackets: 500, rxErrors: 0, txErrors: 0 },
-      disk: { readBytes: 2048000, writeBytes: 1024000, readOps: 200, writeOps: 100 },
+      memory: {
+        usage: 134217728,
+        limit: 268435456,
+        percentage: 50,
+        cache: 16777216,
+        rss: 117440512,
+        swap: 0,
+      },
+      network: {
+        rxBytes: 1024000,
+        txBytes: 512000,
+        rxPackets: 1000,
+        txPackets: 500,
+        rxErrors: 0,
+        txErrors: 0,
+      },
+      disk: {
+        readBytes: 2048000,
+        writeBytes: 1024000,
+        readOps: 200,
+        writeOps: 100,
+      },
       processes: { running: 5, sleeping: 10, stopped: 0, zombie: 0 },
-    }
+    },
   ]),
   getResourceTrends: mock(() => ({
     cpu: [{ timestamp: new Date(), value: 45.5 }],
@@ -48,9 +67,17 @@ const mockResourceMonitor = {
   getLimits: mock(() => ({
     containerId: 'test-container-1',
     cpu: { cores: 2, percentage: 80 },
-    memory: { limit: 512 * 1024 * 1024, swap: 1024 * 1024 * 1024, reservation: 256 * 1024 * 1024 },
+    memory: {
+      limit: 512 * 1024 * 1024,
+      swap: 1024 * 1024 * 1024,
+      reservation: 256 * 1024 * 1024,
+    },
     network: { bandwidth: 100 * 1024 * 1024, connections: 1000 },
-    disk: { readRate: 50 * 1024 * 1024, writeRate: 30 * 1024 * 1024, space: 10 * 1024 * 1024 * 1024 },
+    disk: {
+      readRate: 50 * 1024 * 1024,
+      writeRate: 30 * 1024 * 1024,
+      space: 10 * 1024 * 1024 * 1024,
+    },
     processes: { max: 100 },
   })),
   getAlerts: mock(() => [
@@ -64,7 +91,7 @@ const mockResourceMonitor = {
       message: 'High CPU usage: 85%',
       timestamp: new Date(),
       acknowledged: false,
-    }
+    },
   ]),
   getAllAlerts: mock(() => [
     {
@@ -88,7 +115,7 @@ const mockResourceMonitor = {
       message: 'Critical memory usage: 97%',
       timestamp: new Date(),
       acknowledged: false,
-    }
+    },
   ]),
   acknowledgeAlert: mock(() => true),
 };
@@ -133,33 +160,45 @@ describe('Docker Resource Monitoring API', () => {
 
     it('should return container metrics successfully', async () => {
       // Import and call the route handler
-      const { default: router } = await import('../../api/docker-resource-monitoring.js');
-      
+      const { default: router } = await import(
+        '../../api/docker-resource-monitoring.js'
+      );
+
       // Simulate the route call
-      await new Promise<void>((resolve) => {
-        router.stack.find((layer: any) => 
-          layer.route?.path === '/containers/:containerId/metrics' && 
-          layer.route?.methods?.get
-        )?.route.stack[2].handle(req, res, resolve); // Skip auth middlewares
+      await new Promise<void>(resolve => {
+        router.stack
+          .find(
+            (layer: any) =>
+              layer.route?.path === '/containers/:containerId/metrics' &&
+              layer.route?.methods?.get
+          )
+          ?.route.stack[2].handle(req, res, resolve); // Skip auth middlewares
       });
 
       expectSuccessResponse(res);
       expect(res.data.data.latest).toBeDefined();
       expect(res.data.data.trends).toBeDefined();
       expect(res.data.data.prediction).toBeDefined();
-      expect(mockResourceMonitor.getMetrics).toHaveBeenCalledWith('test-container-1');
+      expect(mockResourceMonitor.getMetrics).toHaveBeenCalledWith(
+        'test-container-1'
+      );
     });
 
     it('should return 404 for container with no metrics', async () => {
       mockResourceMonitor.getMetrics.mockReturnValueOnce([]);
-      
-      const { default: router } = await import('../../api/docker-resource-monitoring.js');
-      
-      await new Promise<void>((resolve) => {
-        router.stack.find((layer: any) => 
-          layer.route?.path === '/containers/:containerId/metrics' && 
-          layer.route?.methods?.get
-        )?.route.stack[2].handle(req, res, resolve);
+
+      const { default: router } = await import(
+        '../../api/docker-resource-monitoring.js'
+      );
+
+      await new Promise<void>(resolve => {
+        router.stack
+          .find(
+            (layer: any) =>
+              layer.route?.path === '/containers/:containerId/metrics' &&
+              layer.route?.methods?.get
+          )
+          ?.route.stack[2].handle(req, res, resolve);
       });
 
       expectErrorResponse(res, 404, 'No metrics found');
@@ -167,14 +206,19 @@ describe('Docker Resource Monitoring API', () => {
 
     it('should require container read permission', async () => {
       req.user = { ...createTestUser(), permissions: [] };
-      
-      const { default: router } = await import('../../api/docker-resource-monitoring.js');
-      
-      await new Promise<void>((resolve) => {
-        router.stack.find((layer: any) => 
-          layer.route?.path === '/containers/:containerId/metrics' && 
-          layer.route?.methods?.get
-        )?.route.stack[1].handle(req, res, resolve); // Permission middleware
+
+      const { default: router } = await import(
+        '../../api/docker-resource-monitoring.js'
+      );
+
+      await new Promise<void>(resolve => {
+        router.stack
+          .find(
+            (layer: any) =>
+              layer.route?.path === '/containers/:containerId/metrics' &&
+              layer.route?.methods?.get
+          )
+          ?.route.stack[1].handle(req, res, resolve); // Permission middleware
       });
 
       expectForbidden(res);
@@ -188,13 +232,18 @@ describe('Docker Resource Monitoring API', () => {
     });
 
     it('should return metrics summary', async () => {
-      const { default: router } = await import('../../api/docker-resource-monitoring.js');
-      
-      await new Promise<void>((resolve) => {
-        router.stack.find((layer: any) => 
-          layer.route?.path === '/containers/metrics' && 
-          layer.route?.methods?.get
-        )?.route.stack[2].handle(req, res, resolve);
+      const { default: router } = await import(
+        '../../api/docker-resource-monitoring.js'
+      );
+
+      await new Promise<void>(resolve => {
+        router.stack
+          .find(
+            (layer: any) =>
+              layer.route?.path === '/containers/metrics' &&
+              layer.route?.methods?.get
+          )
+          ?.route.stack[2].handle(req, res, resolve);
       });
 
       expectSuccessResponse(res);
@@ -212,7 +261,11 @@ describe('Docker Resource Monitoring API', () => {
         params: { containerId: 'test-container-1' },
         body: {
           cpu: { cores: 2, percentage: 80 },
-          memory: { limit: 512 * 1024 * 1024, swap: 1024 * 1024 * 1024, reservation: 256 * 1024 * 1024 },
+          memory: {
+            limit: 512 * 1024 * 1024,
+            swap: 1024 * 1024 * 1024,
+            reservation: 256 * 1024 * 1024,
+          },
           processes: { max: 100 },
         },
       });
@@ -220,45 +273,67 @@ describe('Docker Resource Monitoring API', () => {
     });
 
     it('should set resource limits successfully', async () => {
-      const { default: router } = await import('../../api/docker-resource-monitoring.js');
-      
-      await new Promise<void>((resolve) => {
-        router.stack.find((layer: any) => 
-          layer.route?.path === '/containers/:containerId/limits' && 
-          layer.route?.methods?.post
-        )?.route.stack[2].handle(req, res, resolve);
+      const { default: router } = await import(
+        '../../api/docker-resource-monitoring.js'
+      );
+
+      await new Promise<void>(resolve => {
+        router.stack
+          .find(
+            (layer: any) =>
+              layer.route?.path === '/containers/:containerId/limits' &&
+              layer.route?.methods?.post
+          )
+          ?.route.stack[2].handle(req, res, resolve);
       });
 
       expectSuccessResponse(res);
-      expect(mockResourceMonitor.setResourceLimits).toHaveBeenCalledWith('test-container-1', req.body);
+      expect(mockResourceMonitor.setResourceLimits).toHaveBeenCalledWith(
+        'test-container-1',
+        req.body
+      );
       expect(mockAuditLogger.logAuditEvent).toHaveBeenCalled();
     });
 
     it('should validate required fields', async () => {
       req.body = { cpu: { cores: 2 } }; // Missing memory and processes
-      
-      const { default: router } = await import('../../api/docker-resource-monitoring.js');
-      
-      await new Promise<void>((resolve) => {
-        router.stack.find((layer: any) => 
-          layer.route?.path === '/containers/:containerId/limits' && 
-          layer.route?.methods?.post
-        )?.route.stack[2].handle(req, res, resolve);
+
+      const { default: router } = await import(
+        '../../api/docker-resource-monitoring.js'
+      );
+
+      await new Promise<void>(resolve => {
+        router.stack
+          .find(
+            (layer: any) =>
+              layer.route?.path === '/containers/:containerId/limits' &&
+              layer.route?.methods?.post
+          )
+          ?.route.stack[2].handle(req, res, resolve);
       });
 
-      expectErrorResponse(res, 400, 'CPU, memory, and process limits are required');
+      expectErrorResponse(
+        res,
+        400,
+        'CPU, memory, and process limits are required'
+      );
     });
 
     it('should handle failed limit updates', async () => {
       mockResourceMonitor.setResourceLimits.mockResolvedValueOnce(false);
-      
-      const { default: router } = await import('../../api/docker-resource-monitoring.js');
-      
-      await new Promise<void>((resolve) => {
-        router.stack.find((layer: any) => 
-          layer.route?.path === '/containers/:containerId/limits' && 
-          layer.route?.methods?.post
-        )?.route.stack[2].handle(req, res, resolve);
+
+      const { default: router } = await import(
+        '../../api/docker-resource-monitoring.js'
+      );
+
+      await new Promise<void>(resolve => {
+        router.stack
+          .find(
+            (layer: any) =>
+              layer.route?.path === '/containers/:containerId/limits' &&
+              layer.route?.methods?.post
+          )
+          ?.route.stack[2].handle(req, res, resolve);
       });
 
       expectErrorResponse(res, 500, 'Failed to update resource limits');
@@ -275,30 +350,42 @@ describe('Docker Resource Monitoring API', () => {
     });
 
     it('should return resource limits', async () => {
-      const { default: router } = await import('../../api/docker-resource-monitoring.js');
-      
-      await new Promise<void>((resolve) => {
-        router.stack.find((layer: any) => 
-          layer.route?.path === '/containers/:containerId/limits' && 
-          layer.route?.methods?.get
-        )?.route.stack[2].handle(req, res, resolve);
+      const { default: router } = await import(
+        '../../api/docker-resource-monitoring.js'
+      );
+
+      await new Promise<void>(resolve => {
+        router.stack
+          .find(
+            (layer: any) =>
+              layer.route?.path === '/containers/:containerId/limits' &&
+              layer.route?.methods?.get
+          )
+          ?.route.stack[2].handle(req, res, resolve);
       });
 
       expectSuccessResponse(res);
       expect(res.data.data.containerId).toBe('test-container-1');
-      expect(mockResourceMonitor.getLimits).toHaveBeenCalledWith('test-container-1');
+      expect(mockResourceMonitor.getLimits).toHaveBeenCalledWith(
+        'test-container-1'
+      );
     });
 
     it('should return 404 for container with no limits', async () => {
       mockResourceMonitor.getLimits.mockReturnValueOnce(undefined);
-      
-      const { default: router } = await import('../../api/docker-resource-monitoring.js');
-      
-      await new Promise<void>((resolve) => {
-        router.stack.find((layer: any) => 
-          layer.route?.path === '/containers/:containerId/limits' && 
-          layer.route?.methods?.get
-        )?.route.stack[2].handle(req, res, resolve);
+
+      const { default: router } = await import(
+        '../../api/docker-resource-monitoring.js'
+      );
+
+      await new Promise<void>(resolve => {
+        router.stack
+          .find(
+            (layer: any) =>
+              layer.route?.path === '/containers/:containerId/limits' &&
+              layer.route?.methods?.get
+          )
+          ?.route.stack[2].handle(req, res, resolve);
       });
 
       expectErrorResponse(res, 404, 'No resource limits found');
@@ -315,13 +402,18 @@ describe('Docker Resource Monitoring API', () => {
     });
 
     it('should return container alerts', async () => {
-      const { default: router } = await import('../../api/docker-resource-monitoring.js');
-      
-      await new Promise<void>((resolve) => {
-        router.stack.find((layer: any) => 
-          layer.route?.path === '/containers/:containerId/alerts' && 
-          layer.route?.methods?.get
-        )?.route.stack[2].handle(req, res, resolve);
+      const { default: router } = await import(
+        '../../api/docker-resource-monitoring.js'
+      );
+
+      await new Promise<void>(resolve => {
+        router.stack
+          .find(
+            (layer: any) =>
+              layer.route?.path === '/containers/:containerId/alerts' &&
+              layer.route?.methods?.get
+          )
+          ?.route.stack[2].handle(req, res, resolve);
       });
 
       expectSuccessResponse(res);
@@ -329,7 +421,9 @@ describe('Docker Resource Monitoring API', () => {
       expect(res.data.data.activeAlerts).toBeDefined();
       expect(res.data.data.total).toBe(1);
       expect(res.data.data.active).toBe(1);
-      expect(mockResourceMonitor.getAlerts).toHaveBeenCalledWith('test-container-1');
+      expect(mockResourceMonitor.getAlerts).toHaveBeenCalledWith(
+        'test-container-1'
+      );
     });
   });
 
@@ -343,13 +437,17 @@ describe('Docker Resource Monitoring API', () => {
     });
 
     it('should return all alerts with filtering', async () => {
-      const { default: router } = await import('../../api/docker-resource-monitoring.js');
-      
-      await new Promise<void>((resolve) => {
-        router.stack.find((layer: any) => 
-          layer.route?.path === '/alerts' && 
-          layer.route?.methods?.get
-        )?.route.stack[2].handle(req, res, resolve);
+      const { default: router } = await import(
+        '../../api/docker-resource-monitoring.js'
+      );
+
+      await new Promise<void>(resolve => {
+        router.stack
+          .find(
+            (layer: any) =>
+              layer.route?.path === '/alerts' && layer.route?.methods?.get
+          )
+          ?.route.stack[2].handle(req, res, resolve);
       });
 
       expectSuccessResponse(res);
@@ -372,30 +470,42 @@ describe('Docker Resource Monitoring API', () => {
     });
 
     it('should acknowledge alert successfully', async () => {
-      const { default: router } = await import('../../api/docker-resource-monitoring.js');
-      
-      await new Promise<void>((resolve) => {
-        router.stack.find((layer: any) => 
-          layer.route?.path === '/alerts/:alertId/acknowledge' && 
-          layer.route?.methods?.post
-        )?.route.stack[2].handle(req, res, resolve);
+      const { default: router } = await import(
+        '../../api/docker-resource-monitoring.js'
+      );
+
+      await new Promise<void>(resolve => {
+        router.stack
+          .find(
+            (layer: any) =>
+              layer.route?.path === '/alerts/:alertId/acknowledge' &&
+              layer.route?.methods?.post
+          )
+          ?.route.stack[2].handle(req, res, resolve);
       });
 
       expectSuccessResponse(res);
-      expect(mockResourceMonitor.acknowledgeAlert).toHaveBeenCalledWith('alert-1');
+      expect(mockResourceMonitor.acknowledgeAlert).toHaveBeenCalledWith(
+        'alert-1'
+      );
       expect(mockAuditLogger.logAuditEvent).toHaveBeenCalled();
     });
 
     it('should return 404 for non-existent alert', async () => {
       mockResourceMonitor.acknowledgeAlert.mockReturnValueOnce(false);
-      
-      const { default: router } = await import('../../api/docker-resource-monitoring.js');
-      
-      await new Promise<void>((resolve) => {
-        router.stack.find((layer: any) => 
-          layer.route?.path === '/alerts/:alertId/acknowledge' && 
-          layer.route?.methods?.post
-        )?.route.stack[2].handle(req, res, resolve);
+
+      const { default: router } = await import(
+        '../../api/docker-resource-monitoring.js'
+      );
+
+      await new Promise<void>(resolve => {
+        router.stack
+          .find(
+            (layer: any) =>
+              layer.route?.path === '/alerts/:alertId/acknowledge' &&
+              layer.route?.methods?.post
+          )
+          ?.route.stack[2].handle(req, res, resolve);
       });
 
       expectErrorResponse(res, 404, 'Alert not found');
@@ -413,19 +523,27 @@ describe('Docker Resource Monitoring API', () => {
     });
 
     it('should return resource predictions', async () => {
-      const { default: router } = await import('../../api/docker-resource-monitoring.js');
-      
-      await new Promise<void>((resolve) => {
-        router.stack.find((layer: any) => 
-          layer.route?.path === '/containers/:containerId/predictions' && 
-          layer.route?.methods?.get
-        )?.route.stack[2].handle(req, res, resolve);
+      const { default: router } = await import(
+        '../../api/docker-resource-monitoring.js'
+      );
+
+      await new Promise<void>(resolve => {
+        router.stack
+          .find(
+            (layer: any) =>
+              layer.route?.path === '/containers/:containerId/predictions' &&
+              layer.route?.methods?.get
+          )
+          ?.route.stack[2].handle(req, res, resolve);
       });
 
       expectSuccessResponse(res);
       expect(res.data.data.prediction).toBeDefined();
       expect(res.data.data.forecastMinutes).toBe(60);
-      expect(mockResourceMonitor.predictResourceUsage).toHaveBeenCalledWith('test-container-1', 60);
+      expect(mockResourceMonitor.predictResourceUsage).toHaveBeenCalledWith(
+        'test-container-1',
+        60
+      );
     });
   });
 
@@ -436,13 +554,18 @@ describe('Docker Resource Monitoring API', () => {
     });
 
     it('should return system overview', async () => {
-      const { default: router } = await import('../../api/docker-resource-monitoring.js');
-      
-      await new Promise<void>((resolve) => {
-        router.stack.find((layer: any) => 
-          layer.route?.path === '/system/overview' && 
-          layer.route?.methods?.get
-        )?.route.stack[2].handle(req, res, resolve);
+      const { default: router } = await import(
+        '../../api/docker-resource-monitoring.js'
+      );
+
+      await new Promise<void>(resolve => {
+        router.stack
+          .find(
+            (layer: any) =>
+              layer.route?.path === '/system/overview' &&
+              layer.route?.methods?.get
+          )
+          ?.route.stack[2].handle(req, res, resolve);
       });
 
       expectSuccessResponse(res);
@@ -450,11 +573,13 @@ describe('Docker Resource Monitoring API', () => {
       expect(res.data.data.healthScore).toBeDefined();
       expect(res.data.data.healthStatus).toBeDefined();
       expect(res.data.data.systemMetrics).toBeDefined();
-      
+
       expect(typeof res.data.data.healthScore).toBe('number');
       expect(res.data.data.healthScore).toBeGreaterThanOrEqual(0);
       expect(res.data.data.healthScore).toBeLessThanOrEqual(100);
-      expect(['healthy', 'warning', 'critical']).toContain(res.data.data.healthStatus);
+      expect(['healthy', 'warning', 'critical']).toContain(
+        res.data.data.healthStatus
+      );
     });
   });
 
@@ -469,13 +594,18 @@ describe('Docker Resource Monitoring API', () => {
     });
 
     it('should export metrics in JSON format', async () => {
-      const { default: router } = await import('../../api/docker-resource-monitoring.js');
-      
-      await new Promise<void>((resolve) => {
-        router.stack.find((layer: any) => 
-          layer.route?.path === '/containers/:containerId/export' && 
-          layer.route?.methods?.get
-        )?.route.stack[2].handle(req, res, resolve);
+      const { default: router } = await import(
+        '../../api/docker-resource-monitoring.js'
+      );
+
+      await new Promise<void>(resolve => {
+        router.stack
+          .find(
+            (layer: any) =>
+              layer.route?.path === '/containers/:containerId/export' &&
+              layer.route?.methods?.get
+          )
+          ?.route.stack[2].handle(req, res, resolve);
       });
 
       expectSuccessResponse(res);
@@ -486,14 +616,19 @@ describe('Docker Resource Monitoring API', () => {
 
     it('should export metrics in CSV format', async () => {
       req.query.format = 'csv';
-      
-      const { default: router } = await import('../../api/docker-resource-monitoring.js');
-      
-      await new Promise<void>((resolve) => {
-        router.stack.find((layer: any) => 
-          layer.route?.path === '/containers/:containerId/export' && 
-          layer.route?.methods?.get
-        )?.route.stack[2].handle(req, res, resolve);
+
+      const { default: router } = await import(
+        '../../api/docker-resource-monitoring.js'
+      );
+
+      await new Promise<void>(resolve => {
+        router.stack
+          .find(
+            (layer: any) =>
+              layer.route?.path === '/containers/:containerId/export' &&
+              layer.route?.methods?.get
+          )
+          ?.route.stack[2].handle(req, res, resolve);
       });
 
       expect(res.headers['Content-Type']).toBe('text/csv');
@@ -504,17 +639,26 @@ describe('Docker Resource Monitoring API', () => {
 
     it('should return 404 for no metrics in time range', async () => {
       mockResourceMonitor.getMetrics.mockReturnValueOnce([]);
-      
-      const { default: router } = await import('../../api/docker-resource-monitoring.js');
-      
-      await new Promise<void>((resolve) => {
-        router.stack.find((layer: any) => 
-          layer.route?.path === '/containers/:containerId/export' && 
-          layer.route?.methods?.get
-        )?.route.stack[2].handle(req, res, resolve);
+
+      const { default: router } = await import(
+        '../../api/docker-resource-monitoring.js'
+      );
+
+      await new Promise<void>(resolve => {
+        router.stack
+          .find(
+            (layer: any) =>
+              layer.route?.path === '/containers/:containerId/export' &&
+              layer.route?.methods?.get
+          )
+          ?.route.stack[2].handle(req, res, resolve);
       });
 
-      expectErrorResponse(res, 404, 'No metrics found for the specified time range');
+      expectErrorResponse(
+        res,
+        404,
+        'No metrics found for the specified time range'
+      );
     });
   });
 
@@ -527,30 +671,43 @@ describe('Docker Resource Monitoring API', () => {
       });
       res = createMockRes();
 
-      const { default: router } = await import('../../api/docker-resource-monitoring.js');
-      
-      await new Promise<void>((resolve) => {
-        router.stack.find((layer: any) => 
-          layer.route?.path === '/containers/:containerId/metrics' && 
-          layer.route?.methods?.get
-        )?.route.stack[1].handle(req, res, resolve);
+      const { default: router } = await import(
+        '../../api/docker-resource-monitoring.js'
+      );
+
+      await new Promise<void>(resolve => {
+        router.stack
+          .find(
+            (layer: any) =>
+              layer.route?.path === '/containers/:containerId/metrics' &&
+              layer.route?.methods?.get
+          )
+          ?.route.stack[1].handle(req, res, resolve);
       });
 
       expectForbidden(res);
     });
 
     it('should require system permissions for system endpoints', async () => {
-      const userWithoutPermission = { ...createTestUser(), permissions: ['container:read'] };
+      const userWithoutPermission = {
+        ...createTestUser(),
+        permissions: ['container:read'],
+      };
       req = createMockReq({ user: userWithoutPermission });
       res = createMockRes();
 
-      const { default: router } = await import('../../api/docker-resource-monitoring.js');
-      
-      await new Promise<void>((resolve) => {
-        router.stack.find((layer: any) => 
-          layer.route?.path === '/system/overview' && 
-          layer.route?.methods?.get
-        )?.route.stack[1].handle(req, res, resolve);
+      const { default: router } = await import(
+        '../../api/docker-resource-monitoring.js'
+      );
+
+      await new Promise<void>(resolve => {
+        router.stack
+          .find(
+            (layer: any) =>
+              layer.route?.path === '/system/overview' &&
+              layer.route?.methods?.get
+          )
+          ?.route.stack[1].handle(req, res, resolve);
       });
 
       expectForbidden(res);
@@ -564,13 +721,18 @@ describe('Docker Resource Monitoring API', () => {
       });
       res = createMockRes();
 
-      const { default: router } = await import('../../api/docker-resource-monitoring.js');
-      
-      await new Promise<void>((resolve) => {
-        router.stack.find((layer: any) => 
-          layer.route?.path === '/containers/:containerId/limits' && 
-          layer.route?.methods?.post
-        )?.route.stack[1].handle(req, res, resolve);
+      const { default: router } = await import(
+        '../../api/docker-resource-monitoring.js'
+      );
+
+      await new Promise<void>(resolve => {
+        router.stack
+          .find(
+            (layer: any) =>
+              layer.route?.path === '/containers/:containerId/limits' &&
+              layer.route?.methods?.post
+          )
+          ?.route.stack[1].handle(req, res, resolve);
       });
 
       // Should pass permission check (next called)

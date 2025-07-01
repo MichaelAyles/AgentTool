@@ -1,5 +1,10 @@
 import { EventEmitter } from 'events';
-import { getConnectionPool, ConnectionMetadata, ConnectionQuality, PoolStatistics } from './connection-pool.js';
+import {
+  getConnectionPool,
+  ConnectionMetadata,
+  ConnectionQuality,
+  PoolStatistics,
+} from './connection-pool.js';
 import { structuredLogger } from '../middleware/logging.js';
 
 export interface OptimizationConfig {
@@ -59,7 +64,7 @@ export class PoolOptimizer extends EventEmitter {
 
   constructor(config: Partial<OptimizationConfig> = {}) {
     super();
-    
+
     this.config = {
       enableAutomaticScaling: true,
       enableConnectionUpgrading: true,
@@ -142,7 +147,10 @@ export class PoolOptimizer extends EventEmitter {
       this.metrics.recommendations = recommendations;
 
       // Execute automatic optimizations
-      const optimizationResults = await this.executeOptimizations(poolStats, recommendations);
+      const optimizationResults = await this.executeOptimizations(
+        poolStats,
+        recommendations
+      );
 
       // Update metrics
       this.updateOptimizationMetrics(optimizationResults);
@@ -162,7 +170,6 @@ export class PoolOptimizer extends EventEmitter {
         optimizations: optimizationResults,
         duration,
       });
-
     } catch (error) {
       structuredLogger.error('Pool optimization failed', error as Error);
       this.emit('optimizationFailed', { error });
@@ -181,7 +188,7 @@ export class PoolOptimizer extends EventEmitter {
 
       // Check for degraded connections
       const degradedConnections = this.identifyDegradedConnections();
-      
+
       if (degradedConnections.length > 0) {
         this.handleDegradedConnections(degradedConnections);
       }
@@ -189,7 +196,6 @@ export class PoolOptimizer extends EventEmitter {
       // Check for optimization opportunities
       const connectionGroups = this.analyzeConnectionGroups();
       this.checkConnectionGroupRisks(connectionGroups);
-
     } catch (error) {
       structuredLogger.error('Quality check failed', error as Error);
     }
@@ -207,7 +213,7 @@ export class PoolOptimizer extends EventEmitter {
    */
   updateConfig(newConfig: Partial<OptimizationConfig>): void {
     this.config = { ...this.config, ...newConfig };
-    
+
     // Restart timers if intervals changed
     if (newConfig.optimizationInterval || newConfig.qualityCheckInterval) {
       this.stopOptimization();
@@ -250,7 +256,7 @@ export class PoolOptimizer extends EventEmitter {
 
     // Identify connections to remove based on criteria
     const allConnections = this.getAllConnections();
-    
+
     for (const connection of allConnections) {
       if (this.shouldCleanupConnection(connection, criteria)) {
         connectionsToRemove.push(connection.socketId);
@@ -284,7 +290,9 @@ export class PoolOptimizer extends EventEmitter {
     }
   }
 
-  private generateRecommendations(poolStats: PoolStatistics): OptimizationRecommendation[] {
+  private generateRecommendations(
+    poolStats: PoolStatistics
+  ): OptimizationRecommendation[] {
     const recommendations: OptimizationRecommendation[] = [];
 
     // Pool efficiency recommendations
@@ -292,18 +300,22 @@ export class PoolOptimizer extends EventEmitter {
       recommendations.push({
         type: 'capacity',
         priority: 'high',
-        message: 'Pool efficiency is very high (>90%). Consider increasing max connections.',
+        message:
+          'Pool efficiency is very high (>90%). Consider increasing max connections.',
         action: 'increase_capacity',
-        estimatedImpact: 'Prevents connection rejections and improves user experience',
+        estimatedImpact:
+          'Prevents connection rejections and improves user experience',
         implementable: true,
       });
     } else if (poolStats.poolEfficiency < 0.3) {
       recommendations.push({
         type: 'capacity',
         priority: 'medium',
-        message: 'Pool efficiency is low (<30%). Consider reducing max connections to save resources.',
+        message:
+          'Pool efficiency is low (<30%). Consider reducing max connections to save resources.',
         action: 'decrease_capacity',
-        estimatedImpact: 'Reduces memory usage and improves resource efficiency',
+        estimatedImpact:
+          'Reduces memory usage and improves resource efficiency',
         implementable: true,
       });
     }
@@ -323,12 +335,16 @@ export class PoolOptimizer extends EventEmitter {
     // Connection quality recommendations
     const qualityDistribution = poolStats.connectionsByQuality;
     const totalConnections = poolStats.totalConnections;
-    
-    if (qualityDistribution.poor && qualityDistribution.poor / totalConnections > 0.2) {
+
+    if (
+      qualityDistribution.poor &&
+      qualityDistribution.poor / totalConnections > 0.2
+    ) {
       recommendations.push({
         type: 'cleanup',
         priority: 'medium',
-        message: 'High percentage of poor quality connections (>20%). Consider cleanup.',
+        message:
+          'High percentage of poor quality connections (>20%). Consider cleanup.',
         action: 'cleanup_poor_connections',
         estimatedImpact: 'Improves overall pool performance',
         implementable: true,
@@ -342,13 +358,13 @@ export class PoolOptimizer extends EventEmitter {
   }
 
   private analyzeConnectionDistribution(
-    poolStats: PoolStatistics, 
+    poolStats: PoolStatistics,
     recommendations: OptimizationRecommendation[]
   ): void {
     // Check for IP concentration
     const ipConnections = Object.values(poolStats.connectionsPerIP);
     const maxConnectionsPerIP = Math.max(...ipConnections);
-    
+
     if (maxConnectionsPerIP > 20) {
       recommendations.push({
         type: 'configuration',
@@ -363,7 +379,7 @@ export class PoolOptimizer extends EventEmitter {
     // Check for user concentration
     const userConnections = Object.values(poolStats.connectionsPerUser);
     const maxConnectionsPerUser = Math.max(...userConnections);
-    
+
     if (maxConnectionsPerUser > 10) {
       recommendations.push({
         type: 'configuration',
@@ -394,7 +410,9 @@ export class PoolOptimizer extends EventEmitter {
               minQuality: ConnectionQuality.FAIR,
             });
             if (cleanedCount > 0) {
-              executedOptimizations.push(`Cleaned up ${cleanedCount} poor quality connections`);
+              executedOptimizations.push(
+                `Cleaned up ${cleanedCount} poor quality connections`
+              );
             }
             break;
 
@@ -402,25 +420,35 @@ export class PoolOptimizer extends EventEmitter {
             if (this.config.enableConnectionUpgrading) {
               const upgradedCount = this.optimizeConnectionTransports();
               if (upgradedCount > 0) {
-                executedOptimizations.push(`Optimized ${upgradedCount} connection transports`);
+                executedOptimizations.push(
+                  `Optimized ${upgradedCount} connection transports`
+                );
               }
             }
             break;
 
           case 'increase_capacity':
             // This would require configuration changes at runtime
-            executedOptimizations.push('Recommended capacity increase (manual action required)');
+            executedOptimizations.push(
+              'Recommended capacity increase (manual action required)'
+            );
             break;
 
           case 'decrease_capacity':
             // This would require configuration changes at runtime
-            executedOptimizations.push('Recommended capacity decrease (manual action required)');
+            executedOptimizations.push(
+              'Recommended capacity decrease (manual action required)'
+            );
             break;
         }
       } catch (error) {
-        structuredLogger.error('Optimization execution failed', error as Error, {
-          action: recommendation.action,
-        });
+        structuredLogger.error(
+          'Optimization execution failed',
+          error as Error,
+          {
+            action: recommendation.action,
+          }
+        );
       }
     }
 
@@ -432,7 +460,7 @@ export class PoolOptimizer extends EventEmitter {
     const degradedConnections: string[] = [];
 
     const allConnections = this.getAllConnections();
-    
+
     for (const connection of allConnections) {
       if (this.isConnectionDegraded(connection)) {
         degradedConnections.push(connection.socketId);
@@ -490,10 +518,12 @@ export class PoolOptimizer extends EventEmitter {
     const groups: ConnectionGroupMetrics[] = [];
 
     // Analyze by user
-    for (const [userId, connectionCount] of Object.entries(poolStats.connectionsPerUser)) {
+    for (const [userId, connectionCount] of Object.entries(
+      poolStats.connectionsPerUser
+    )) {
       const userConnections = connectionPool.getUserConnections(userId);
       const metrics = this.calculateGroupMetrics(userConnections);
-      
+
       groups.push({
         userId,
         connectionCount,
@@ -502,10 +532,12 @@ export class PoolOptimizer extends EventEmitter {
     }
 
     // Analyze by IP
-    for (const [ipAddress, connectionCount] of Object.entries(poolStats.connectionsPerIP)) {
+    for (const [ipAddress, connectionCount] of Object.entries(
+      poolStats.connectionsPerIP
+    )) {
       const ipConnections = this.getConnectionsByIP(ipAddress);
       const metrics = this.calculateGroupMetrics(ipConnections);
-      
+
       groups.push({
         ipAddress,
         connectionCount,
@@ -516,7 +548,9 @@ export class PoolOptimizer extends EventEmitter {
     return groups;
   }
 
-  private calculateGroupMetrics(connections: ConnectionMetadata[]): Omit<ConnectionGroupMetrics, 'userId' | 'ipAddress' | 'connectionCount'> {
+  private calculateGroupMetrics(
+    connections: ConnectionMetadata[]
+  ): Omit<ConnectionGroupMetrics, 'userId' | 'ipAddress' | 'connectionCount'> {
     if (connections.length === 0) {
       return {
         averageLatency: 0,
@@ -527,18 +561,33 @@ export class PoolOptimizer extends EventEmitter {
       };
     }
 
-    const totalLatency = connections.reduce((sum, conn) => sum + conn.pingLatency, 0);
-    const totalDataTransferred = connections.reduce((sum, conn) => sum + conn.dataTransferred, 0);
-    const totalMessageCount = connections.reduce((sum, conn) => sum + conn.messageCount, 0);
-    
+    const totalLatency = connections.reduce(
+      (sum, conn) => sum + conn.pingLatency,
+      0
+    );
+    const totalDataTransferred = connections.reduce(
+      (sum, conn) => sum + conn.dataTransferred,
+      0
+    );
+    const totalMessageCount = connections.reduce(
+      (sum, conn) => sum + conn.messageCount,
+      0
+    );
+
     const qualitySum = connections.reduce((sum, conn) => {
       switch (conn.connectionQuality) {
-        case ConnectionQuality.EXCELLENT: return sum + 5;
-        case ConnectionQuality.GOOD: return sum + 4;
-        case ConnectionQuality.FAIR: return sum + 3;
-        case ConnectionQuality.POOR: return sum + 2;
-        case ConnectionQuality.DEGRADED: return sum + 1;
-        default: return sum + 0;
+        case ConnectionQuality.EXCELLENT:
+          return sum + 5;
+        case ConnectionQuality.GOOD:
+          return sum + 4;
+        case ConnectionQuality.FAIR:
+          return sum + 3;
+        case ConnectionQuality.POOR:
+          return sum + 2;
+        case ConnectionQuality.DEGRADED:
+          return sum + 1;
+        default:
+          return sum + 0;
       }
     }, 0);
 
@@ -578,9 +627,11 @@ export class PoolOptimizer extends EventEmitter {
   }
 
   private canUpgradeConnection(connection: ConnectionMetadata): boolean {
-    return this.config.enableConnectionUpgrading &&
-           connection.pingLatency < this.config.connectionUpgradeThreshold &&
-           connection.connectionQuality >= ConnectionQuality.FAIR;
+    return (
+      this.config.enableConnectionUpgrading &&
+      connection.pingLatency < this.config.connectionUpgradeThreshold &&
+      connection.connectionQuality >= ConnectionQuality.FAIR
+    );
   }
 
   private upgradeConnection(socketId: string): boolean {
@@ -625,7 +676,10 @@ export class PoolOptimizer extends EventEmitter {
         [ConnectionQuality.DEGRADED]: 1,
       };
 
-      if (qualityValues[connection.connectionQuality] < qualityValues[criteria.minQuality]) {
+      if (
+        qualityValues[connection.connectionQuality] <
+        qualityValues[criteria.minQuality]
+      ) {
         return true;
       }
     }
@@ -651,10 +705,13 @@ export class PoolOptimizer extends EventEmitter {
     const recentLatency = this.metrics.latencyHistory.slice(-10);
 
     if (recentEfficiency.length >= 2 && recentLatency.length >= 2) {
-      const efficiencyImprovement = recentEfficiency[recentEfficiency.length - 1] - recentEfficiency[0];
-      const latencyImprovement = recentLatency[0] - recentLatency[recentLatency.length - 1];
-      
-      this.metrics.optimizationEffectiveness = (efficiencyImprovement + (latencyImprovement / 100)) * 50;
+      const efficiencyImprovement =
+        recentEfficiency[recentEfficiency.length - 1] - recentEfficiency[0];
+      const latencyImprovement =
+        recentLatency[0] - recentLatency[recentLatency.length - 1];
+
+      this.metrics.optimizationEffectiveness =
+        (efficiencyImprovement + latencyImprovement / 100) * 50;
     }
   }
 
@@ -676,18 +733,22 @@ export class PoolOptimizer extends EventEmitter {
 // Singleton factory
 let poolOptimizerInstance: PoolOptimizer | null = null;
 
-export function createPoolOptimizer(config?: Partial<OptimizationConfig>): PoolOptimizer {
+export function createPoolOptimizer(
+  config?: Partial<OptimizationConfig>
+): PoolOptimizer {
   if (poolOptimizerInstance) {
     return poolOptimizerInstance;
   }
-  
+
   poolOptimizerInstance = new PoolOptimizer(config);
   return poolOptimizerInstance;
 }
 
 export function getPoolOptimizer(): PoolOptimizer {
   if (!poolOptimizerInstance) {
-    throw new Error('Pool optimizer not initialized. Call createPoolOptimizer first.');
+    throw new Error(
+      'Pool optimizer not initialized. Call createPoolOptimizer first.'
+    );
   }
   return poolOptimizerInstance;
 }

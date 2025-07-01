@@ -12,11 +12,11 @@ function App() {
     <>
       <Layout>
         <Routes>
-          <Route path="/" element={<ProjectList />} />
-          <Route path="/terminal/:sessionId" element={<Terminal />} />
-          <Route path="/monitor" element={<ProcessMonitor />} />
-          <Route path="/cli" element={<CLIManager />} />
-          <Route path="/settings" element={<Settings />} />
+          <Route path='/' element={<ProjectList />} />
+          <Route path='/terminal/:sessionId' element={<Terminal />} />
+          <Route path='/monitor' element={<ProcessMonitor />} />
+          <Route path='/cli' element={<CLIManager />} />
+          <Route path='/settings' element={<Settings />} />
         </Routes>
       </Layout>
       <NotificationCenter />

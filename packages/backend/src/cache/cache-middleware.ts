@@ -32,45 +32,45 @@ export function cacheMiddleware(options: CacheMiddlewareOptions = {}) {
     }
 
     try {
-      const cacheKey = options.keyGenerator 
+      const cacheKey = options.keyGenerator
         ? options.keyGenerator(req)
         : generateDefaultCacheKey(req, options);
 
       // Try to get from cache
       const cached = await cacheManager.get(cacheKey, options.strategy);
-      
+
       if (cached) {
         // Cache hit
         const { statusCode, headers, body, timestamp } = cached;
-        
+
         // Set headers
         if (headers) {
           for (const [key, value] of Object.entries(headers)) {
             res.setHeader(key, value as string);
           }
         }
-        
+
         // Add cache headers
         res.setHeader('X-Cache', 'HIT');
         res.setHeader('X-Cache-Key', cacheKey);
         res.setHeader('X-Cache-Timestamp', timestamp);
-        
+
         // Handle Vary headers
         if (options.vary) {
           res.setHeader('Vary', options.vary.join(', '));
         }
-        
+
         if (options.onHit) {
           options.onHit(req, res, cached);
         }
-        
+
         structuredLogger.debug('HTTP cache hit', {
           method: req.method,
           url: req.originalUrl,
           cacheKey,
           strategy: options.strategy,
         });
-        
+
         return res.status(statusCode).send(body);
       }
 
@@ -82,19 +82,19 @@ export function cacheMiddleware(options: CacheMiddlewareOptions = {}) {
       let responseData: any;
 
       // Override status method to capture status code
-      res.status = function(code: number) {
+      res.status = function (code: number) {
         statusCode = code;
         return originalStatus.call(this, code);
       };
 
       // Override send method
-      res.send = function(data: any) {
+      res.send = function (data: any) {
         responseData = data;
         return originalSend.call(this, data);
       };
 
       // Override json method
-      res.json = function(data: any) {
+      res.json = function (data: any) {
         responseData = data;
         return originalJson.call(this, data);
       };
@@ -105,7 +105,7 @@ export function cacheMiddleware(options: CacheMiddlewareOptions = {}) {
           // Only cache successful responses
           if (statusCode >= 200 && statusCode < 300 && responseData) {
             const headers = extractHeaders(res, options);
-            
+
             const cacheData = {
               statusCode,
               headers,
@@ -142,7 +142,7 @@ export function cacheMiddleware(options: CacheMiddlewareOptions = {}) {
       // Add cache miss headers
       res.setHeader('X-Cache', 'MISS');
       res.setHeader('X-Cache-Key', cacheKey);
-      
+
       if (options.onMiss) {
         options.onMiss(req, res);
       }
@@ -183,7 +183,11 @@ export function cacheInvalidationMiddleware(options: {
         }
 
         // Only invalidate on successful mutations
-        if (req.method !== 'GET' && res.statusCode >= 200 && res.statusCode < 300) {
+        if (
+          req.method !== 'GET' &&
+          res.statusCode >= 200 &&
+          res.statusCode < 300
+        ) {
           if (options.tags) {
             const deleted = await cacheManager.invalidateByTags(options.tags);
             structuredLogger.info('Cache invalidated by tags', {
@@ -239,19 +243,21 @@ export function cacheHeadersMiddleware(options: {
     if (options.noStore) cacheControl.push('no-store');
     if (options.mustRevalidate) cacheControl.push('must-revalidate');
     if (options.immutable) cacheControl.push('immutable');
-    
+
     if (options.maxAge !== undefined) {
       cacheControl.push(`max-age=${options.maxAge}`);
     }
-    
+
     if (options.sMaxAge !== undefined) {
       cacheControl.push(`s-maxage=${options.sMaxAge}`);
     }
-    
+
     if (options.staleWhileRevalidate !== undefined) {
-      cacheControl.push(`stale-while-revalidate=${options.staleWhileRevalidate}`);
+      cacheControl.push(
+        `stale-while-revalidate=${options.staleWhileRevalidate}`
+      );
     }
-    
+
     if (options.staleIfError !== undefined) {
       cacheControl.push(`stale-if-error=${options.staleIfError}`);
     }
@@ -267,15 +273,17 @@ export function cacheHeadersMiddleware(options: {
 /**
  * Session-based cache middleware
  */
-export function sessionCacheMiddleware(options: {
-  strategy?: string;
-  ttl?: number;
-  keyPrefix?: string;
-} = {}) {
+export function sessionCacheMiddleware(
+  options: {
+    strategy?: string;
+    ttl?: number;
+    keyPrefix?: string;
+  } = {}
+) {
   return cacheMiddleware({
     strategy: options.strategy || 'sessions',
     ttl: options.ttl || 3600,
-    keyGenerator: (req) => {
+    keyGenerator: req => {
       const sessionId = (req as any).session?.id || (req as any).sessionID;
       const prefix = options.keyPrefix || 'session';
       return `${prefix}:${sessionId}:${req.method}:${req.originalUrl}`;
@@ -287,27 +295,29 @@ export function sessionCacheMiddleware(options: {
 /**
  * API response cache middleware
  */
-export function apiCacheMiddleware(options: {
-  ttl?: number;
-  tags?: string[];
-  varyByUser?: boolean;
-  varyByRole?: boolean;
-} = {}) {
+export function apiCacheMiddleware(
+  options: {
+    ttl?: number;
+    tags?: string[];
+    varyByUser?: boolean;
+    varyByRole?: boolean;
+  } = {}
+) {
   return cacheMiddleware({
     strategy: 'api-responses',
     ttl: options.ttl || 300,
     tags: options.tags || ['api', 'responses'],
-    keyGenerator: (req) => {
+    keyGenerator: req => {
       let key = `api:${req.method}:${req.originalUrl}`;
-      
+
       if (options.varyByUser && req.user) {
         key += `:user:${req.user.id}`;
       }
-      
+
       if (options.varyByRole && req.user) {
         key += `:role:${req.user.role}`;
       }
-      
+
       return key;
     },
     vary: ['Authorization', 'User-Agent'],
@@ -316,24 +326,30 @@ export function apiCacheMiddleware(options: {
 
 // Helper functions
 
-function generateDefaultCacheKey(req: Request, options: CacheMiddlewareOptions): string {
+function generateDefaultCacheKey(
+  req: Request,
+  options: CacheMiddlewareOptions
+): string {
   const baseKey = `${req.method}:${req.originalUrl}`;
-  
+
   // Include query parameters
   const queryString = new URLSearchParams(req.query as any).toString();
   const key = queryString ? `${baseKey}?${queryString}` : baseKey;
-  
+
   // Include user ID if available
   if (req.user) {
     return `user:${req.user.id}:${key}`;
   }
-  
+
   return key;
 }
 
-function extractHeaders(res: Response, options: CacheMiddlewareOptions): Record<string, string> {
+function extractHeaders(
+  res: Response,
+  options: CacheMiddlewareOptions
+): Record<string, string> {
   const headers: Record<string, string> = {};
-  
+
   // Include specific headers
   if (options.includeHeaders) {
     for (const header of options.includeHeaders) {
@@ -352,13 +368,13 @@ function extractHeaders(res: Response, options: CacheMiddlewareOptions): Record<
       }
     }
   }
-  
+
   // Exclude specific headers
   if (options.excludeHeaders) {
     for (const header of options.excludeHeaders) {
       delete headers[header];
     }
   }
-  
+
   return headers;
 }

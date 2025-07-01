@@ -111,7 +111,7 @@ export class ResourceMonitor extends EventEmitter {
   private alerts = new Map<string, ResourceAlert[]>();
   private monitoringInterval: NodeJS.Timeout;
   private activeContainers = new Set<string>();
-  
+
   private config = {
     monitoringInterval: 5000, // 5 seconds
     metricsRetention: 3600000, // 1 hour
@@ -129,23 +129,23 @@ export class ResourceMonitor extends EventEmitter {
 
   constructor() {
     super();
-    
+
     this.docker = new Docker({
       socketPath: process.env.DOCKER_SOCKET_PATH || '/var/run/docker.sock',
     });
 
     this.startMonitoring();
     this.startCleanupTask();
-    
+
     // Listen for container events
-    sandboxManager.on('containerCreated', (container) => {
+    sandboxManager.on('containerCreated', container => {
       this.addContainer(container.id);
     });
-    
+
     sandboxManager.on('containerDestroyed', ({ containerId }) => {
       this.removeContainer(containerId);
     });
-    
+
     structuredLogger.info('Resource monitor initialized');
   }
 
@@ -154,16 +154,18 @@ export class ResourceMonitor extends EventEmitter {
    */
   addContainer(containerId: string): void {
     this.activeContainers.add(containerId);
-    
+
     if (!this.metrics.has(containerId)) {
       this.metrics.set(containerId, []);
     }
-    
+
     if (!this.alerts.has(containerId)) {
       this.alerts.set(containerId, []);
     }
-    
-    structuredLogger.info('Container added to resource monitoring', { containerId });
+
+    structuredLogger.info('Container added to resource monitoring', {
+      containerId,
+    });
   }
 
   /**
@@ -171,17 +173,22 @@ export class ResourceMonitor extends EventEmitter {
    */
   removeContainer(containerId: string): void {
     this.activeContainers.delete(containerId);
-    
-    structuredLogger.info('Container removed from resource monitoring', { containerId });
+
+    structuredLogger.info('Container removed from resource monitoring', {
+      containerId,
+    });
   }
 
   /**
    * Set resource limits for a container
    */
-  async setResourceLimits(containerId: string, limits: ResourceLimit): Promise<boolean> {
+  async setResourceLimits(
+    containerId: string,
+    limits: ResourceLimit
+  ): Promise<boolean> {
     try {
       const container = this.docker.getContainer(containerId);
-      
+
       // Update container with new limits
       await container.update({
         Memory: limits.memory.limit,
@@ -191,17 +198,21 @@ export class ResourceMonitor extends EventEmitter {
         CpuPeriod: 100000,
         PidsLimit: limits.processes.max,
         BlkioDeviceReadBps: [{ Path: '/dev/sda', Rate: limits.disk.readRate }],
-        BlkioDeviceWriteBps: [{ Path: '/dev/sda', Rate: limits.disk.writeRate }],
+        BlkioDeviceWriteBps: [
+          { Path: '/dev/sda', Rate: limits.disk.writeRate },
+        ],
       });
-      
+
       this.limits.set(containerId, limits);
-      
+
       this.emit('limitsUpdated', { containerId, limits });
       structuredLogger.info('Resource limits updated', { containerId, limits });
-      
+
       return true;
     } catch (error) {
-      structuredLogger.error('Failed to set resource limits', error as Error, { containerId });
+      structuredLogger.error('Failed to set resource limits', error as Error, {
+        containerId,
+      });
       return false;
     }
   }
@@ -235,7 +246,9 @@ export class ResourceMonitor extends EventEmitter {
     for (const alerts of this.alerts.values()) {
       allAlerts.push(...alerts.filter(a => !a.acknowledged));
     }
-    return allAlerts.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+    return allAlerts.sort(
+      (a, b) => b.timestamp.getTime() - a.timestamp.getTime()
+    );
   }
 
   /**
@@ -280,11 +293,11 @@ export class ResourceMonitor extends EventEmitter {
     }
 
     const allAlerts = this.getAllAlerts();
-    
+
     return {
       totalContainers: containers.length,
       averageCpuUsage: validMetrics > 0 ? totalCpu / validMetrics : 0,
-      averageMemoryUsage: validMetrics > 0 ? (totalMemoryUsed / validMetrics) : 0,
+      averageMemoryUsage: validMetrics > 0 ? totalMemoryUsed / validMetrics : 0,
       totalMemoryUsed,
       activeAlerts: allAlerts.length,
       criticalAlerts: allAlerts.filter(a => a.severity === 'critical').length,
@@ -294,7 +307,10 @@ export class ResourceMonitor extends EventEmitter {
   /**
    * Get resource trends for a container
    */
-  getResourceTrends(containerId: string, timeRange: number = 3600000): {
+  getResourceTrends(
+    containerId: string,
+    timeRange: number = 3600000
+  ): {
     cpu: Array<{ timestamp: Date; value: number }>;
     memory: Array<{ timestamp: Date; value: number }>;
     network: Array<{ timestamp: Date; rx: number; tx: number }>;
@@ -323,7 +339,10 @@ export class ResourceMonitor extends EventEmitter {
   /**
    * Predict resource usage based on trends
    */
-  predictResourceUsage(containerId: string, forecastMinutes: number = 30): {
+  predictResourceUsage(
+    containerId: string,
+    forecastMinutes: number = 30
+  ): {
     cpu: { predicted: number; confidence: number };
     memory: { predicted: number; confidence: number };
     alerts: string[];
@@ -340,23 +359,42 @@ export class ResourceMonitor extends EventEmitter {
     // Simple linear regression for trend analysis
     const recent = metrics.slice(-20); // Last 20 data points
     const cpuTrend = this.calculateTrend(recent.map(m => m.cpu.usage));
-    const memoryTrend = this.calculateTrend(recent.map(m => m.memory.percentage));
+    const memoryTrend = this.calculateTrend(
+      recent.map(m => m.memory.percentage)
+    );
 
-    const forecastIntervals = (forecastMinutes * 60 * 1000) / this.config.monitoringInterval;
-    const predictedCpu = Math.max(0, Math.min(100, cpuTrend.predicted + (cpuTrend.slope * forecastIntervals)));
-    const predictedMemory = Math.max(0, Math.min(100, memoryTrend.predicted + (memoryTrend.slope * forecastIntervals)));
+    const forecastIntervals =
+      (forecastMinutes * 60 * 1000) / this.config.monitoringInterval;
+    const predictedCpu = Math.max(
+      0,
+      Math.min(100, cpuTrend.predicted + cpuTrend.slope * forecastIntervals)
+    );
+    const predictedMemory = Math.max(
+      0,
+      Math.min(
+        100,
+        memoryTrend.predicted + memoryTrend.slope * forecastIntervals
+      )
+    );
 
     const alerts: string[] = [];
     if (predictedCpu > this.defaultThresholds.cpu.warning) {
-      alerts.push(`CPU usage may exceed ${this.defaultThresholds.cpu.warning}% in ${forecastMinutes} minutes`);
+      alerts.push(
+        `CPU usage may exceed ${this.defaultThresholds.cpu.warning}% in ${forecastMinutes} minutes`
+      );
     }
     if (predictedMemory > this.defaultThresholds.memory.warning) {
-      alerts.push(`Memory usage may exceed ${this.defaultThresholds.memory.warning}% in ${forecastMinutes} minutes`);
+      alerts.push(
+        `Memory usage may exceed ${this.defaultThresholds.memory.warning}% in ${forecastMinutes} minutes`
+      );
     }
 
     return {
       cpu: { predicted: predictedCpu, confidence: cpuTrend.confidence },
-      memory: { predicted: predictedMemory, confidence: memoryTrend.confidence },
+      memory: {
+        predicted: predictedMemory,
+        confidence: memoryTrend.confidence,
+      },
       alerts,
     };
   }
@@ -375,7 +413,7 @@ export class ResourceMonitor extends EventEmitter {
     try {
       const container = this.docker.getContainer(containerId);
       const stats = await container.stats({ stream: false });
-      
+
       const metrics: ResourceMetrics = {
         containerId,
         timestamp: new Date(),
@@ -389,12 +427,15 @@ export class ResourceMonitor extends EventEmitter {
       // Store metrics
       const containerMetrics = this.metrics.get(containerId) || [];
       containerMetrics.push(metrics);
-      
+
       // Limit stored metrics
       if (containerMetrics.length > this.config.maxMetricsPerContainer) {
-        containerMetrics.splice(0, containerMetrics.length - this.config.maxMetricsPerContainer);
+        containerMetrics.splice(
+          0,
+          containerMetrics.length - this.config.maxMetricsPerContainer
+        );
       }
-      
+
       this.metrics.set(containerId, containerMetrics);
 
       // Check for threshold violations
@@ -411,13 +452,15 @@ export class ResourceMonitor extends EventEmitter {
   }
 
   private calculateCpuMetrics(stats: any): ResourceMetrics['cpu'] {
-    const cpuDelta = stats.cpu_stats?.cpu_usage?.total_usage - 
-                    (stats.precpu_stats?.cpu_usage?.total_usage || 0);
-    const systemDelta = stats.cpu_stats?.system_cpu_usage - 
-                       (stats.precpu_stats?.system_cpu_usage || 0);
-    
+    const cpuDelta =
+      stats.cpu_stats?.cpu_usage?.total_usage -
+      (stats.precpu_stats?.cpu_usage?.total_usage || 0);
+    const systemDelta =
+      stats.cpu_stats?.system_cpu_usage -
+      (stats.precpu_stats?.system_cpu_usage || 0);
+
     const usage = systemDelta > 0 ? (cpuDelta / systemDelta) * 100 : 0;
-    
+
     return {
       usage: Math.min(100, Math.max(0, usage)),
       throttled: stats.cpu_stats?.throttling_data?.throttled_time || 0,
@@ -430,7 +473,7 @@ export class ResourceMonitor extends EventEmitter {
     const usage = stats.memory_stats?.usage || 0;
     const limit = stats.memory_stats?.limit || 0;
     const cache = stats.memory_stats?.stats?.cache || 0;
-    
+
     return {
       usage,
       limit,
@@ -443,8 +486,13 @@ export class ResourceMonitor extends EventEmitter {
 
   private calculateNetworkMetrics(stats: any): ResourceMetrics['network'] {
     const networks = stats.networks || {};
-    let rxBytes = 0, txBytes = 0, rxPackets = 0, txPackets = 0, rxErrors = 0, txErrors = 0;
-    
+    let rxBytes = 0,
+      txBytes = 0,
+      rxPackets = 0,
+      txPackets = 0,
+      rxErrors = 0,
+      txErrors = 0;
+
     for (const network of Object.values(networks) as any[]) {
       rxBytes += network.rx_bytes || 0;
       txBytes += network.tx_bytes || 0;
@@ -453,27 +501,29 @@ export class ResourceMonitor extends EventEmitter {
       rxErrors += network.rx_errors || 0;
       txErrors += network.tx_errors || 0;
     }
-    
+
     return { rxBytes, txBytes, rxPackets, txPackets, rxErrors, txErrors };
   }
 
   private calculateDiskMetrics(stats: any): ResourceMetrics['disk'] {
     const blkio = stats.blkio_stats?.io_service_bytes_recursive || [];
-    let readBytes = 0, writeBytes = 0;
-    
+    let readBytes = 0,
+      writeBytes = 0;
+
     for (const entry of blkio) {
       if (entry.op === 'Read') readBytes += entry.value || 0;
       if (entry.op === 'Write') writeBytes += entry.value || 0;
     }
-    
+
     const ioOps = stats.blkio_stats?.io_serviced_recursive || [];
-    let readOps = 0, writeOps = 0;
-    
+    let readOps = 0,
+      writeOps = 0;
+
     for (const entry of ioOps) {
       if (entry.op === 'Read') readOps += entry.value || 0;
       if (entry.op === 'Write') writeOps += entry.value || 0;
     }
-    
+
     return { readBytes, writeBytes, readOps, writeOps };
   }
 
@@ -493,46 +543,79 @@ export class ResourceMonitor extends EventEmitter {
 
     // Check CPU threshold
     if (metrics.cpu.usage > this.defaultThresholds.cpu.critical) {
-      this.createAlert(containerId, 'cpu', 'critical', this.defaultThresholds.cpu.critical, 
-                      metrics.cpu.usage, `Critical CPU usage: ${metrics.cpu.usage.toFixed(1)}%`);
+      this.createAlert(
+        containerId,
+        'cpu',
+        'critical',
+        this.defaultThresholds.cpu.critical,
+        metrics.cpu.usage,
+        `Critical CPU usage: ${metrics.cpu.usage.toFixed(1)}%`
+      );
     } else if (metrics.cpu.usage > this.defaultThresholds.cpu.warning) {
-      this.createAlert(containerId, 'cpu', 'warning', this.defaultThresholds.cpu.warning, 
-                      metrics.cpu.usage, `High CPU usage: ${metrics.cpu.usage.toFixed(1)}%`);
+      this.createAlert(
+        containerId,
+        'cpu',
+        'warning',
+        this.defaultThresholds.cpu.warning,
+        metrics.cpu.usage,
+        `High CPU usage: ${metrics.cpu.usage.toFixed(1)}%`
+      );
     }
 
     // Check Memory threshold
     if (metrics.memory.percentage > this.defaultThresholds.memory.critical) {
-      this.createAlert(containerId, 'memory', 'critical', this.defaultThresholds.memory.critical, 
-                      metrics.memory.percentage, `Critical memory usage: ${metrics.memory.percentage.toFixed(1)}%`);
-    } else if (metrics.memory.percentage > this.defaultThresholds.memory.warning) {
-      this.createAlert(containerId, 'memory', 'warning', this.defaultThresholds.memory.warning, 
-                      metrics.memory.percentage, `High memory usage: ${metrics.memory.percentage.toFixed(1)}%`);
+      this.createAlert(
+        containerId,
+        'memory',
+        'critical',
+        this.defaultThresholds.memory.critical,
+        metrics.memory.percentage,
+        `Critical memory usage: ${metrics.memory.percentage.toFixed(1)}%`
+      );
+    } else if (
+      metrics.memory.percentage > this.defaultThresholds.memory.warning
+    ) {
+      this.createAlert(
+        containerId,
+        'memory',
+        'warning',
+        this.defaultThresholds.memory.warning,
+        metrics.memory.percentage,
+        `High memory usage: ${metrics.memory.percentage.toFixed(1)}%`
+      );
     }
 
     // Check process count if limits are set
     if (limits && metrics.processes.running > limits.processes.max * 0.9) {
-      this.createAlert(containerId, 'processes', 'warning', limits.processes.max, 
-                      metrics.processes.running, `High process count: ${metrics.processes.running}`);
+      this.createAlert(
+        containerId,
+        'processes',
+        'warning',
+        limits.processes.max,
+        metrics.processes.running,
+        `High process count: ${metrics.processes.running}`
+      );
     }
   }
 
   private createAlert(
-    containerId: string, 
-    type: ResourceAlert['type'], 
+    containerId: string,
+    type: ResourceAlert['type'],
     severity: ResourceAlert['severity'],
-    threshold: number, 
-    currentValue: number, 
+    threshold: number,
+    currentValue: number,
     message: string
   ): void {
     const alerts = this.alerts.get(containerId) || [];
-    
+
     // Check for recent similar alerts (cooldown)
-    const recentAlert = alerts.find(a => 
-      a.type === type && 
-      a.severity === severity &&
-      (Date.now() - a.timestamp.getTime()) < this.config.alertCooldown
+    const recentAlert = alerts.find(
+      a =>
+        a.type === type &&
+        a.severity === severity &&
+        Date.now() - a.timestamp.getTime() < this.config.alertCooldown
     );
-    
+
     if (recentAlert) return;
 
     const alert: ResourceAlert = {
@@ -596,7 +679,8 @@ export class ResourceMonitor extends EventEmitter {
       residualSumSquares += (values[i] - predicted) ** 2;
     }
 
-    const rSquared = totalSumSquares === 0 ? 0 : 1 - (residualSumSquares / totalSumSquares);
+    const rSquared =
+      totalSumSquares === 0 ? 0 : 1 - residualSumSquares / totalSumSquares;
     const confidence = Math.max(0, Math.min(1, rSquared));
 
     return { predicted, slope, confidence };
@@ -605,12 +689,12 @@ export class ResourceMonitor extends EventEmitter {
   private startCleanupTask(): void {
     setInterval(() => {
       const cutoff = new Date(Date.now() - this.config.metricsRetention);
-      
+
       for (const [containerId, metrics] of this.metrics.entries()) {
         const filtered = metrics.filter(m => m.timestamp >= cutoff);
         this.metrics.set(containerId, filtered);
       }
-      
+
       for (const [containerId, alerts] of this.alerts.entries()) {
         const filtered = alerts.filter(a => a.timestamp >= cutoff);
         this.alerts.set(containerId, filtered);
@@ -625,7 +709,7 @@ export class ResourceMonitor extends EventEmitter {
     if (this.monitoringInterval) {
       clearInterval(this.monitoringInterval);
     }
-    
+
     this.removeAllListeners();
     structuredLogger.info('Resource monitor closed');
   }

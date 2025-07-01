@@ -1,7 +1,10 @@
 import { EventEmitter } from 'events';
 import { v4 as uuidv4 } from 'uuid';
 import { mcpConnectionManager } from './mcp-connection-manager.js';
-import { comprehensiveAuditLogger, AuditCategory } from '../security/audit-logger.js';
+import {
+  comprehensiveAuditLogger,
+  AuditCategory,
+} from '../security/audit-logger.js';
 import { SecurityLevel } from '../security/types.js';
 
 // MCP Protocol Message Types
@@ -75,27 +78,27 @@ export enum MCPMethod {
   // Initialization
   INITIALIZE = 'initialize',
   INITIALIZED = 'initialized',
-  
+
   // Capabilities
   PING = 'ping',
-  
+
   // Tools
   TOOLS_LIST = 'tools/list',
   TOOLS_CALL = 'tools/call',
-  
+
   // Resources
   RESOURCES_LIST = 'resources/list',
   RESOURCES_READ = 'resources/read',
   RESOURCES_SUBSCRIBE = 'resources/subscribe',
   RESOURCES_UNSUBSCRIBE = 'resources/unsubscribe',
-  
+
   // Prompts
   PROMPTS_LIST = 'prompts/list',
   PROMPTS_GET = 'prompts/get',
-  
+
   // Logging
   LOGGING_SET_LEVEL = 'logging/setLevel',
-  
+
   // Notifications
   NOTIFICATIONS_CANCELLED = 'notifications/cancelled',
   NOTIFICATIONS_PROGRESS = 'notifications/progress',
@@ -108,7 +111,9 @@ export enum MCPMethod {
 export class MCPMessageHandler extends EventEmitter {
   private static instance: MCPMessageHandler;
   private handlers: Map<string, MessageHandler> = new Map();
-  private middlewares: Array<(message: MCPMessage, context: MessageContext) => Promise<MCPMessage | null>> = [];
+  private middlewares: Array<
+    (message: MCPMessage, context: MessageContext) => Promise<MCPMessage | null>
+  > = [];
   private isInitialized = false;
 
   constructor() {
@@ -130,13 +135,13 @@ export class MCPMessageHandler extends EventEmitter {
 
     // Register built-in handlers
     this.registerBuiltinHandlers();
-    
+
     // Set up connection listeners
     this.setupConnectionListeners();
-    
+
     this.isInitialized = true;
     this.emit('initialized');
-    
+
     console.log('✅ MCP message handler initialized');
   }
 
@@ -162,7 +167,12 @@ export class MCPMessageHandler extends EventEmitter {
   /**
    * Add middleware for message processing
    */
-  addMiddleware(middleware: (message: MCPMessage, context: MessageContext) => Promise<MCPMessage | null>): void {
+  addMiddleware(
+    middleware: (
+      message: MCPMessage,
+      context: MessageContext
+    ) => Promise<MCPMessage | null>
+  ): void {
     this.middlewares.push(middleware);
   }
 
@@ -198,12 +208,22 @@ export class MCPMessageHandler extends EventEmitter {
       // Handle different message types
       if (processedMessage.method && processedMessage.id !== undefined) {
         // Request
-        return await this.handleRequest(processedMessage as MCPRequest, context);
+        return await this.handleRequest(
+          processedMessage as MCPRequest,
+          context
+        );
       } else if (processedMessage.method && processedMessage.id === undefined) {
         // Notification
-        await this.handleNotification(processedMessage as MCPNotification, context);
+        await this.handleNotification(
+          processedMessage as MCPNotification,
+          context
+        );
         return null;
-      } else if (processedMessage.id !== undefined && (processedMessage.result !== undefined || processedMessage.error !== undefined)) {
+      } else if (
+        processedMessage.id !== undefined &&
+        (processedMessage.result !== undefined ||
+          processedMessage.error !== undefined)
+      ) {
         // Response - forward to connection manager
         this.emit('response', processedMessage, context);
         return null;
@@ -217,7 +237,7 @@ export class MCPMessageHandler extends EventEmitter {
       }
     } catch (error) {
       console.error('Error processing MCP message:', error);
-      
+
       await comprehensiveAuditLogger.logAuditEvent({
         category: AuditCategory.SYSTEM_ERRORS,
         action: 'mcp_message_processing_error',
@@ -251,8 +271,12 @@ export class MCPMessageHandler extends EventEmitter {
     userId?: string
   ): Promise<any> {
     try {
-      const result = await mcpConnectionManager.sendRequest(connectionId, method, params);
-      
+      const result = await mcpConnectionManager.sendRequest(
+        connectionId,
+        method,
+        params
+      );
+
       if (userId) {
         await comprehensiveAuditLogger.logAuditEvent({
           category: AuditCategory.SYSTEM_ACCESS,
@@ -378,9 +402,12 @@ export class MCPMessageHandler extends EventEmitter {
 
   // Private methods
 
-  private async handleRequest(request: MCPRequest, context: MessageContext): Promise<MCPResponse> {
+  private async handleRequest(
+    request: MCPRequest,
+    context: MessageContext
+  ): Promise<MCPResponse> {
     const handler = this.handlers.get(request.method);
-    
+
     if (!handler) {
       return this.createErrorResponse(
         context.messageId,
@@ -406,7 +433,7 @@ export class MCPMessageHandler extends EventEmitter {
 
     try {
       const result = await handler.handler(request.params, context);
-      
+
       return {
         jsonrpc: '2.0',
         id: context.messageId,
@@ -427,13 +454,20 @@ export class MCPMessageHandler extends EventEmitter {
         errorCode = MCPErrorCode.AUTHORIZATION_ERROR;
       }
 
-      return this.createErrorResponse(context.messageId, errorCode, errorMessage);
+      return this.createErrorResponse(
+        context.messageId,
+        errorCode,
+        errorMessage
+      );
     }
   }
 
-  private async handleNotification(notification: MCPNotification, context: MessageContext): Promise<void> {
+  private async handleNotification(
+    notification: MCPNotification,
+    context: MessageContext
+  ): Promise<void> {
     this.emit('notification', notification, context);
-    
+
     // Handle specific notifications
     switch (notification.method) {
       case MCPMethod.NOTIFICATIONS_TOOLS_CHANGED:
@@ -451,7 +485,12 @@ export class MCPMessageHandler extends EventEmitter {
     }
   }
 
-  private createErrorResponse(id: string | number, code: number, message: string, data?: any): MCPResponse {
+  private createErrorResponse(
+    id: string | number,
+    code: number,
+    message: string,
+    data?: any
+  ): MCPResponse {
     return {
       jsonrpc: '2.0',
       id,
@@ -497,7 +536,9 @@ export class MCPMessageHandler extends EventEmitter {
       method: MCPMethod.TOOLS_LIST,
       requiresAuth: true,
       handler: async (params, context) => {
-        const connection = mcpConnectionManager.getConnection(context.connectionId);
+        const connection = mcpConnectionManager.getConnection(
+          context.connectionId
+        );
         if (!connection) {
           throw new Error('Connection not found');
         }
@@ -511,7 +552,7 @@ export class MCPMessageHandler extends EventEmitter {
       requiresAuth: true,
       handler: async (params, context) => {
         const { name, arguments: args } = params;
-        
+
         // This would delegate to the actual tool execution
         // For now, return a placeholder
         return {
@@ -527,7 +568,9 @@ export class MCPMessageHandler extends EventEmitter {
       method: MCPMethod.RESOURCES_LIST,
       requiresAuth: true,
       handler: async (params, context) => {
-        const connection = mcpConnectionManager.getConnection(context.connectionId);
+        const connection = mcpConnectionManager.getConnection(
+          context.connectionId
+        );
         if (!connection) {
           throw new Error('Connection not found');
         }
@@ -541,15 +584,17 @@ export class MCPMessageHandler extends EventEmitter {
       requiresAuth: true,
       handler: async (params, context) => {
         const { uri } = params;
-        
+
         // This would delegate to the actual resource reading
         // For now, return a placeholder
         return {
-          contents: [{
-            uri,
-            mimeType: 'text/plain',
-            text: `Content of resource: ${uri}`,
-          }],
+          contents: [
+            {
+              uri,
+              mimeType: 'text/plain',
+              text: `Content of resource: ${uri}`,
+            },
+          ],
         };
       },
     });
@@ -579,7 +624,7 @@ export class MCPMessageHandler extends EventEmitter {
       });
     });
 
-    mcpConnectionManager.on('connected', (connection) => {
+    mcpConnectionManager.on('connected', connection => {
       // Send initialization notification
       this.sendNotification(
         connection.id,

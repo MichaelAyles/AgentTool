@@ -1,8 +1,16 @@
 import { Router } from 'express';
 import { authenticate } from '../auth/middleware.js';
 import { requireAdmin } from '../auth/permissions.js';
-import { securityNotificationService, NotificationType, NotificationPriority, DeliveryMethod } from '../dangerous/notifications.js';
-import { comprehensiveAuditLogger, AuditCategory } from '../security/audit-logger.js';
+import {
+  securityNotificationService,
+  NotificationType,
+  NotificationPriority,
+  DeliveryMethod,
+} from '../dangerous/notifications.js';
+import {
+  comprehensiveAuditLogger,
+  AuditCategory,
+} from '../security/audit-logger.js';
 import { SecurityLevel } from '../security/types.js';
 
 // Simple input sanitization function
@@ -34,10 +42,15 @@ router.get('/', authenticate, async (req, res) => {
       includeAcknowledged: includeAcknowledged === 'true',
       limit: Math.min(parseInt(limit as string) || 50, 100),
       sinceTimestamp: since ? new Date(since as string) : undefined,
-      types: types ? (types as string).split(',') as NotificationType[] : undefined,
+      types: types
+        ? ((types as string).split(',') as NotificationType[])
+        : undefined,
     };
 
-    const notifications = securityNotificationService.getNotificationsForUser(userId, options);
+    const notifications = securityNotificationService.getNotificationsForUser(
+      userId,
+      options
+    );
 
     res.json({
       success: true,
@@ -162,7 +175,9 @@ router.post('/test', authenticate, requireAdmin(), async (req, res) => {
     }
 
     // Create test notification using the internal method
-    const notification = await (securityNotificationService as any).createNotification({
+    const notification = await (
+      securityNotificationService as any
+    ).createNotification({
       type: type as NotificationType,
       title: sanitizeInput(title),
       message: sanitizeInput(message),
@@ -176,7 +191,9 @@ router.post('/test', authenticate, requireAdmin(), async (req, res) => {
       userId: userId ? sanitizeInput(userId) : undefined,
     });
 
-    await (securityNotificationService as any).deliverNotification(notification);
+    await (securityNotificationService as any).deliverNotification(
+      notification
+    );
 
     await comprehensiveAuditLogger.logAuditEvent({
       category: AuditCategory.SECURITY_EVENTS,
@@ -237,8 +254,14 @@ router.post('/recipients', authenticate, requireAdmin(), async (req, res) => {
 
     // Validate delivery preferences
     const { types, methods, minPriority } = deliveryPreferences;
-    
-    if (!types || !Array.isArray(types) || !methods || !Array.isArray(methods) || !minPriority) {
+
+    if (
+      !types ||
+      !Array.isArray(types) ||
+      !methods ||
+      !Array.isArray(methods) ||
+      !minPriority
+    ) {
       return res.status(400).json({
         success: false,
         message: 'Invalid delivery preferences format',
@@ -246,7 +269,10 @@ router.post('/recipients', authenticate, requireAdmin(), async (req, res) => {
     }
 
     // Validate notification types
-    const invalidTypes = types.filter((type: string) => !Object.values(NotificationType).includes(type as NotificationType));
+    const invalidTypes = types.filter(
+      (type: string) =>
+        !Object.values(NotificationType).includes(type as NotificationType)
+    );
     if (invalidTypes.length > 0) {
       return res.status(400).json({
         success: false,
@@ -255,7 +281,10 @@ router.post('/recipients', authenticate, requireAdmin(), async (req, res) => {
     }
 
     // Validate delivery methods
-    const invalidMethods = methods.filter((method: string) => !Object.values(DeliveryMethod).includes(method as DeliveryMethod));
+    const invalidMethods = methods.filter(
+      (method: string) =>
+        !Object.values(DeliveryMethod).includes(method as DeliveryMethod)
+    );
     if (invalidMethods.length > 0) {
       return res.status(400).json({
         success: false,
@@ -355,8 +384,9 @@ router.post('/config/:type', authenticate, requireAdmin(), async (req, res) => {
     }
 
     if (config.deliveryMethods) {
-      const invalidMethods = config.deliveryMethods.filter((method: string) => 
-        !Object.values(DeliveryMethod).includes(method as DeliveryMethod)
+      const invalidMethods = config.deliveryMethods.filter(
+        (method: string) =>
+          !Object.values(DeliveryMethod).includes(method as DeliveryMethod)
       );
       if (invalidMethods.length > 0) {
         return res.status(400).json({
@@ -366,14 +396,20 @@ router.post('/config/:type', authenticate, requireAdmin(), async (req, res) => {
       }
     }
 
-    if (config.priority && !Object.values(NotificationPriority).includes(config.priority)) {
+    if (
+      config.priority &&
+      !Object.values(NotificationPriority).includes(config.priority)
+    ) {
       return res.status(400).json({
         success: false,
         message: 'Invalid priority level',
       });
     }
 
-    securityNotificationService.updateConfiguration(type as NotificationType, config);
+    securityNotificationService.updateConfiguration(
+      type as NotificationType,
+      config
+    );
 
     await comprehensiveAuditLogger.logAuditEvent({
       category: AuditCategory.CONFIGURATION,
@@ -424,35 +460,39 @@ router.get('/metadata', authenticate, (req, res) => {
  */
 router.get('/stream', authenticate, (req, res) => {
   const userId = req.user?.id;
-  
+
   // Set up Server-Sent Events
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
-    'Connection': 'keep-alive',
+    Connection: 'keep-alive',
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Cache-Control'
+    'Access-Control-Allow-Headers': 'Cache-Control',
   });
 
   // Send initial connection confirmation
-  res.write(`data: ${JSON.stringify({ type: 'connected', timestamp: new Date().toISOString() })}\n\n`);
+  res.write(
+    `data: ${JSON.stringify({ type: 'connected', timestamp: new Date().toISOString() })}\n\n`
+  );
 
   // Listen for real-time notifications
   const handleNotification = (notification: any) => {
     // Only send notifications for this user or global notifications
     if (!notification.userId || notification.userId === userId) {
-      res.write(`data: ${JSON.stringify({
-        type: 'notification',
-        notification: {
-          id: notification.id,
-          type: notification.type,
-          title: notification.title,
-          message: notification.message,
-          priority: notification.priority,
-          severity: notification.severity,
-          timestamp: notification.timestamp,
-        }
-      })}\n\n`);
+      res.write(
+        `data: ${JSON.stringify({
+          type: 'notification',
+          notification: {
+            id: notification.id,
+            type: notification.type,
+            title: notification.title,
+            message: notification.message,
+            priority: notification.priority,
+            severity: notification.severity,
+            timestamp: notification.timestamp,
+          },
+        })}\n\n`
+      );
     }
   };
 
@@ -460,7 +500,10 @@ router.get('/stream', authenticate, (req, res) => {
 
   // Clean up on client disconnect
   req.on('close', () => {
-    securityNotificationService.removeListener('realTimeNotification', handleNotification);
+    securityNotificationService.removeListener(
+      'realTimeNotification',
+      handleNotification
+    );
   });
 });
 

@@ -84,7 +84,7 @@ export class OrchestrationManager extends EventEmitter {
   private healthCheckInterval: NodeJS.Timeout;
   private scalingInterval: NodeJS.Timeout;
   private loadBalancers = new Map<string, LoadBalancer>();
-  
+
   private config = {
     healthCheckInterval: 30000, // 30 seconds
     scalingCheckInterval: 60000, // 1 minute
@@ -95,10 +95,10 @@ export class OrchestrationManager extends EventEmitter {
 
   constructor() {
     super();
-    
+
     this.startHealthMonitoring();
     this.startAutoScaling();
-    
+
     structuredLogger.info('Orchestration manager initialized');
   }
 
@@ -107,19 +107,21 @@ export class OrchestrationManager extends EventEmitter {
    */
   async deploy(config: DeploymentConfig): Promise<string> {
     const deploymentId = uuidv4();
-    
+
     try {
-      structuredLogger.info('Starting deployment', { 
-        deploymentId, 
+      structuredLogger.info('Starting deployment', {
+        deploymentId,
         name: config.name,
         namespace: config.namespace,
-        services: config.services.length 
+        services: config.services.length,
       });
 
       // Validate deployment configuration
       const validation = this.validateDeploymentConfig(config);
       if (!validation.valid) {
-        throw new Error(`Invalid deployment config: ${validation.errors.join(', ')}`);
+        throw new Error(
+          `Invalid deployment config: ${validation.errors.join(', ')}`
+        );
       }
 
       // Create deployment object
@@ -128,7 +130,10 @@ export class OrchestrationManager extends EventEmitter {
         config,
         status: 'deploying',
         instances: new Map(),
-        desiredReplicas: config.services.reduce((sum, svc) => sum + svc.replicas, 0),
+        desiredReplicas: config.services.reduce(
+          (sum, svc) => sum + svc.replicas,
+          0
+        ),
         runningReplicas: 0,
         readyReplicas: 0,
         createdAt: new Date(),
@@ -157,10 +162,10 @@ export class OrchestrationManager extends EventEmitter {
       deployment.updatedAt = new Date();
 
       this.emit('deploymentComplete', deployment);
-      structuredLogger.info('Deployment completed successfully', { 
-        deploymentId, 
+      structuredLogger.info('Deployment completed successfully', {
+        deploymentId,
         name: config.name,
-        runningReplicas: deployment.runningReplicas 
+        runningReplicas: deployment.runningReplicas,
       });
 
       return deploymentId;
@@ -171,9 +176,9 @@ export class OrchestrationManager extends EventEmitter {
         deployment.updatedAt = new Date();
       }
 
-      structuredLogger.error('Deployment failed', error as Error, { 
-        deploymentId, 
-        name: config.name 
+      structuredLogger.error('Deployment failed', error as Error, {
+        deploymentId,
+        name: config.name,
       });
       throw error;
     }
@@ -183,7 +188,7 @@ export class OrchestrationManager extends EventEmitter {
    * Update an existing deployment
    */
   async updateDeployment(
-    deploymentId: string, 
+    deploymentId: string,
     updates: Partial<DeploymentConfig>
   ): Promise<boolean> {
     const deployment = this.deployments.get(deploymentId);
@@ -205,11 +210,15 @@ export class OrchestrationManager extends EventEmitter {
       deployment.status = 'running';
       this.emit('deploymentUpdated', deployment);
 
-      structuredLogger.info('Deployment updated successfully', { deploymentId });
+      structuredLogger.info('Deployment updated successfully', {
+        deploymentId,
+      });
       return true;
     } catch (error) {
       deployment.status = 'failed';
-      structuredLogger.error('Deployment update failed', error as Error, { deploymentId });
+      structuredLogger.error('Deployment update failed', error as Error, {
+        deploymentId,
+      });
       throw error;
     }
   }
@@ -218,8 +227,8 @@ export class OrchestrationManager extends EventEmitter {
    * Scale a service within a deployment
    */
   async scaleService(
-    deploymentId: string, 
-    serviceName: string, 
+    deploymentId: string,
+    serviceName: string,
     replicas: number
   ): Promise<boolean> {
     const deployment = this.deployments.get(deploymentId);
@@ -227,17 +236,19 @@ export class OrchestrationManager extends EventEmitter {
       throw new Error(`Deployment ${deploymentId} not found`);
     }
 
-    const service = deployment.config.services.find(s => s.name === serviceName);
+    const service = deployment.config.services.find(
+      s => s.name === serviceName
+    );
     if (!service) {
       throw new Error(`Service ${serviceName} not found in deployment`);
     }
 
     try {
-      structuredLogger.info('Scaling service', { 
-        deploymentId, 
-        serviceName, 
+      structuredLogger.info('Scaling service', {
+        deploymentId,
+        serviceName,
         currentReplicas: service.replicas,
-        targetReplicas: replicas 
+        targetReplicas: replicas,
       });
 
       const oldReplicas = service.replicas;
@@ -251,21 +262,24 @@ export class OrchestrationManager extends EventEmitter {
         await this.scaleDown(deployment, service, oldReplicas - replicas);
       }
 
-      deployment.desiredReplicas = deployment.config.services.reduce((sum, svc) => sum + svc.replicas, 0);
+      deployment.desiredReplicas = deployment.config.services.reduce(
+        (sum, svc) => sum + svc.replicas,
+        0
+      );
       deployment.updatedAt = new Date();
 
       this.emit('serviceScaled', { deploymentId, serviceName, replicas });
-      structuredLogger.info('Service scaled successfully', { 
-        deploymentId, 
-        serviceName, 
-        replicas 
+      structuredLogger.info('Service scaled successfully', {
+        deploymentId,
+        serviceName,
+        replicas,
       });
 
       return true;
     } catch (error) {
-      structuredLogger.error('Service scaling failed', error as Error, { 
-        deploymentId, 
-        serviceName 
+      structuredLogger.error('Service scaling failed', error as Error, {
+        deploymentId,
+        serviceName,
       });
       throw error;
     }
@@ -286,17 +300,19 @@ export class OrchestrationManager extends EventEmitter {
       deployment.status = 'stopping';
 
       // Stop all instances
-      const stopPromises = Array.from(deployment.instances.values()).map(async (instance) => {
-        try {
-          await sandboxManager.destroySandbox(instance.sandboxId);
-          instance.status = 'stopped';
-        } catch (error) {
-          structuredLogger.error('Failed to stop instance', error as Error, { 
-            instanceId: instance.id 
-          });
-          instance.status = 'failed';
+      const stopPromises = Array.from(deployment.instances.values()).map(
+        async instance => {
+          try {
+            await sandboxManager.destroySandbox(instance.sandboxId);
+            instance.status = 'stopped';
+          } catch (error) {
+            structuredLogger.error('Failed to stop instance', error as Error, {
+              instanceId: instance.id,
+            });
+            instance.status = 'failed';
+          }
         }
-      });
+      );
 
       await Promise.allSettled(stopPromises);
 
@@ -306,11 +322,15 @@ export class OrchestrationManager extends EventEmitter {
       deployment.updatedAt = new Date();
 
       this.emit('deploymentStopped', deployment);
-      structuredLogger.info('Deployment stopped successfully', { deploymentId });
+      structuredLogger.info('Deployment stopped successfully', {
+        deploymentId,
+      });
 
       return true;
     } catch (error) {
-      structuredLogger.error('Failed to stop deployment', error as Error, { deploymentId });
+      structuredLogger.error('Failed to stop deployment', error as Error, {
+        deploymentId,
+      });
       throw error;
     }
   }
@@ -327,11 +347,11 @@ export class OrchestrationManager extends EventEmitter {
    */
   listDeployments(namespace?: string): Deployment[] {
     const deployments = Array.from(this.deployments.values());
-    
+
     if (namespace) {
       return deployments.filter(d => d.config.namespace === namespace);
     }
-    
+
     return deployments;
   }
 
@@ -340,13 +360,13 @@ export class OrchestrationManager extends EventEmitter {
    */
   setScalingPolicy(policy: ScalingPolicy): void {
     this.scalingPolicies.set(`${policy.deployment}:${policy.service}`, policy);
-    
-    structuredLogger.info('Scaling policy set', { 
+
+    structuredLogger.info('Scaling policy set', {
       name: policy.name,
       deployment: policy.deployment,
       service: policy.service,
       minReplicas: policy.minReplicas,
-      maxReplicas: policy.maxReplicas 
+      maxReplicas: policy.maxReplicas,
     });
   }
 
@@ -363,31 +383,44 @@ export class OrchestrationManager extends EventEmitter {
     scalingPolicies: number;
   } {
     const deployments = Array.from(this.deployments.values());
-    const allInstances = deployments.flatMap(d => Array.from(d.instances.values()));
+    const allInstances = deployments.flatMap(d =>
+      Array.from(d.instances.values())
+    );
 
     return {
       totalDeployments: deployments.length,
-      runningDeployments: deployments.filter(d => d.status === 'running').length,
+      runningDeployments: deployments.filter(d => d.status === 'running')
+        .length,
       totalInstances: allInstances.length,
       healthyInstances: allInstances.filter(i => i.health === 'healthy').length,
-      totalMemoryUsage: allInstances.reduce((sum, i) => sum + i.serviceDefinition.resources.memory, 0),
-      totalCpuUsage: allInstances.reduce((sum, i) => sum + i.serviceDefinition.resources.cpu, 0),
+      totalMemoryUsage: allInstances.reduce(
+        (sum, i) => sum + i.serviceDefinition.resources.memory,
+        0
+      ),
+      totalCpuUsage: allInstances.reduce(
+        (sum, i) => sum + i.serviceDefinition.resources.cpu,
+        0
+      ),
       scalingPolicies: this.scalingPolicies.size,
     };
   }
 
   // Private methods
 
-  private async executeRollingDeployment(deployment: Deployment): Promise<void> {
+  private async executeRollingDeployment(
+    deployment: Deployment
+  ): Promise<void> {
     for (const service of deployment.config.services) {
       await this.deployService(deployment, service);
     }
   }
 
-  private async executeBlueGreenDeployment(deployment: Deployment): Promise<void> {
+  private async executeBlueGreenDeployment(
+    deployment: Deployment
+  ): Promise<void> {
     // Deploy to "green" environment
     const greenInstances = new Map<string, ServiceInstance>();
-    
+
     for (const service of deployment.config.services) {
       const instances = await this.createServiceInstances(deployment, service);
       instances.forEach(instance => greenInstances.set(instance.id, instance));
@@ -405,19 +438,25 @@ export class OrchestrationManager extends EventEmitter {
   private async executeCanaryDeployment(deployment: Deployment): Promise<void> {
     // Deploy a small percentage first
     const canaryPercentage = 0.1;
-    
+
     for (const service of deployment.config.services) {
-      const canaryReplicas = Math.max(1, Math.floor(service.replicas * canaryPercentage));
-      
+      const canaryReplicas = Math.max(
+        1,
+        Math.floor(service.replicas * canaryPercentage)
+      );
+
       // Deploy canary instances
       const canaryService = { ...service, replicas: canaryReplicas };
       await this.deployService(deployment, canaryService);
-      
+
       // Monitor canary for success metrics
       await this.monitorCanaryDeployment(deployment, service.name);
-      
+
       // Deploy remaining instances
-      const remainingService = { ...service, replicas: service.replicas - canaryReplicas };
+      const remainingService = {
+        ...service,
+        replicas: service.replicas - canaryReplicas,
+      };
       await this.deployService(deployment, remainingService);
     }
   }
@@ -428,28 +467,33 @@ export class OrchestrationManager extends EventEmitter {
     }
   }
 
-  private async deployService(deployment: Deployment, service: ServiceDefinition): Promise<void> {
+  private async deployService(
+    deployment: Deployment,
+    service: ServiceDefinition
+  ): Promise<void> {
     const instances = await this.createServiceInstances(deployment, service);
-    
+
     instances.forEach(instance => {
       deployment.instances.set(instance.id, instance);
     });
 
     deployment.runningReplicas += instances.length;
-    deployment.readyReplicas += instances.filter(i => i.health === 'healthy').length;
+    deployment.readyReplicas += instances.filter(
+      i => i.health === 'healthy'
+    ).length;
   }
 
   private async createServiceInstances(
-    deployment: Deployment, 
+    deployment: Deployment,
     service: ServiceDefinition
   ): Promise<ServiceInstance[]> {
     const instances: ServiceInstance[] = [];
-    
+
     for (let i = 0; i < service.replicas; i++) {
       const instance = await this.createServiceInstance(deployment, service, i);
       instances.push(instance);
     }
-    
+
     return instances;
   }
 
@@ -459,7 +503,7 @@ export class OrchestrationManager extends EventEmitter {
     index: number
   ): Promise<ServiceInstance> {
     const instanceId = `${deployment.config.name}-${service.name}-${index}`;
-    
+
     // Get security profile
     const profile = profileManager.getProfile(service.securityProfile);
     if (!profile) {
@@ -509,25 +553,30 @@ export class OrchestrationManager extends EventEmitter {
   }
 
   private async scaleUp(
-    deployment: Deployment, 
-    service: ServiceDefinition, 
+    deployment: Deployment,
+    service: ServiceDefinition,
     replicas: number
   ): Promise<void> {
-    const currentInstances = Array.from(deployment.instances.values())
-      .filter(i => i.serviceDefinition.name === service.name);
-    
+    const currentInstances = Array.from(deployment.instances.values()).filter(
+      i => i.serviceDefinition.name === service.name
+    );
+
     const startIndex = currentInstances.length;
-    
+
     for (let i = 0; i < replicas; i++) {
-      const instance = await this.createServiceInstance(deployment, service, startIndex + i);
+      const instance = await this.createServiceInstance(
+        deployment,
+        service,
+        startIndex + i
+      );
       deployment.instances.set(instance.id, instance);
       deployment.runningReplicas++;
     }
   }
 
   private async scaleDown(
-    deployment: Deployment, 
-    service: ServiceDefinition, 
+    deployment: Deployment,
+    service: ServiceDefinition,
     replicas: number
   ): Promise<void> {
     const instances = Array.from(deployment.instances.values())
@@ -542,71 +591,92 @@ export class OrchestrationManager extends EventEmitter {
   }
 
   private async updateServiceInstances(
-    deployment: Deployment, 
+    deployment: Deployment,
     service: ServiceDefinition
   ): Promise<void> {
-    const instances = Array.from(deployment.instances.values())
-      .filter(i => i.serviceDefinition.name === service.name);
+    const instances = Array.from(deployment.instances.values()).filter(
+      i => i.serviceDefinition.name === service.name
+    );
 
     // Rolling update: replace instances one by one
     for (const oldInstance of instances) {
       // Create new instance
-      const newInstance = await this.createServiceInstance(deployment, service, oldInstance.metadata.index);
-      
+      const newInstance = await this.createServiceInstance(
+        deployment,
+        service,
+        oldInstance.metadata.index
+      );
+
       // Wait for new instance to be healthy
       await this.waitForHealthyInstance(newInstance);
-      
+
       // Remove old instance
       await sandboxManager.destroySandbox(oldInstance.sandboxId);
       deployment.instances.delete(oldInstance.id);
-      
+
       // Add new instance
       deployment.instances.set(newInstance.id, newInstance);
     }
   }
 
-  private async waitForHealthyInstance(instance: ServiceInstance): Promise<void> {
+  private async waitForHealthyInstance(
+    instance: ServiceInstance
+  ): Promise<void> {
     const maxWait = 60000; // 1 minute
     const checkInterval = 5000; // 5 seconds
     const startTime = Date.now();
 
     while (Date.now() - startTime < maxWait) {
       await this.performHealthCheck(instance);
-      
+
       if (instance.health === 'healthy') {
         return;
       }
-      
+
       await new Promise(resolve => setTimeout(resolve, checkInterval));
     }
 
-    throw new Error(`Instance ${instance.id} failed to become healthy within timeout`);
+    throw new Error(
+      `Instance ${instance.id} failed to become healthy within timeout`
+    );
   }
 
-  private async waitForHealthyInstances(instances: ServiceInstance[]): Promise<void> {
-    const promises = instances.map(instance => this.waitForHealthyInstance(instance));
+  private async waitForHealthyInstances(
+    instances: ServiceInstance[]
+  ): Promise<void> {
+    const promises = instances.map(instance =>
+      this.waitForHealthyInstance(instance)
+    );
     await Promise.all(promises);
   }
 
-  private async monitorCanaryDeployment(deployment: Deployment, serviceName: string): Promise<void> {
+  private async monitorCanaryDeployment(
+    deployment: Deployment,
+    serviceName: string
+  ): Promise<void> {
     // Monitor metrics for a period
     const monitoringPeriod = 300000; // 5 minutes
     const checkInterval = 30000; // 30 seconds
-    
+
     const startTime = Date.now();
-    
+
     while (Date.now() - startTime < monitoringPeriod) {
       // Check canary instances health and metrics
-      const canaryInstances = Array.from(deployment.instances.values())
-        .filter(i => i.serviceDefinition.name === serviceName);
-      
-      const healthyCanaries = canaryInstances.filter(i => i.health === 'healthy').length;
+      const canaryInstances = Array.from(deployment.instances.values()).filter(
+        i => i.serviceDefinition.name === serviceName
+      );
+
+      const healthyCanaries = canaryInstances.filter(
+        i => i.health === 'healthy'
+      ).length;
       const healthRatio = healthyCanaries / canaryInstances.length;
-      
+
       if (healthRatio < 0.8) {
-        throw new Error(`Canary deployment failed: only ${healthRatio * 100}% healthy`);
+        throw new Error(
+          `Canary deployment failed: only ${healthRatio * 100}% healthy`
+        );
       }
-      
+
       await new Promise(resolve => setTimeout(resolve, checkInterval));
     }
   }
@@ -637,23 +707,25 @@ export class OrchestrationManager extends EventEmitter {
     } catch (error) {
       instance.health = 'unhealthy';
       instance.lastHealthCheck = new Date();
-      
-      structuredLogger.error('Health check failed', error as Error, { 
-        instanceId: instance.id 
+
+      structuredLogger.error('Health check failed', error as Error, {
+        instanceId: instance.id,
       });
-      
+
       this.handleUnhealthyInstance(instance);
     }
   }
 
-  private async handleUnhealthyInstance(instance: ServiceInstance): Promise<void> {
+  private async handleUnhealthyInstance(
+    instance: ServiceInstance
+  ): Promise<void> {
     const maxRetries = instance.serviceDefinition.healthCheck.retries;
-    
+
     if (instance.restarts < maxRetries) {
       // Restart instance
       try {
         await sandboxManager.destroySandbox(instance.sandboxId);
-        
+
         // Create new sandbox with same configuration
         const sandboxId = await sandboxManager.createSandbox({
           image: instance.serviceDefinition.image,
@@ -665,22 +737,22 @@ export class OrchestrationManager extends EventEmitter {
         instance.sandboxId = sandboxId;
         instance.restarts++;
         instance.status = 'running';
-        
-        structuredLogger.info('Instance restarted', { 
+
+        structuredLogger.info('Instance restarted', {
           instanceId: instance.id,
-          restarts: instance.restarts 
+          restarts: instance.restarts,
         });
       } catch (error) {
         instance.status = 'failed';
-        structuredLogger.error('Failed to restart instance', error as Error, { 
-          instanceId: instance.id 
+        structuredLogger.error('Failed to restart instance', error as Error, {
+          instanceId: instance.id,
         });
       }
     } else {
       instance.status = 'failed';
-      structuredLogger.error('Instance exceeded max restarts', { 
+      structuredLogger.error('Instance exceeded max restarts', {
         instanceId: instance.id,
-        maxRetries 
+        maxRetries,
       });
     }
   }
@@ -706,14 +778,21 @@ export class OrchestrationManager extends EventEmitter {
     const deployment = this.deployments.get(policy.deployment);
     if (!deployment) return;
 
-    const serviceInstances = Array.from(deployment.instances.values())
-      .filter(i => i.serviceDefinition.name === policy.service);
+    const serviceInstances = Array.from(deployment.instances.values()).filter(
+      i => i.serviceDefinition.name === policy.service
+    );
 
     if (serviceInstances.length === 0) return;
 
     // Calculate average resource usage
-    const avgCpu = await this.calculateAverageResourceUsage(serviceInstances, 'cpu');
-    const avgMemory = await this.calculateAverageResourceUsage(serviceInstances, 'memory');
+    const avgCpu = await this.calculateAverageResourceUsage(
+      serviceInstances,
+      'cpu'
+    );
+    const avgMemory = await this.calculateAverageResourceUsage(
+      serviceInstances,
+      'memory'
+    );
 
     const currentReplicas = serviceInstances.length;
     let targetReplicas = currentReplicas;
@@ -725,7 +804,10 @@ export class OrchestrationManager extends EventEmitter {
       }
     }
     // Scale down if resource usage is low
-    else if (avgCpu < policy.targetCPU * 0.5 && avgMemory < policy.targetMemory * 0.5) {
+    else if (
+      avgCpu < policy.targetCPU * 0.5 &&
+      avgMemory < policy.targetMemory * 0.5
+    ) {
       if (currentReplicas > policy.minReplicas) {
         targetReplicas = Math.max(policy.minReplicas, currentReplicas - 1);
       }
@@ -740,12 +822,16 @@ export class OrchestrationManager extends EventEmitter {
         avgMemory,
       });
 
-      await this.scaleService(policy.deployment, policy.service, targetReplicas);
+      await this.scaleService(
+        policy.deployment,
+        policy.service,
+        targetReplicas
+      );
     }
   }
 
   private async calculateAverageResourceUsage(
-    instances: ServiceInstance[], 
+    instances: ServiceInstance[],
     resource: 'cpu' | 'memory'
   ): Promise<number> {
     // This would integrate with actual resource monitoring
@@ -753,7 +839,10 @@ export class OrchestrationManager extends EventEmitter {
     return Math.random() * 100;
   }
 
-  private validateDeploymentConfig(config: DeploymentConfig): { valid: boolean; errors: string[] } {
+  private validateDeploymentConfig(config: DeploymentConfig): {
+    valid: boolean;
+    errors: string[];
+  } {
     const errors: string[] = [];
 
     if (!config.name) errors.push('Deployment name is required');
@@ -765,8 +854,9 @@ export class OrchestrationManager extends EventEmitter {
     for (const service of config.services || []) {
       if (!service.name) errors.push('Service name is required');
       if (!service.image) errors.push('Service image is required');
-      if (service.replicas < 1) errors.push('Service replicas must be at least 1');
-      
+      if (service.replicas < 1)
+        errors.push('Service replicas must be at least 1');
+
       if (!profileManager.getProfile(service.securityProfile)) {
         errors.push(`Security profile ${service.securityProfile} not found`);
       }
@@ -785,7 +875,7 @@ export class OrchestrationManager extends EventEmitter {
     if (this.scalingInterval) {
       clearInterval(this.scalingInterval);
     }
-    
+
     this.removeAllListeners();
     structuredLogger.info('Orchestration manager closed');
   }
@@ -796,10 +886,13 @@ export class OrchestrationManager extends EventEmitter {
  */
 class LoadBalancer {
   private instances: ServiceInstance[] = [];
-  private algorithm: 'round-robin' | 'least-connections' | 'weighted' = 'round-robin';
+  private algorithm: 'round-robin' | 'least-connections' | 'weighted' =
+    'round-robin';
   private currentIndex = 0;
 
-  constructor(algorithm: 'round-robin' | 'least-connections' | 'weighted' = 'round-robin') {
+  constructor(
+    algorithm: 'round-robin' | 'least-connections' | 'weighted' = 'round-robin'
+  ) {
     this.algorithm = algorithm;
   }
 
@@ -813,25 +906,26 @@ class LoadBalancer {
 
   getNextInstance(): ServiceInstance | null {
     const healthyInstances = this.instances.filter(i => i.health === 'healthy');
-    
+
     if (healthyInstances.length === 0) {
       return null;
     }
 
     switch (this.algorithm) {
       case 'round-robin':
-        const instance = healthyInstances[this.currentIndex % healthyInstances.length];
+        const instance =
+          healthyInstances[this.currentIndex % healthyInstances.length];
         this.currentIndex++;
         return instance;
-      
+
       case 'least-connections':
         // Would need to track active connections
         return healthyInstances[0];
-      
+
       case 'weighted':
         // Would implement weighted selection
         return healthyInstances[0];
-      
+
       default:
         return healthyInstances[0];
     }

@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test';
 import { ProjectManager } from '../../services/project-manager.js';
-import { 
-  createTestUser, 
+import {
+  createTestUser,
   createTestProject,
   mockDb,
   createTempDir,
   cleanupTempDir,
-  withTestEnv
+  withTestEnv,
 } from '../test-setup.js';
 
 // Mock file system operations
@@ -15,13 +15,17 @@ const mockFs = {
     access: mock(() => Promise.resolve()),
     mkdir: mock(() => Promise.resolve()),
     readdir: mock(() => Promise.resolve(['file1.js', 'file2.ts'])),
-    stat: mock(() => Promise.resolve({
-      isDirectory: () => false,
-      isFile: () => true,
-      size: 1024,
-      mtime: new Date(),
-    })),
-    readFile: mock(() => Promise.resolve('{"name": "test-project", "version": "1.0.0"}')),
+    stat: mock(() =>
+      Promise.resolve({
+        isDirectory: () => false,
+        isFile: () => true,
+        size: 1024,
+        mtime: new Date(),
+      })
+    ),
+    readFile: mock(() =>
+      Promise.resolve('{"name": "test-project", "version": "1.0.0"}')
+    ),
   },
   existsSync: mock(() => true),
   constants: { F_OK: 0, R_OK: 4, W_OK: 2 },
@@ -69,7 +73,7 @@ describe('ProjectManager', () => {
   beforeEach(() => {
     projectManager = new ProjectManager(mockDb as any);
     tempDir = createTempDir();
-    
+
     // Reset mocks
     Object.values(mockFs.promises).forEach(mockFn => mockFn.mockClear());
     mockFs.existsSync.mockClear();
@@ -109,13 +113,14 @@ describe('ProjectManager', () => {
       };
       const userId = 'test-user-1';
 
-      await expect(projectManager.createProject(invalidProjectData, userId))
-        .rejects.toThrow('Project name is required');
+      await expect(
+        projectManager.createProject(invalidProjectData, userId)
+      ).rejects.toThrow('Project name is required');
     });
 
     it('should check if path already exists', async () => {
       mockFs.existsSync.mockReturnValueOnce(true);
-      
+
       const projectData = {
         name: 'Test Project',
         path: `${tempDir}/existing-project`,
@@ -123,13 +128,14 @@ describe('ProjectManager', () => {
       };
       const userId = 'test-user-1';
 
-      await expect(projectManager.createProject(projectData, userId))
-        .rejects.toThrow('Project path already exists');
+      await expect(
+        projectManager.createProject(projectData, userId)
+      ).rejects.toThrow('Project path already exists');
     });
 
     it('should create project directory structure', async () => {
       mockFs.existsSync.mockReturnValueOnce(false);
-      
+
       const projectData = {
         name: 'Test Project',
         path: `${tempDir}/new-project`,
@@ -139,10 +145,9 @@ describe('ProjectManager', () => {
 
       await projectManager.createProject(projectData, userId);
 
-      expect(mockFs.promises.mkdir).toHaveBeenCalledWith(
-        projectData.path,
-        { recursive: true }
-      );
+      expect(mockFs.promises.mkdir).toHaveBeenCalledWith(projectData.path, {
+        recursive: true,
+      });
     });
   });
 
@@ -174,8 +179,9 @@ describe('ProjectManager', () => {
       };
       const userId = 'test-user-1';
 
-      await expect(projectManager.cloneProject(invalidCloneData, userId))
-        .rejects.toThrow('Repository URL is required');
+      await expect(
+        projectManager.cloneProject(invalidCloneData, userId)
+      ).rejects.toThrow('Repository URL is required');
     });
 
     it('should handle git clone failures', async () => {
@@ -197,8 +203,9 @@ describe('ProjectManager', () => {
       };
       const userId = 'test-user-1';
 
-      await expect(projectManager.cloneProject(cloneData, userId))
-        .rejects.toThrow('Git clone failed');
+      await expect(
+        projectManager.cloneProject(cloneData, userId)
+      ).rejects.toThrow('Git clone failed');
     });
 
     it('should use default branch if not specified', async () => {
@@ -283,7 +290,7 @@ describe('ProjectManager', () => {
   describe('Project Information', () => {
     it('should get project information', async () => {
       const projectPath = `${tempDir}/info-project`;
-      
+
       // Mock package.json content
       mockFs.promises.readFile.mockResolvedValueOnce(
         JSON.stringify({
@@ -303,7 +310,7 @@ describe('ProjectManager', () => {
 
     it('should handle projects without package.json', async () => {
       const projectPath = `${tempDir}/no-package-project`;
-      
+
       // Mock file not found
       mockFs.promises.readFile.mockRejectedValueOnce(new Error('ENOENT'));
 
@@ -315,7 +322,7 @@ describe('ProjectManager', () => {
 
     it('should detect git repository', async () => {
       const projectPath = `${tempDir}/git-project`;
-      
+
       // Mock .git directory exists
       mockFs.promises.access.mockResolvedValueOnce(undefined);
 
@@ -326,12 +333,28 @@ describe('ProjectManager', () => {
 
     it('should count project files', async () => {
       const projectPath = `${tempDir}/file-count-project`;
-      
-      mockFs.promises.readdir.mockResolvedValueOnce(['file1.js', 'file2.ts', 'dir1']);
+
+      mockFs.promises.readdir.mockResolvedValueOnce([
+        'file1.js',
+        'file2.ts',
+        'dir1',
+      ]);
       mockFs.promises.stat
-        .mockResolvedValueOnce({ isDirectory: () => false, isFile: () => true, size: 100 })
-        .mockResolvedValueOnce({ isDirectory: () => false, isFile: () => true, size: 200 })
-        .mockResolvedValueOnce({ isDirectory: () => true, isFile: () => false, size: 0 });
+        .mockResolvedValueOnce({
+          isDirectory: () => false,
+          isFile: () => true,
+          size: 100,
+        })
+        .mockResolvedValueOnce({
+          isDirectory: () => false,
+          isFile: () => true,
+          size: 200,
+        })
+        .mockResolvedValueOnce({
+          isDirectory: () => true,
+          isFile: () => false,
+          size: 0,
+        });
 
       const info = await projectManager.getProjectInfo(projectPath);
 
@@ -343,7 +366,7 @@ describe('ProjectManager', () => {
   describe('Path Validation', () => {
     it('should validate accessible path', async () => {
       const validPath = `${tempDir}/valid-path`;
-      
+
       mockFs.promises.access.mockResolvedValueOnce(undefined);
 
       const validation = await projectManager.validateProjectPath(validPath);
@@ -355,10 +378,11 @@ describe('ProjectManager', () => {
 
     it('should detect inaccessible path', async () => {
       const inaccessiblePath = '/root/restricted';
-      
+
       mockFs.promises.access.mockRejectedValueOnce(new Error('EACCES'));
 
-      const validation = await projectManager.validateProjectPath(inaccessiblePath);
+      const validation =
+        await projectManager.validateProjectPath(inaccessiblePath);
 
       expect(validation.valid).toBe(false);
       expect(validation.accessible).toBe(false);
@@ -367,10 +391,11 @@ describe('ProjectManager', () => {
 
     it('should detect non-existent path', async () => {
       const nonExistentPath = `${tempDir}/does-not-exist`;
-      
+
       mockFs.promises.access.mockRejectedValueOnce(new Error('ENOENT'));
 
-      const validation = await projectManager.validateProjectPath(nonExistentPath);
+      const validation =
+        await projectManager.validateProjectPath(nonExistentPath);
 
       expect(validation.exists).toBe(false);
       // Non-existent paths can still be valid for creation
@@ -388,7 +413,7 @@ describe('ProjectManager', () => {
 
     it('should check if path is empty directory', async () => {
       const emptyPath = `${tempDir}/empty-dir`;
-      
+
       mockFs.promises.access.mockResolvedValueOnce(undefined);
       mockFs.promises.readdir.mockResolvedValueOnce([]);
 
@@ -400,7 +425,7 @@ describe('ProjectManager', () => {
 
     it('should detect non-empty directory', async () => {
       const nonEmptyPath = `${tempDir}/non-empty-dir`;
-      
+
       mockFs.promises.access.mockResolvedValueOnce(undefined);
       mockFs.promises.readdir.mockResolvedValueOnce(['file1.js']);
 
@@ -425,18 +450,19 @@ describe('ProjectManager', () => {
 
     it('should handle git initialization failure', async () => {
       const projectPath = `${tempDir}/git-fail-project`;
-      
+
       mockChildProcess.exec.mockImplementationOnce((command, callback) => {
         callback(new Error('Git not found'), '', 'git: command not found');
       });
 
-      await expect(projectManager.initializeGitRepo(projectPath))
-        .rejects.toThrow('Git initialization failed');
+      await expect(
+        projectManager.initializeGitRepo(projectPath)
+      ).rejects.toThrow('Git initialization failed');
     });
 
     it('should check git status', async () => {
       const projectPath = `${tempDir}/git-status-project`;
-      
+
       mockChildProcess.exec.mockImplementationOnce((command, callback) => {
         callback(null, 'On branch main\nnothing to commit', '');
       });
@@ -451,7 +477,7 @@ describe('ProjectManager', () => {
   describe('Template Application', () => {
     it('should apply node.js template', async () => {
       const projectPath = `${tempDir}/node-template`;
-      
+
       await projectManager.applyTemplate(projectPath, 'node');
 
       // Check if package.json was created
@@ -460,7 +486,7 @@ describe('ProjectManager', () => {
 
     it('should apply react template', async () => {
       const projectPath = `${tempDir}/react-template`;
-      
+
       await projectManager.applyTemplate(projectPath, 'react');
 
       expect(mockFs.promises.mkdir).toHaveBeenCalled();
@@ -468,7 +494,7 @@ describe('ProjectManager', () => {
 
     it('should handle unknown template', async () => {
       const projectPath = `${tempDir}/unknown-template`;
-      
+
       await projectManager.applyTemplate(projectPath, 'unknown');
 
       // Should not throw error but log warning
@@ -485,10 +511,13 @@ describe('ProjectManager', () => {
       };
       const userId = 'test-user-1';
 
-      mockFs.promises.mkdir.mockRejectedValueOnce(new Error('Permission denied'));
+      mockFs.promises.mkdir.mockRejectedValueOnce(
+        new Error('Permission denied')
+      );
 
-      await expect(projectManager.createProject(projectData, userId))
-        .rejects.toThrow('Permission denied');
+      await expect(
+        projectManager.createProject(projectData, userId)
+      ).rejects.toThrow('Permission denied');
     });
 
     it('should handle network errors during cloning', async () => {
@@ -507,36 +536,39 @@ describe('ProjectManager', () => {
           }
         }),
         stdout: { on: mock() },
-        stderr: { on: mock((event: string, callback: Function) => {
-          if (event === 'data') {
-            callback('fatal: unable to connect');
-          }
-        }) },
+        stderr: {
+          on: mock((event: string, callback: Function) => {
+            if (event === 'data') {
+              callback('fatal: unable to connect');
+            }
+          }),
+        },
       });
 
-      await expect(projectManager.cloneProject(cloneData, userId))
-        .rejects.toThrow('Git clone failed');
+      await expect(
+        projectManager.cloneProject(cloneData, userId)
+      ).rejects.toThrow('Git clone failed');
     });
   });
 
   describe('Environment Variables', () => {
-    it('should respect custom git commands', withTestEnv(
-      { GIT_EXECUTABLE: '/custom/git' },
-      async () => {
+    it(
+      'should respect custom git commands',
+      withTestEnv({ GIT_EXECUTABLE: '/custom/git' }, async () => {
         const projectPath = `${tempDir}/custom-git`;
-        
+
         await projectManager.initializeGitRepo(projectPath);
 
         expect(mockChildProcess.exec).toHaveBeenCalledWith(
           expect.stringContaining('/custom/git'),
           expect.any(Function)
         );
-      }
-    ));
+      })
+    );
 
     it('should use default git when not specified', async () => {
       const projectPath = `${tempDir}/default-git`;
-      
+
       await projectManager.initializeGitRepo(projectPath);
 
       expect(mockChildProcess.exec).toHaveBeenCalledWith(

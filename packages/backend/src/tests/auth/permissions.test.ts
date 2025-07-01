@@ -1,18 +1,18 @@
 import { describe, it, expect, beforeEach } from 'bun:test';
-import { 
-  checkPermission, 
-  hasPermission, 
+import {
+  checkPermission,
+  hasPermission,
   requirePermission,
   requireAdmin,
-  requireRole 
+  requireRole,
 } from '../../auth/permissions.js';
-import { 
-  createMockReq, 
-  createMockRes, 
-  createTestUser, 
+import {
+  createMockReq,
+  createMockRes,
+  createTestUser,
   createTestAdmin,
   expectForbidden,
-  expectSuccessResponse 
+  expectSuccessResponse,
 } from '../test-setup.js';
 
 describe('Auth Permissions', () => {
@@ -24,7 +24,10 @@ describe('Auth Permissions', () => {
     });
 
     it('should return true for exact permission match', () => {
-      const user = { ...createTestUser(), permissions: ['project:read', 'project:create'] };
+      const user = {
+        ...createTestUser(),
+        permissions: ['project:read', 'project:create'],
+      };
       expect(checkPermission(user, 'project', 'read')).toBe(true);
       expect(checkPermission(user, 'project', 'create')).toBe(true);
     });
@@ -73,7 +76,9 @@ describe('Auth Permissions', () => {
       const req = createMockReq({ user });
       const res = createMockRes();
       let nextCalled = false;
-      const next = () => { nextCalled = true; };
+      const next = () => {
+        nextCalled = true;
+      };
 
       const middleware = requirePermission('project', 'read');
       middleware(req, res, next);
@@ -87,7 +92,9 @@ describe('Auth Permissions', () => {
       const req = createMockReq({ user });
       const res = createMockRes();
       let nextCalled = false;
-      const next = () => { nextCalled = true; };
+      const next = () => {
+        nextCalled = true;
+      };
 
       const middleware = requirePermission('project', 'delete');
       middleware(req, res, next);
@@ -100,7 +107,9 @@ describe('Auth Permissions', () => {
       const req = createMockReq({ user: null });
       const res = createMockRes();
       let nextCalled = false;
-      const next = () => { nextCalled = true; };
+      const next = () => {
+        nextCalled = true;
+      };
 
       const middleware = requirePermission('project', 'read');
       middleware(req, res, next);
@@ -114,7 +123,9 @@ describe('Auth Permissions', () => {
       const req = createMockReq({ user: admin });
       const res = createMockRes();
       let nextCalled = false;
-      const next = () => { nextCalled = true; };
+      const next = () => {
+        nextCalled = true;
+      };
 
       const middleware = requirePermission('system', 'admin');
       middleware(req, res, next);
@@ -129,7 +140,9 @@ describe('Auth Permissions', () => {
       const req = createMockReq({ user: admin });
       const res = createMockRes();
       let nextCalled = false;
-      const next = () => { nextCalled = true; };
+      const next = () => {
+        nextCalled = true;
+      };
 
       const middleware = requireAdmin();
       middleware(req, res, next);
@@ -142,7 +155,9 @@ describe('Auth Permissions', () => {
       const req = createMockReq({ user });
       const res = createMockRes();
       let nextCalled = false;
-      const next = () => { nextCalled = true; };
+      const next = () => {
+        nextCalled = true;
+      };
 
       const middleware = requireAdmin();
       middleware(req, res, next);
@@ -155,7 +170,9 @@ describe('Auth Permissions', () => {
       const req = createMockReq({ user: null });
       const res = createMockRes();
       let nextCalled = false;
-      const next = () => { nextCalled = true; };
+      const next = () => {
+        nextCalled = true;
+      };
 
       const middleware = requireAdmin();
       middleware(req, res, next);
@@ -171,7 +188,9 @@ describe('Auth Permissions', () => {
       const req = createMockReq({ user: admin });
       const res = createMockRes();
       let nextCalled = false;
-      const next = () => { nextCalled = true; };
+      const next = () => {
+        nextCalled = true;
+      };
 
       const middleware = requireRole('admin');
       middleware(req, res, next);
@@ -184,7 +203,9 @@ describe('Auth Permissions', () => {
       const req = createMockReq({ user });
       const res = createMockRes();
       let nextCalled = false;
-      const next = () => { nextCalled = true; };
+      const next = () => {
+        nextCalled = true;
+      };
 
       const middleware = requireRole('admin');
       middleware(req, res, next);
@@ -198,7 +219,9 @@ describe('Auth Permissions', () => {
       const req = createMockReq({ user });
       const res = createMockRes();
       let nextCalled = false;
-      const next = () => { nextCalled = true; };
+      const next = () => {
+        nextCalled = true;
+      };
 
       const middleware = requireRole(['user', 'admin']);
       middleware(req, res, next);
@@ -210,7 +233,9 @@ describe('Auth Permissions', () => {
       const req = createMockReq({ user: null });
       const res = createMockRes();
       let nextCalled = false;
-      const next = () => { nextCalled = true; };
+      const next = () => {
+        nextCalled = true;
+      };
 
       const middleware = requireRole('user');
       middleware(req, res, next);
@@ -229,8 +254,8 @@ describe('Auth Permissions', () => {
           'session:read',
           'session:create',
           '*:read',
-          'system:monitor'
-        ]
+          'system:monitor',
+        ],
       };
 
       // Should allow all project actions
@@ -256,7 +281,7 @@ describe('Auth Permissions', () => {
     it('should handle edge cases in permission strings', () => {
       const user = {
         ...createTestUser(),
-        permissions: ['', 'invalid', 'project:', ':read', 'project:read:extra']
+        permissions: ['', 'invalid', 'project:', ':read', 'project:read:extra'],
       };
 
       // Should not grant access for malformed permissions
@@ -275,8 +300,8 @@ describe('Auth Permissions', () => {
           'session:read',
           'container:read',
           'container:update',
-          'system:read'
-        ]
+          'system:read',
+        ],
       };
 
       // Project permissions

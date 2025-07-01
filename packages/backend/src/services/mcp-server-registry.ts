@@ -4,7 +4,10 @@ import { join, dirname } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import { MCPTransportType } from './mcp-connection-manager.js';
-import { comprehensiveAuditLogger, AuditCategory } from '../security/audit-logger.js';
+import {
+  comprehensiveAuditLogger,
+  AuditCategory,
+} from '../security/audit-logger.js';
 import { SecurityLevel } from '../security/types.js';
 
 // MCP Server Registry Types
@@ -28,7 +31,14 @@ export interface MCPServerDefinition {
   };
   license: string;
   tags: string[];
-  category: 'ai' | 'productivity' | 'development' | 'data' | 'system' | 'utility' | 'custom';
+  category:
+    | 'ai'
+    | 'productivity'
+    | 'development'
+    | 'data'
+    | 'system'
+    | 'utility'
+    | 'custom';
   transport: {
     type: MCPTransportType;
     config: MCPServerTransportConfig;
@@ -73,17 +83,17 @@ export interface MCPServerTransportConfig {
   // WebSocket config
   url?: string;
   headers?: Record<string, string>;
-  
+
   // STDIO config
   executable?: string;
   args?: string[];
   env?: Record<string, string>;
   cwd?: string;
-  
+
   // HTTP config
   baseUrl?: string;
   timeout?: number;
-  
+
   // IPC config
   path?: string;
 }
@@ -154,10 +164,10 @@ export class MCPServerRegistry extends EventEmitter {
       await this.loadServerDefinitions();
       await this.loadServerInstances();
       await this.loadDefaultServers();
-      
+
       this.isInitialized = true;
       this.emit('initialized');
-      
+
       console.log('✅ MCP server registry initialized');
     } catch (error) {
       console.error('❌ Failed to initialize MCP server registry:', error);
@@ -173,7 +183,7 @@ export class MCPServerRegistry extends EventEmitter {
     submitterId: string
   ): Promise<string> {
     const serverId = uuidv4();
-    
+
     const serverDefinition: MCPServerDefinition = {
       ...definition,
       id: serverId,
@@ -193,10 +203,10 @@ export class MCPServerRegistry extends EventEmitter {
 
     // Validate server definition
     await this.validateServerDefinition(serverDefinition);
-    
+
     this.serverDefinitions.set(serverId, serverDefinition);
     await this.saveServerDefinitions();
-    
+
     this.emit('serverRegistered', serverDefinition, submitterId);
 
     await comprehensiveAuditLogger.logAuditEvent({
@@ -226,17 +236,19 @@ export class MCPServerRegistry extends EventEmitter {
     categories: string[];
     tags: string[];
   }> {
-    let servers = Array.from(this.serverDefinitions.values())
-      .filter(server => server.status === 'active');
+    let servers = Array.from(this.serverDefinitions.values()).filter(
+      server => server.status === 'active'
+    );
 
     // Apply filters
     if (search.query) {
       const query = search.query.toLowerCase();
-      servers = servers.filter(server =>
-        server.name.toLowerCase().includes(query) ||
-        server.displayName.toLowerCase().includes(query) ||
-        server.description.toLowerCase().includes(query) ||
-        server.tags.some(tag => tag.toLowerCase().includes(query))
+      servers = servers.filter(
+        server =>
+          server.name.toLowerCase().includes(query) ||
+          server.displayName.toLowerCase().includes(query) ||
+          server.description.toLowerCase().includes(query) ||
+          server.tags.some(tag => tag.toLowerCase().includes(query))
       );
     }
 
@@ -251,7 +263,9 @@ export class MCPServerRegistry extends EventEmitter {
     }
 
     if (search.transport) {
-      servers = servers.filter(server => server.transport.type === search.transport);
+      servers = servers.filter(
+        server => server.transport.type === search.transport
+      );
     }
 
     if (search.author) {
@@ -261,28 +275,36 @@ export class MCPServerRegistry extends EventEmitter {
     }
 
     if (search.verified !== undefined) {
-      servers = servers.filter(server => server.metadata.verified === search.verified);
+      servers = servers.filter(
+        server => server.metadata.verified === search.verified
+      );
     }
 
     if (search.official !== undefined) {
-      servers = servers.filter(server => server.metadata.official === search.official);
+      servers = servers.filter(
+        server => server.metadata.official === search.official
+      );
     }
 
     if (search.experimental !== undefined) {
-      servers = servers.filter(server => server.metadata.experimental === search.experimental);
+      servers = servers.filter(
+        server => server.metadata.experimental === search.experimental
+      );
     }
 
     if (search.featured !== undefined) {
-      servers = servers.filter(server => server.metadata.featured === search.featured);
+      servers = servers.filter(
+        server => server.metadata.featured === search.featured
+      );
     }
 
     // Sort results
     const sortBy = search.sortBy || 'name';
     const sortOrder = search.sortOrder || 'asc';
-    
+
     servers.sort((a, b) => {
       let comparison = 0;
-      
+
       switch (sortBy) {
         case 'name':
           comparison = a.displayName.localeCompare(b.displayName);
@@ -294,13 +316,15 @@ export class MCPServerRegistry extends EventEmitter {
           comparison = a.metadata.rating - b.metadata.rating;
           break;
         case 'updated':
-          comparison = a.metadata.lastUpdated.getTime() - b.metadata.lastUpdated.getTime();
+          comparison =
+            a.metadata.lastUpdated.getTime() - b.metadata.lastUpdated.getTime();
           break;
         case 'created':
-          comparison = a.metadata.createdAt.getTime() - b.metadata.createdAt.getTime();
+          comparison =
+            a.metadata.createdAt.getTime() - b.metadata.createdAt.getTime();
           break;
       }
-      
+
       return sortOrder === 'asc' ? comparison : -comparison;
     });
 
@@ -395,11 +419,11 @@ export class MCPServerRegistry extends EventEmitter {
    */
   getServerInstances(userId?: string): MCPServerInstance[] {
     const instances = Array.from(this.serverInstances.values());
-    
+
     if (userId) {
       return instances.filter(instance => instance.userId === userId);
     }
-    
+
     return instances;
   }
 
@@ -431,7 +455,10 @@ export class MCPServerRegistry extends EventEmitter {
     if (updates.configuration) {
       const serverDefinition = this.serverDefinitions.get(instance.serverId);
       if (serverDefinition) {
-        await this.validateConfiguration(serverDefinition, updates.configuration);
+        await this.validateConfiguration(
+          serverDefinition,
+          updates.configuration
+        );
       }
     }
 
@@ -454,7 +481,10 @@ export class MCPServerRegistry extends EventEmitter {
   /**
    * Delete a server instance
    */
-  async deleteServerInstance(instanceId: string, userId: string): Promise<void> {
+  async deleteServerInstance(
+    instanceId: string,
+    userId: string
+  ): Promise<void> {
     const instance = this.serverInstances.get(instanceId);
     if (!instance) {
       throw new Error(`Server instance not found: ${instanceId}`);
@@ -499,15 +529,22 @@ export class MCPServerRegistry extends EventEmitter {
     const servers = Array.from(this.serverDefinitions.values());
     const instances = Array.from(this.serverInstances.values());
 
-    const categoryCounts = servers.reduce((counts, server) => {
-      counts[server.category] = (counts[server.category] || 0) + 1;
-      return counts;
-    }, {} as Record<string, number>);
+    const categoryCounts = servers.reduce(
+      (counts, server) => {
+        counts[server.category] = (counts[server.category] || 0) + 1;
+        return counts;
+      },
+      {} as Record<string, number>
+    );
 
-    const transportCounts = servers.reduce((counts, server) => {
-      counts[server.transport.type] = (counts[server.transport.type] || 0) + 1;
-      return counts;
-    }, {} as Record<string, number>);
+    const transportCounts = servers.reduce(
+      (counts, server) => {
+        counts[server.transport.type] =
+          (counts[server.transport.type] || 0) + 1;
+        return counts;
+      },
+      {} as Record<string, number>
+    );
 
     const featuredServers = servers
       .filter(s => s.metadata.featured && s.status === 'active')
@@ -553,25 +590,31 @@ export class MCPServerRegistry extends EventEmitter {
   // Private methods
 
   private ensureDirectories(): void {
-    [this.registryDir, this.instancesDir, this.configTemplatesDir].forEach(dir => {
-      if (!existsSync(dir)) {
-        mkdirSync(dir, { recursive: true });
+    [this.registryDir, this.instancesDir, this.configTemplatesDir].forEach(
+      dir => {
+        if (!existsSync(dir)) {
+          mkdirSync(dir, { recursive: true });
+        }
       }
-    });
+    );
   }
 
   private async loadServerDefinitions(): Promise<void> {
     const definitionsPath = join(this.registryDir, 'definitions.json');
-    
+
     if (existsSync(definitionsPath)) {
       try {
         const data = await fs.readFile(definitionsPath, 'utf8');
         const definitions = JSON.parse(data);
-        
+
         for (const definition of definitions) {
           // Convert date strings back to Date objects
-          definition.metadata.lastUpdated = new Date(definition.metadata.lastUpdated);
-          definition.metadata.createdAt = new Date(definition.metadata.createdAt);
+          definition.metadata.lastUpdated = new Date(
+            definition.metadata.lastUpdated
+          );
+          definition.metadata.createdAt = new Date(
+            definition.metadata.createdAt
+          );
           this.serverDefinitions.set(definition.id, definition);
         }
       } catch (error) {
@@ -582,12 +625,12 @@ export class MCPServerRegistry extends EventEmitter {
 
   private async loadServerInstances(): Promise<void> {
     const instancesPath = join(this.instancesDir, 'instances.json');
-    
+
     if (existsSync(instancesPath)) {
       try {
         const data = await fs.readFile(instancesPath, 'utf8');
         const instances = JSON.parse(data);
-        
+
         for (const instance of instances) {
           instance.createdAt = new Date(instance.createdAt);
           instance.updatedAt = new Date(instance.updatedAt);
@@ -618,11 +661,11 @@ export class MCPServerRegistry extends EventEmitter {
     // Load default server definitions if registry is empty
     if (this.serverDefinitions.size === 0) {
       const defaultServers = await this.getDefaultServerDefinitions();
-      
+
       for (const server of defaultServers) {
         this.serverDefinitions.set(server.id, server);
       }
-      
+
       if (defaultServers.length > 0) {
         await this.saveServerDefinitions();
       }
@@ -653,7 +696,12 @@ export class MCPServerRegistry extends EventEmitter {
           },
         },
         capabilities: {
-          tools: ['read_file', 'write_file', 'list_directory', 'create_directory'],
+          tools: [
+            'read_file',
+            'write_file',
+            'list_directory',
+            'create_directory',
+          ],
           resources: ['file://*'],
           prompts: [],
           features: ['file_operations'],
@@ -705,9 +753,15 @@ export class MCPServerRegistry extends EventEmitter {
     ];
   }
 
-  private async validateServerDefinition(definition: MCPServerDefinition): Promise<void> {
+  private async validateServerDefinition(
+    definition: MCPServerDefinition
+  ): Promise<void> {
     // Validate required fields
-    if (!definition.name || !definition.displayName || !definition.description) {
+    if (
+      !definition.name ||
+      !definition.displayName ||
+      !definition.description
+    ) {
       throw new Error('Missing required server definition fields');
     }
 

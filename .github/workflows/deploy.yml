@@ -150,7 +150,7 @@ jobs:
           # Update deployment images
           kubectl set image deployment/vibe-code-backend backend=${{ needs.build-images.outputs.backend-image }}
           kubectl set image deployment/vibe-code-frontend frontend=${{ needs.build-images.outputs.frontend-image }}
-          
+
           # Wait for rollout
           kubectl rollout status deployment/vibe-code-backend --timeout=300s
           kubectl rollout status deployment/vibe-code-frontend --timeout=300s
@@ -159,11 +159,11 @@ jobs:
         run: |
           # Wait for pods to be ready
           sleep 30
-          
+
           # Check backend health
           kubectl get pods -l app=vibe-code-backend
           kubectl logs -l app=vibe-code-backend --tail=50
-          
+
           # Check frontend health
           kubectl get pods -l app=vibe-code-frontend
           kubectl logs -l app=vibe-code-frontend --tail=50
@@ -200,7 +200,7 @@ jobs:
           # Update deployment images with rolling update strategy
           kubectl set image deployment/vibe-code-backend backend=${{ needs.build-images.outputs.backend-image }}
           kubectl set image deployment/vibe-code-frontend frontend=${{ needs.build-images.outputs.frontend-image }}
-          
+
           # Wait for rollout with timeout
           kubectl rollout status deployment/vibe-code-backend --timeout=600s
           kubectl rollout status deployment/vibe-code-frontend --timeout=600s
@@ -209,18 +209,18 @@ jobs:
         run: |
           # Wait for stabilization
           sleep 60
-          
+
           # Check all pods are running
           kubectl get pods -l app=vibe-code-backend
           kubectl get pods -l app=vibe-code-frontend
-          
+
           # Check service endpoints
           kubectl get services
-          
+
           # Verify application health
           BACKEND_POD=$(kubectl get pods -l app=vibe-code-backend -o jsonpath="{.items[0].metadata.name}")
           kubectl exec $BACKEND_POD -- curl -f http://localhost:3000/health || exit 1
-          
+
           echo "✅ Production deployment successful!"
 
       - name: Rollback on failure
@@ -279,19 +279,19 @@ jobs:
         run: |
           # Wait for deployment to stabilize
           sleep 120
-          
+
           # Test critical endpoints
           curl -f https://api.vibecode.dev/health || exit 1
           curl -f https://api.vibecode.dev/api/adapters || exit 1
           curl -f https://vibecode.dev || exit 1
-          
+
           echo "✅ Smoke tests passed!"
 
       - name: Run performance baseline tests
         run: |
           # Install artillery for performance testing
           npm install -g artillery
-          
+
           # Run baseline performance test
           cat > performance-test.yml << EOF
           config:
@@ -308,7 +308,7 @@ jobs:
                 - get:
                     url: "/api/adapters"
           EOF
-          
+
           artillery run performance-test.yml
         continue-on-error: true
 
@@ -330,7 +330,7 @@ jobs:
         run: |
           # This would typically connect to your registry and clean up old images
           echo "Cleaning up old container images..."
-          
+
       - name: Archive deployment logs
         run: |
           echo "Archiving deployment logs and artifacts..."

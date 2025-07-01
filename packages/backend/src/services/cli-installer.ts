@@ -108,14 +108,16 @@ export class CLIInstallerService {
       if (!stdout.includes(distro)) {
         console.log(`📦 Installing WSL distribution: ${distro}`);
         await execAsync(`wsl --install -d ${distro}`);
-        
+
         // Wait for installation to complete
         await new Promise(resolve => setTimeout(resolve, 30000));
       }
 
       // Install Node.js and npm in WSL
-      await execAsync(`wsl -d ${distro} -- bash -c "curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash - && sudo apt-get install -y nodejs"`);
-      
+      await execAsync(
+        `wsl -d ${distro} -- bash -c "curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash - && sudo apt-get install -y nodejs"`
+      );
+
       return true;
     } catch (error) {
       console.error('WSL setup failed:', error);
@@ -128,14 +130,18 @@ export class CLIInstallerService {
       // Pull the base image
       console.log(`📦 Setting up Docker environment with ${image}`);
       await execAsync(`docker pull ${image}`);
-      
+
       // Create a container with Node.js
       const containerName = `vibe-code-${image.replace(':', '-')}`;
-      await execAsync(`docker run -d --name ${containerName} ${image} tail -f /dev/null`);
-      
+      await execAsync(
+        `docker run -d --name ${containerName} ${image} tail -f /dev/null`
+      );
+
       // Install Node.js in container
-      await execAsync(`docker exec ${containerName} bash -c "apt-get update && apt-get install -y curl && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && apt-get install -y nodejs"`);
-      
+      await execAsync(
+        `docker exec ${containerName} bash -c "apt-get update && apt-get install -y curl && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && apt-get install -y nodejs"`
+      );
+
       return true;
     } catch (error) {
       console.error('Docker setup failed:', error);
@@ -155,12 +161,14 @@ export class CLIInstallerService {
     }
 
     const platform = await this.detectPlatform();
-    
+
     // Check native support first
     if (cliInfo.platformSupport?.[platform]) {
       try {
         // First check if command exists
-        const { stdout: whichOutput } = await execAsync(`which ${cliInfo.command}`);
+        const { stdout: whichOutput } = await execAsync(
+          `which ${cliInfo.command}`
+        );
         const path = whichOutput.trim();
 
         if (!path) {
@@ -173,7 +181,7 @@ export class CLIInstallerService {
             `${cliInfo.command} ${cliInfo.versionFlag}`,
             { timeout: 5000 }
           );
-          
+
           return {
             available: true,
             version: versionOutput.trim(),
@@ -200,7 +208,7 @@ export class CLIInstallerService {
       );
 
       for (const fallback of applicableFallbacks) {
-        if (fallback.method === 'wsl' && await this.isWSLAvailable()) {
+        if (fallback.method === 'wsl' && (await this.isWSLAvailable())) {
           try {
             const { stdout } = await execAsync(
               `wsl -d ${fallback.wslDistro} -- which ${cliInfo.command}`
@@ -222,7 +230,7 @@ export class CLIInstallerService {
           }
         }
 
-        if (fallback.method === 'docker' && await this.isDockerAvailable()) {
+        if (fallback.method === 'docker' && (await this.isDockerAvailable())) {
           try {
             const containerName = `vibe-code-${fallback.dockerImage?.replace(':', '-')}`;
             const { stdout } = await execAsync(
@@ -284,16 +292,24 @@ export class CLIInstallerService {
 
       for (const fallback of applicableFallbacks) {
         console.log(`Trying ${fallback.method} fallback...`);
-        
+
         if (fallback.method === 'wsl') {
-          const wslResult = await this.installViaWSL(cliName, cliInfo, fallback);
+          const wslResult = await this.installViaWSL(
+            cliName,
+            cliInfo,
+            fallback
+          );
           if (wslResult.success) {
             return { ...wslResult, method: 'wsl' };
           }
         }
 
         if (fallback.method === 'docker') {
-          const dockerResult = await this.installViaDocker(cliName, cliInfo, fallback);
+          const dockerResult = await this.installViaDocker(
+            cliName,
+            cliInfo,
+            fallback
+          );
           if (dockerResult.success) {
             return { ...dockerResult, method: 'docker' };
           }
@@ -307,14 +323,19 @@ export class CLIInstallerService {
     };
   }
 
-  private async installNative(cliName: string, cliInfo: CLIInfo): Promise<{
+  private async installNative(
+    cliName: string,
+    cliInfo: CLIInfo
+  ): Promise<{
     success: boolean;
     message: string;
     error?: string;
   }> {
     try {
       // Check if installer is available
-      const installerAvailable = await this.checkInstallerAvailability(cliInfo.installMethod);
+      const installerAvailable = await this.checkInstallerAvailability(
+        cliInfo.installMethod
+      );
       if (!installerAvailable) {
         return {
           success: false,
@@ -323,15 +344,17 @@ export class CLIInstallerService {
       }
 
       // Run installation command
-      const installResult = await this.runInstallCommand(cliInfo.installCommand);
-      
+      const installResult = await this.runInstallCommand(
+        cliInfo.installCommand
+      );
+
       if (!installResult.success) {
         return installResult;
       }
 
       // Verify installation
       const verifyResult = await this.verifyCLIInstallation(cliName);
-      
+
       return verifyResult;
     } catch (error) {
       return {
@@ -342,13 +365,17 @@ export class CLIInstallerService {
     }
   }
 
-  private async installViaWSL(cliName: string, cliInfo: CLIInfo, fallback: any): Promise<{
+  private async installViaWSL(
+    cliName: string,
+    cliInfo: CLIInfo,
+    fallback: any
+  ): Promise<{
     success: boolean;
     message: string;
     error?: string;
   }> {
     try {
-      if (!await this.isWSLAvailable()) {
+      if (!(await this.isWSLAvailable())) {
         return {
           success: false,
           message: 'WSL is not available on this system',
@@ -367,7 +394,7 @@ export class CLIInstallerService {
       // Install CLI in WSL
       const installCommand = `wsl -d ${fallback.wslDistro} -- bash -c "${cliInfo.installCommand}"`;
       const installResult = await this.runInstallCommand(installCommand);
-      
+
       if (!installResult.success) {
         return installResult;
       }
@@ -385,13 +412,17 @@ export class CLIInstallerService {
     }
   }
 
-  private async installViaDocker(cliName: string, cliInfo: CLIInfo, fallback: any): Promise<{
+  private async installViaDocker(
+    cliName: string,
+    cliInfo: CLIInfo,
+    fallback: any
+  ): Promise<{
     success: boolean;
     message: string;
     error?: string;
   }> {
     try {
-      if (!await this.isDockerAvailable()) {
+      if (!(await this.isDockerAvailable())) {
         return {
           success: false,
           message: 'Docker is not available on this system',
@@ -399,7 +430,9 @@ export class CLIInstallerService {
       }
 
       // Setup Docker environment
-      const setupSuccess = await this.setupDockerEnvironment(fallback.dockerImage);
+      const setupSuccess = await this.setupDockerEnvironment(
+        fallback.dockerImage
+      );
       if (!setupSuccess) {
         return {
           success: false,
@@ -411,7 +444,7 @@ export class CLIInstallerService {
       const containerName = `vibe-code-${fallback.dockerImage.replace(':', '-')}`;
       const installCommand = `docker exec ${containerName} bash -c "${cliInfo.installCommand}"`;
       const installResult = await this.runInstallCommand(installCommand);
-      
+
       if (!installResult.success) {
         return installResult;
       }
@@ -462,7 +495,7 @@ export class CLIInstallerService {
     message: string;
     error?: string;
   }> {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       const child = spawn('bash', ['-c', command], {
         stdio: ['pipe', 'pipe', 'pipe'],
         env: { ...process.env },
@@ -471,17 +504,17 @@ export class CLIInstallerService {
       let stdout = '';
       let stderr = '';
 
-      child.stdout?.on('data', (data) => {
+      child.stdout?.on('data', data => {
         stdout += data.toString();
         console.log(`📦 ${data.toString().trim()}`);
       });
 
-      child.stderr?.on('data', (data) => {
+      child.stderr?.on('data', data => {
         stderr += data.toString();
         console.error(`📦 ${data.toString().trim()}`);
       });
 
-      child.on('close', (code) => {
+      child.on('close', code => {
         if (code === 0) {
           resolve({
             success: true,
@@ -496,7 +529,7 @@ export class CLIInstallerService {
         }
       });
 
-      child.on('error', (error) => {
+      child.on('error', error => {
         resolve({
           success: false,
           message: 'Failed to run installation command',
@@ -505,13 +538,16 @@ export class CLIInstallerService {
       });
 
       // Set timeout for installation
-      setTimeout(() => {
-        child.kill('SIGTERM');
-        resolve({
-          success: false,
-          message: 'Installation timed out after 5 minutes',
-        });
-      }, 5 * 60 * 1000);
+      setTimeout(
+        () => {
+          child.kill('SIGTERM');
+          resolve({
+            success: false,
+            message: 'Installation timed out after 5 minutes',
+          });
+        },
+        5 * 60 * 1000
+      );
     });
   }
 
@@ -521,13 +557,13 @@ export class CLIInstallerService {
     error?: string;
   }> {
     const cliInfo = CLI_TOOLS[cliName];
-    
+
     // Wait a moment for installation to complete
     await new Promise(resolve => setTimeout(resolve, 2000));
 
     // Check if CLI is now available
     const availability = await this.checkCLIAvailability(cliName);
-    
+
     if (!availability.available) {
       return {
         success: false,
@@ -560,21 +596,29 @@ export class CLIInstallerService {
     };
   }
 
-  async getAllCLIStatus(): Promise<Record<string, {
-    available: boolean;
-    version?: string;
-    path?: string;
-  }>> {
+  async getAllCLIStatus(): Promise<
+    Record<
+      string,
+      {
+        available: boolean;
+        version?: string;
+        path?: string;
+      }
+    >
+  > {
     const status: Record<string, any> = {};
-    
+
     for (const cliName of Object.keys(CLI_TOOLS)) {
       status[cliName] = await this.checkCLIAvailability(cliName);
     }
-    
+
     return status;
   }
 
-  async ensureCLIAvailable(cliName: string, autoInstall: boolean = false): Promise<{
+  async ensureCLIAvailable(
+    cliName: string,
+    autoInstall: boolean = false
+  ): Promise<{
     available: boolean;
     installed?: boolean;
     message: string;
@@ -582,7 +626,7 @@ export class CLIInstallerService {
   }> {
     // Check if already available
     const status = await this.checkCLIAvailability(cliName);
-    
+
     if (status.available) {
       return {
         available: true,
@@ -599,7 +643,7 @@ export class CLIInstallerService {
 
     // Attempt installation
     const installResult = await this.installCLI(cliName);
-    
+
     return {
       available: installResult.success,
       installed: installResult.success,
@@ -616,12 +660,14 @@ export class CLIInstallerService {
     return CLI_TOOLS[cliName];
   }
 
-  async getFallbackMethods(cliName: string): Promise<Array<{
-    method: 'docker' | 'wsl' | 'manual';
-    available: boolean;
-    description: string;
-    instructions?: string;
-  }>> {
+  async getFallbackMethods(cliName: string): Promise<
+    Array<{
+      method: 'docker' | 'wsl' | 'manual';
+      available: boolean;
+      description: string;
+      instructions?: string;
+    }>
+  > {
     const cliInfo = CLI_TOOLS[cliName];
     if (!cliInfo) {
       return [];
@@ -648,7 +694,9 @@ export class CLIInstallerService {
             method: 'docker',
             available: dockerAvailable,
             description: `Run ${cliInfo.name} in Docker container (${fallback.dockerImage})`,
-            instructions: dockerAvailable ? undefined : 'Install Docker Desktop and ensure it\'s running',
+            instructions: dockerAvailable
+              ? undefined
+              : "Install Docker Desktop and ensure it's running",
           });
         }
 
@@ -658,7 +706,9 @@ export class CLIInstallerService {
             method: 'wsl',
             available: wslAvailable,
             description: `Run ${cliInfo.name} via Windows Subsystem for Linux`,
-            instructions: wslAvailable ? undefined : 'Enable WSL and install a Linux distribution',
+            instructions: wslAvailable
+              ? undefined
+              : 'Enable WSL and install a Linux distribution',
           });
         }
       }
@@ -675,9 +725,12 @@ export class CLIInstallerService {
     return fallbacks;
   }
 
-  private getManualInstallInstructions(cliName: string, platform: string): string {
+  private getManualInstallInstructions(
+    cliName: string,
+    platform: string
+  ): string {
     const cliInfo = CLI_TOOLS[cliName];
-    
+
     switch (cliName) {
       case 'claude-code':
         if (platform === 'linux') {
@@ -721,7 +774,10 @@ Claude Code is currently Linux-only. Recommended alternatives:
     return `Please refer to the official documentation for ${cliInfo?.name || cliName} installation instructions.`;
   }
 
-  async installWithFallback(cliName: string, preferredMethod?: 'native' | 'docker' | 'wsl'): Promise<{
+  async installWithFallback(
+    cliName: string,
+    preferredMethod?: 'native' | 'docker' | 'wsl'
+  ): Promise<{
     success: boolean;
     message: string;
     method: 'native' | 'docker' | 'wsl' | 'manual';
@@ -737,7 +793,9 @@ Claude Code is currently Linux-only. Recommended alternatives:
     }
 
     const platform = await this.detectPlatform();
-    console.log(`🔧 Attempting to install ${cliInfo.name} on ${platform} with fallback support...`);
+    console.log(
+      `🔧 Attempting to install ${cliInfo.name} on ${platform} with fallback support...`
+    );
 
     // Try preferred method first if specified and supported
     if (preferredMethod && preferredMethod !== 'manual') {
@@ -749,9 +807,15 @@ Claude Code is currently Linux-only. Recommended alternatives:
       } else if (preferredMethod === 'docker') {
         const dockerAvailable = await this.isDockerAvailable();
         if (dockerAvailable) {
-          const fallback = cliInfo.fallbackMethod?.find(f => f.method === 'docker' && f.platform === platform);
+          const fallback = cliInfo.fallbackMethod?.find(
+            f => f.method === 'docker' && f.platform === platform
+          );
           if (fallback) {
-            const result = await this.installViaDocker(cliName, cliInfo, fallback);
+            const result = await this.installViaDocker(
+              cliName,
+              cliInfo,
+              fallback
+            );
             if (result.success) {
               return { ...result, method: 'docker' };
             }
@@ -760,7 +824,9 @@ Claude Code is currently Linux-only. Recommended alternatives:
       } else if (preferredMethod === 'wsl') {
         const wslAvailable = await this.isWSLAvailable();
         if (wslAvailable) {
-          const fallback = cliInfo.fallbackMethod?.find(f => f.method === 'wsl' && f.platform === platform);
+          const fallback = cliInfo.fallbackMethod?.find(
+            f => f.method === 'wsl' && f.platform === platform
+          );
           if (fallback) {
             const result = await this.installViaWSL(cliName, cliInfo, fallback);
             if (result.success) {
@@ -773,7 +839,7 @@ Claude Code is currently Linux-only. Recommended alternatives:
 
     // Fall back to automatic method selection
     const installResult = await this.installCLI(cliName);
-    
+
     if (installResult.success) {
       return {
         success: true,
@@ -784,7 +850,7 @@ Claude Code is currently Linux-only. Recommended alternatives:
 
     // If all automated methods fail, provide manual instructions
     const instructions = this.getManualInstallInstructions(cliName, platform);
-    
+
     return {
       success: false,
       message: `Automated installation failed. Manual installation required.`,
@@ -832,7 +898,9 @@ Claude Code is currently Linux-only. Recommended alternatives:
     }
 
     // Check dependencies
-    const installerAvailable = await this.checkInstallerAvailability(cliInfo.installMethod);
+    const installerAvailable = await this.checkInstallerAvailability(
+      cliInfo.installMethod
+    );
     if (!installerAvailable) {
       issues.push({
         category: 'dependencies',
@@ -886,7 +954,7 @@ Claude Code is currently Linux-only. Recommended alternatives:
     if (dockerAvailable) {
       supportedMethods.push('docker');
     }
-    if (platform === 'win32' && await this.isWSLAvailable()) {
+    if (platform === 'win32' && (await this.isWSLAvailable())) {
       supportedMethods.push('wsl');
     }
     supportedMethods.push('manual');

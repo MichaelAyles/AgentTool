@@ -6,7 +6,7 @@ import { useProcessMonitoring } from './useSocket';
  */
 export function useWebSocket() {
   const { socket, isConnected } = useProcessMonitoring();
-  
+
   return {
     socket,
     isConnected,

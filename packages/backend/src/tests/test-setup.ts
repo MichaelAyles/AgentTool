@@ -85,7 +85,7 @@ export const createMockReq = (overrides: any = {}) => ({
   user: createTestUser(),
   session: { id: 'test-session-1' },
   ip: '127.0.0.1',
-  get: (header: string) => header === 'User-Agent' ? 'test-agent' : undefined,
+  get: (header: string) => (header === 'User-Agent' ? 'test-agent' : undefined),
   params: {},
   query: {},
   body: {},
@@ -94,13 +94,22 @@ export const createMockReq = (overrides: any = {}) => ({
 
 export const createMockRes = () => {
   const res: any = {
-    status: function(code: number) { this.statusCode = code; return this; },
-    json: function(data: any) { this.data = data; return this; },
-    send: function(data: any) { this.data = data; return this; },
-    setHeader: function(name: string, value: string) { 
-      this.headers = this.headers || {}; 
-      this.headers[name] = value; 
-      return this; 
+    status: function (code: number) {
+      this.statusCode = code;
+      return this;
+    },
+    json: function (data: any) {
+      this.data = data;
+      return this;
+    },
+    send: function (data: any) {
+      this.data = data;
+      return this;
+    },
+    setHeader: function (name: string, value: string) {
+      this.headers = this.headers || {};
+      this.headers[name] = value;
+      return this;
     },
     statusCode: 200,
     data: null,
@@ -201,26 +210,29 @@ export const createMockProcessMetrics = () => ({
 
 // Test data generators
 export const generateTestData = {
-  users: (count: number) => Array.from({ length: count }, (_, i) => ({
-    ...createTestUser(),
-    id: `test-user-${i + 1}`,
-    username: `testuser${i + 1}`,
-    email: `test${i + 1}@example.com`,
-  })),
-  
-  projects: (count: number, userId?: string) => Array.from({ length: count }, (_, i) => ({
-    ...createTestProject(),
-    id: `test-project-${i + 1}`,
-    name: `Test Project ${i + 1}`,
-    path: `/tmp/test-project-${i + 1}`,
-    userId: userId || `test-user-${i + 1}`,
-  })),
-  
-  containers: (count: number) => Array.from({ length: count }, (_, i) => ({
-    ...createMockContainer(),
-    id: `test-container-${i + 1}`,
-    names: [`/test-container-${i + 1}`],
-  })),
+  users: (count: number) =>
+    Array.from({ length: count }, (_, i) => ({
+      ...createTestUser(),
+      id: `test-user-${i + 1}`,
+      username: `testuser${i + 1}`,
+      email: `test${i + 1}@example.com`,
+    })),
+
+  projects: (count: number, userId?: string) =>
+    Array.from({ length: count }, (_, i) => ({
+      ...createTestProject(),
+      id: `test-project-${i + 1}`,
+      name: `Test Project ${i + 1}`,
+      path: `/tmp/test-project-${i + 1}`,
+      userId: userId || `test-user-${i + 1}`,
+    })),
+
+  containers: (count: number) =>
+    Array.from({ length: count }, (_, i) => ({
+      ...createMockContainer(),
+      id: `test-container-${i + 1}`,
+      names: [`/test-container-${i + 1}`],
+    })),
 };
 
 // Assertion helpers
@@ -232,7 +244,11 @@ export const expectSuccessResponse = (res: any, expectedData?: any) => {
   }
 };
 
-export const expectErrorResponse = (res: any, expectedStatus: number, expectedMessage?: string) => {
+export const expectErrorResponse = (
+  res: any,
+  expectedStatus: number,
+  expectedMessage?: string
+) => {
   expect(res.statusCode).toBe(expectedStatus);
   expect(res.data.success).toBe(false);
   if (expectedMessage) {
@@ -263,9 +279,14 @@ export const expectNotFound = (res: any, resource?: string) => {
 };
 
 // Time utilities for testing
-export const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+export const sleep = (ms: number) =>
+  new Promise(resolve => setTimeout(resolve, ms));
 
-export const waitFor = async (condition: () => boolean, timeout: number = 5000, interval: number = 100) => {
+export const waitFor = async (
+  condition: () => boolean,
+  timeout: number = 5000,
+  interval: number = 100
+) => {
   const start = Date.now();
   while (Date.now() - start < timeout) {
     if (condition()) return true;
@@ -290,23 +311,25 @@ export const mockServices = {
   docker: {
     listContainers: () => Promise.resolve(generateTestData.containers(3)),
     getContainer: (id: string) => ({
-      inspect: () => Promise.resolve({
-        Id: id,
-        State: { Status: 'running' },
-        Config: { Image: 'node:18' },
-        Created: new Date().toISOString(),
-      }),
+      inspect: () =>
+        Promise.resolve({
+          Id: id,
+          State: { Status: 'running' },
+          Config: { Image: 'node:18' },
+          Created: new Date().toISOString(),
+        }),
       stats: () => Promise.resolve(createMockStats()),
       stop: () => Promise.resolve(),
       remove: () => Promise.resolve(),
       start: () => Promise.resolve(),
     }),
-    createContainer: () => Promise.resolve({
-      id: 'new-container-id',
-      start: () => Promise.resolve(),
-    }),
+    createContainer: () =>
+      Promise.resolve({
+        id: 'new-container-id',
+        start: () => Promise.resolve(),
+      }),
   },
-  
+
   redis: {
     get: () => Promise.resolve(null),
     set: () => Promise.resolve('OK'),
@@ -316,7 +339,7 @@ export const mockServices = {
     keys: () => Promise.resolve([]),
     flushdb: () => Promise.resolve('OK'),
   },
-  
+
   process: {
     spawn: () => ({
       pid: 12345,
@@ -332,9 +355,12 @@ export const mockServices = {
 };
 
 // Environment helpers
-export const withTestEnv = (env: Record<string, string>, fn: () => void | Promise<void>) => {
+export const withTestEnv = (
+  env: Record<string, string>,
+  fn: () => void | Promise<void>
+) => {
   const originalEnv = { ...process.env };
-  
+
   return async () => {
     try {
       Object.assign(process.env, env);

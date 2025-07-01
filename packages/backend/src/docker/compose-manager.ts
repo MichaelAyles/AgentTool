@@ -3,7 +3,10 @@ import { join } from 'path';
 import { spawn } from 'child_process';
 import { EventEmitter } from 'events';
 import { structuredLogger } from '../middleware/logging.js';
-import type { DeploymentConfig, ServiceDefinition } from './orchestration-manager.js';
+import type {
+  DeploymentConfig,
+  ServiceDefinition,
+} from './orchestration-manager.js';
 
 export interface ComposeService {
   image: string;
@@ -66,12 +69,15 @@ export interface ComposeStack {
   config: ComposeConfig;
   filePath: string;
   status: 'stopped' | 'starting' | 'running' | 'stopping' | 'failed';
-  services: Record<string, {
-    status: string;
-    health: string;
-    ports: string[];
-    image: string;
-  }>;
+  services: Record<
+    string,
+    {
+      status: string;
+      health: string;
+      ports: string[];
+      image: string;
+    }
+  >;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -122,7 +128,9 @@ export class ComposeManager extends EventEmitter {
 
       return stackId;
     } catch (error) {
-      structuredLogger.error('Failed to create compose stack', error as Error, { name });
+      structuredLogger.error('Failed to create compose stack', error as Error, {
+        name,
+      });
       throw error;
     }
   }
@@ -140,28 +148,40 @@ export class ComposeManager extends EventEmitter {
       stack.status = 'starting';
       this.emit('stackStatusChanged', stack);
 
-      const result = await this.runDockerComposeCommand(stack.filePath, ['up', '-d']);
-      
+      const result = await this.runDockerComposeCommand(stack.filePath, [
+        'up',
+        '-d',
+      ]);
+
       if (result.success) {
         stack.status = 'running';
         stack.updatedAt = new Date();
-        
+
         // Update service status
         await this.updateStackServiceStatus(stack);
-        
+
         this.emit('stackDeployed', stack);
-        structuredLogger.info('Stack deployed successfully', { stackId, name: stack.name });
+        structuredLogger.info('Stack deployed successfully', {
+          stackId,
+          name: stack.name,
+        });
         return true;
       } else {
         stack.status = 'failed';
         this.emit('stackFailed', stack);
-        structuredLogger.error('Stack deployment failed', new Error(result.error), { stackId });
+        structuredLogger.error(
+          'Stack deployment failed',
+          new Error(result.error),
+          { stackId }
+        );
         return false;
       }
     } catch (error) {
       stack.status = 'failed';
       this.emit('stackFailed', stack);
-      structuredLogger.error('Stack deployment error', error as Error, { stackId });
+      structuredLogger.error('Stack deployment error', error as Error, {
+        stackId,
+      });
       return false;
     }
   }
@@ -179,18 +199,25 @@ export class ComposeManager extends EventEmitter {
       stack.status = 'stopping';
       this.emit('stackStatusChanged', stack);
 
-      const result = await this.runDockerComposeCommand(stack.filePath, ['down']);
-      
+      const result = await this.runDockerComposeCommand(stack.filePath, [
+        'down',
+      ]);
+
       if (result.success) {
         stack.status = 'stopped';
         stack.updatedAt = new Date();
         stack.services = {};
-        
+
         this.emit('stackStopped', stack);
-        structuredLogger.info('Stack stopped successfully', { stackId, name: stack.name });
+        structuredLogger.info('Stack stopped successfully', {
+          stackId,
+          name: stack.name,
+        });
         return true;
       } else {
-        structuredLogger.error('Stack stop failed', new Error(result.error), { stackId });
+        structuredLogger.error('Stack stop failed', new Error(result.error), {
+          stackId,
+        });
         return false;
       }
     } catch (error) {
@@ -213,15 +240,18 @@ export class ComposeManager extends EventEmitter {
     }
 
     try {
-      const result = await this.runDockerComposeCommand(
-        stack.filePath,
-        ['up', '-d', '--scale', `${serviceName}=${replicas}`, '--no-recreate']
-      );
+      const result = await this.runDockerComposeCommand(stack.filePath, [
+        'up',
+        '-d',
+        '--scale',
+        `${serviceName}=${replicas}`,
+        '--no-recreate',
+      ]);
 
       if (result.success) {
         await this.updateStackServiceStatus(stack);
         stack.updatedAt = new Date();
-        
+
         this.emit('serviceScaled', { stackId, serviceName, replicas });
         structuredLogger.info('Service scaled successfully', {
           stackId,
@@ -230,10 +260,14 @@ export class ComposeManager extends EventEmitter {
         });
         return true;
       } else {
-        structuredLogger.error('Service scaling failed', new Error(result.error), {
-          stackId,
-          serviceName,
-        });
+        structuredLogger.error(
+          'Service scaling failed',
+          new Error(result.error),
+          {
+            stackId,
+            serviceName,
+          }
+        );
         return false;
       }
     } catch (error) {
@@ -259,7 +293,7 @@ export class ComposeManager extends EventEmitter {
 
     try {
       const newComposeConfig = this.convertToComposeConfig(newDeploymentConfig);
-      
+
       // Backup old file
       const backupPath = `${stack.filePath}.backup`;
       await fs.copyFile(stack.filePath, backupPath);
@@ -268,17 +302,23 @@ export class ComposeManager extends EventEmitter {
       await this.writeComposeFile(stack.filePath, newComposeConfig);
 
       // Update stack
-      const result = await this.runDockerComposeCommand(stack.filePath, ['up', '-d']);
+      const result = await this.runDockerComposeCommand(stack.filePath, [
+        'up',
+        '-d',
+      ]);
 
       if (result.success) {
         stack.config = newComposeConfig;
         stack.updatedAt = new Date();
-        
+
         await this.updateStackServiceStatus(stack);
-        
+
         this.emit('stackUpdated', stack);
-        structuredLogger.info('Stack updated successfully', { stackId, name: stack.name });
-        
+        structuredLogger.info('Stack updated successfully', {
+          stackId,
+          name: stack.name,
+        });
+
         // Remove backup
         await fs.unlink(backupPath);
         return true;
@@ -286,10 +326,14 @@ export class ComposeManager extends EventEmitter {
         // Restore backup on failure
         await fs.copyFile(backupPath, stack.filePath);
         await fs.unlink(backupPath);
-        
-        structuredLogger.error('Stack update failed, restored backup', new Error(result.error), {
-          stackId,
-        });
+
+        structuredLogger.error(
+          'Stack update failed, restored backup',
+          new Error(result.error),
+          {
+            stackId,
+          }
+        );
         return false;
       }
     } catch (error) {
@@ -321,11 +365,11 @@ export class ComposeManager extends EventEmitter {
 
     try {
       const args = ['logs'];
-      
+
       if (options.follow) args.push('-f');
       if (options.tail) args.push('--tail', options.tail.toString());
       if (options.since) args.push('--since', options.since);
-      
+
       if (serviceName) {
         args.push(serviceName);
       }
@@ -333,7 +377,9 @@ export class ComposeManager extends EventEmitter {
       const result = await this.runDockerComposeCommand(stack.filePath, args);
       return result;
     } catch (error) {
-      structuredLogger.error('Failed to get stack logs', error as Error, { stackId });
+      structuredLogger.error('Failed to get stack logs', error as Error, {
+        stackId,
+      });
       return {
         success: false,
         error: (error as Error).message,
@@ -363,11 +409,15 @@ export class ComposeManager extends EventEmitter {
       const result = await this.runDockerComposeCommand(stack.filePath, args);
       return result;
     } catch (error) {
-      structuredLogger.error('Failed to execute command in service', error as Error, {
-        stackId,
-        serviceName,
-        command,
-      });
+      structuredLogger.error(
+        'Failed to execute command in service',
+        error as Error,
+        {
+          stackId,
+          serviceName,
+          command,
+        }
+      );
       return {
         success: false,
         error: (error as Error).message,
@@ -414,7 +464,9 @@ export class ComposeManager extends EventEmitter {
       structuredLogger.info('Stack removed', { stackId, name: stack.name });
       return true;
     } catch (error) {
-      structuredLogger.error('Failed to remove stack', error as Error, { stackId });
+      structuredLogger.error('Failed to remove stack', error as Error, {
+        stackId,
+      });
       return false;
     }
   }
@@ -425,12 +477,17 @@ export class ComposeManager extends EventEmitter {
     try {
       await fs.mkdir(this.stacksDirectory, { recursive: true });
     } catch (error) {
-      structuredLogger.error('Failed to initialize stacks directory', error as Error);
+      structuredLogger.error(
+        'Failed to initialize stacks directory',
+        error as Error
+      );
       throw error;
     }
   }
 
-  private convertToComposeConfig(deploymentConfig: DeploymentConfig): ComposeConfig {
+  private convertToComposeConfig(
+    deploymentConfig: DeploymentConfig
+  ): ComposeConfig {
     const services: Record<string, ComposeService> = {};
     const networks: Record<string, any> = {};
 
@@ -472,7 +529,8 @@ export class ComposeManager extends EventEmitter {
             },
           },
           restart_policy: {
-            condition: service.restartPolicy === 'never' ? 'none' : 'on-failure',
+            condition:
+              service.restartPolicy === 'never' ? 'none' : 'on-failure',
             max_attempts: 3,
           },
         };
@@ -504,7 +562,10 @@ export class ComposeManager extends EventEmitter {
     };
   }
 
-  private async writeComposeFile(filePath: string, config: ComposeConfig): Promise<void> {
+  private async writeComposeFile(
+    filePath: string,
+    config: ComposeConfig
+  ): Promise<void> {
     const yaml = this.convertToYaml(config);
     await fs.writeFile(filePath, yaml, 'utf8');
   }
@@ -518,43 +579,43 @@ export class ComposeManager extends EventEmitter {
     for (const [name, service] of Object.entries(config.services)) {
       yaml += `  ${name}:\n`;
       yaml += `    image: ${service.image}\n`;
-      
+
       if (service.container_name) {
         yaml += `    container_name: ${service.container_name}\n`;
       }
-      
+
       if (service.environment) {
         yaml += '    environment:\n';
         for (const [key, value] of Object.entries(service.environment)) {
           yaml += `      ${key}: "${value}"\n`;
         }
       }
-      
+
       if (service.volumes) {
         yaml += '    volumes:\n';
         for (const volume of service.volumes) {
           yaml += `      - ${volume}\n`;
         }
       }
-      
+
       if (service.networks) {
         yaml += '    networks:\n';
         for (const network of service.networks) {
           yaml += `      - ${network}\n`;
         }
       }
-      
+
       if (service.restart) {
         yaml += `    restart: ${service.restart}\n`;
       }
-      
+
       if (service.labels) {
         yaml += '    labels:\n';
         for (const [key, value] of Object.entries(service.labels)) {
           yaml += `      ${key}: "${value}"\n`;
         }
       }
-      
+
       if (service.healthcheck) {
         yaml += '    healthcheck:\n';
         yaml += `      test: [${service.healthcheck.test.map(t => `"${t}"`).join(', ')}]\n`;
@@ -568,7 +629,7 @@ export class ComposeManager extends EventEmitter {
           yaml += `      retries: ${service.healthcheck.retries}\n`;
         }
       }
-      
+
       if (service.deploy) {
         yaml += '    deploy:\n';
         if (service.deploy.replicas) {
@@ -587,7 +648,7 @@ export class ComposeManager extends EventEmitter {
           }
         }
       }
-      
+
       yaml += '\n';
     }
 
@@ -613,7 +674,7 @@ export class ComposeManager extends EventEmitter {
     logs?: string;
     error?: string;
   }> {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       const command = spawn('docker-compose', ['-f', filePath, ...args], {
         stdio: ['pipe', 'pipe', 'pipe'],
       });
@@ -621,15 +682,15 @@ export class ComposeManager extends EventEmitter {
       let stdout = '';
       let stderr = '';
 
-      command.stdout.on('data', (data) => {
+      command.stdout.on('data', data => {
         stdout += data.toString();
       });
 
-      command.stderr.on('data', (data) => {
+      command.stderr.on('data', data => {
         stderr += data.toString();
       });
 
-      command.on('close', (code) => {
+      command.on('close', code => {
         if (code === 0) {
           resolve({
             success: true,
@@ -643,7 +704,7 @@ export class ComposeManager extends EventEmitter {
         }
       });
 
-      command.on('error', (error) => {
+      command.on('error', error => {
         resolve({
           success: false,
           error: error.message,
@@ -654,13 +715,17 @@ export class ComposeManager extends EventEmitter {
 
   private async updateStackServiceStatus(stack: ComposeStack): Promise<void> {
     try {
-      const result = await this.runDockerComposeCommand(stack.filePath, ['ps', '--format', 'json']);
-      
+      const result = await this.runDockerComposeCommand(stack.filePath, [
+        'ps',
+        '--format',
+        'json',
+      ]);
+
       if (result.success && result.logs) {
         // Parse service status from docker-compose ps output
         // This is a simplified version - actual implementation would parse JSON
         stack.services = {};
-        
+
         for (const serviceName of Object.keys(stack.config.services)) {
           stack.services[serviceName] = {
             status: 'running', // Would parse from actual output
@@ -671,9 +736,13 @@ export class ComposeManager extends EventEmitter {
         }
       }
     } catch (error) {
-      structuredLogger.error('Failed to update service status', error as Error, {
-        stackId: stack.id,
-      });
+      structuredLogger.error(
+        'Failed to update service status',
+        error as Error,
+        {
+          stackId: stack.id,
+        }
+      );
     }
   }
 }

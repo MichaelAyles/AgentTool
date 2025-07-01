@@ -97,22 +97,60 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
   hasUnsavedChanges = false,
 }) => {
   const [activeSection, setActiveSection] = useState<string>('profile');
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['profile']));
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(
+    new Set(['profile'])
+  );
   const [searchQuery, setSearchQuery] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const sections = [
-    { id: 'profile', label: 'Profile', icon: User, description: 'Personal information and account settings' },
-    { id: 'security', label: 'Security', icon: Shield, description: 'Security and privacy settings' },
-    { id: 'terminal', label: 'Terminal', icon: Terminal, description: 'Terminal appearance and behavior' },
-    { id: 'appearance', label: 'Appearance', icon: Palette, description: 'UI theme and visual preferences' },
-    { id: 'notifications', label: 'Notifications', icon: Bell, description: 'Notification preferences' },
-    { id: 'performance', label: 'Performance', icon: HardDrive, description: 'Performance and resource settings' },
-    { id: 'development', label: 'Development', icon: Code, description: 'Developer tools and debugging', advanced: true },
+    {
+      id: 'profile',
+      label: 'Profile',
+      icon: User,
+      description: 'Personal information and account settings',
+    },
+    {
+      id: 'security',
+      label: 'Security',
+      icon: Shield,
+      description: 'Security and privacy settings',
+    },
+    {
+      id: 'terminal',
+      label: 'Terminal',
+      icon: Terminal,
+      description: 'Terminal appearance and behavior',
+    },
+    {
+      id: 'appearance',
+      label: 'Appearance',
+      icon: Palette,
+      description: 'UI theme and visual preferences',
+    },
+    {
+      id: 'notifications',
+      label: 'Notifications',
+      icon: Bell,
+      description: 'Notification preferences',
+    },
+    {
+      id: 'performance',
+      label: 'Performance',
+      icon: HardDrive,
+      description: 'Performance and resource settings',
+    },
+    {
+      id: 'development',
+      label: 'Development',
+      icon: Code,
+      description: 'Developer tools and debugging',
+      advanced: true,
+    },
   ];
 
-  const visibleSections = sections.filter(section => 
-    !section.advanced || showAdvanced
+  const visibleSections = sections.filter(
+    section => !section.advanced || showAdvanced
   );
 
   const filteredSections = visibleSections.filter(section => {
@@ -134,7 +172,11 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
     setExpandedSections(newExpanded);
   };
 
-  const updateSettings = (section: keyof UserSettings, field: string, value: any) => {
+  const updateSettings = (
+    section: keyof UserSettings,
+    field: string,
+    value: any
+  ) => {
     onSettingsChange({
       ...settings,
       [section]: {
@@ -164,9 +206,9 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
     max?: number,
     step?: number
   ) => (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <label className="text-sm font-medium text-gray-900 dark:text-white">
+    <div className='space-y-2'>
+      <div className='flex items-center justify-between'>
+        <label className='text-sm font-medium text-gray-900 dark:text-white'>
           {label}
         </label>
         {type === 'boolean' && (
@@ -184,59 +226,61 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
           </button>
         )}
       </div>
-      
+
       {description && (
-        <p className="text-xs text-gray-500 dark:text-gray-400">{description}</p>
+        <p className='text-xs text-gray-500 dark:text-gray-400'>
+          {description}
+        </p>
       )}
-      
+
       {type === 'text' && (
         <input
-          type="text"
+          type='text'
           value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+          onChange={e => onChange(e.target.value)}
+          className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
         />
       )}
-      
+
       {type === 'number' && (
         <input
-          type="number"
+          type='number'
           value={value}
-          onChange={(e) => onChange(Number(e.target.value))}
+          onChange={e => onChange(Number(e.target.value))}
           min={min}
           max={max}
           step={step}
-          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+          className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
         />
       )}
-      
+
       {type === 'select' && options && (
         <select
           value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+          onChange={e => onChange(e.target.value)}
+          className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
         >
-          {options.map((option) => (
+          {options.map(option => (
             <option key={option.value} value={option.value}>
               {option.label}
             </option>
           ))}
         </select>
       )}
-      
+
       {type === 'color' && (
-        <div className="flex items-center space-x-2">
+        <div className='flex items-center space-x-2'>
           <input
-            type="color"
+            type='color'
             value={value}
-            onChange={(e) => onChange(e.target.value)}
-            className="w-12 h-8 border border-gray-300 dark:border-gray-600 rounded cursor-pointer"
+            onChange={e => onChange(e.target.value)}
+            className='w-12 h-8 border border-gray-300 dark:border-gray-600 rounded cursor-pointer'
           />
           <input
-            type="text"
+            type='text'
             value={value}
-            onChange={(e) => onChange(e.target.value)}
-            className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-mono"
+            onChange={e => onChange(e.target.value)}
+            className='flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-mono'
           />
         </div>
       )}
@@ -247,11 +291,11 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
     switch (sectionId) {
       case 'profile':
         return (
-          <div className="space-y-4">
+          <div className='space-y-4'>
             {renderFormField(
               'Username',
               settings.profile.username,
-              (value) => updateSettings('profile', 'username', value),
+              value => updateSettings('profile', 'username', value),
               'text',
               undefined,
               'Your unique username'
@@ -259,7 +303,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             {renderFormField(
               'Display Name',
               settings.profile.displayName,
-              (value) => updateSettings('profile', 'displayName', value),
+              value => updateSettings('profile', 'displayName', value),
               'text',
               undefined,
               'Name shown to other users'
@@ -267,7 +311,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             {renderFormField(
               'Email',
               settings.profile.email,
-              (value) => updateSettings('profile', 'email', value),
+              value => updateSettings('profile', 'email', value),
               'text',
               undefined,
               'Your email address for notifications'
@@ -277,11 +321,12 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
 
       case 'security':
         return (
-          <div className="space-y-4">
+          <div className='space-y-4'>
             {renderFormField(
               'Dangerous Mode',
               settings.security.dangerousModeEnabled,
-              (value) => updateSettings('security', 'dangerousModeEnabled', value),
+              value =>
+                updateSettings('security', 'dangerousModeEnabled', value),
               'boolean',
               undefined,
               'Allow execution of potentially dangerous commands'
@@ -289,7 +334,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             {renderFormField(
               'Session Timeout (minutes)',
               settings.security.sessionTimeout,
-              (value) => updateSettings('security', 'sessionTimeout', value),
+              value => updateSettings('security', 'sessionTimeout', value),
               'number',
               undefined,
               'Automatically log out after inactivity',
@@ -300,7 +345,12 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             {renderFormField(
               'Require Password Confirmation',
               settings.security.requirePasswordConfirmation,
-              (value) => updateSettings('security', 'requirePasswordConfirmation', value),
+              value =>
+                updateSettings(
+                  'security',
+                  'requirePasswordConfirmation',
+                  value
+                ),
               'boolean',
               undefined,
               'Require password for sensitive operations'
@@ -308,7 +358,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             {renderFormField(
               'Audit Logging',
               settings.security.auditLogging,
-              (value) => updateSettings('security', 'auditLogging', value),
+              value => updateSettings('security', 'auditLogging', value),
               'boolean',
               undefined,
               'Log security-relevant actions'
@@ -318,11 +368,11 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
 
       case 'terminal':
         return (
-          <div className="space-y-4">
+          <div className='space-y-4'>
             {renderFormField(
               'Font Size',
               settings.terminal.fontSize,
-              (value) => updateSettings('terminal', 'fontSize', value),
+              value => updateSettings('terminal', 'fontSize', value),
               'number',
               undefined,
               'Terminal font size in pixels',
@@ -333,21 +383,37 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             {renderFormField(
               'Font Family',
               settings.terminal.fontFamily,
-              (value) => updateSettings('terminal', 'fontFamily', value),
+              value => updateSettings('terminal', 'fontFamily', value),
               'select',
               [
-                { value: 'Monaco, "Cascadia Code", "SF Mono", Consolas, monospace', label: 'Monaco (Default)' },
-                { value: '"JetBrains Mono", Monaco, Consolas, monospace', label: 'JetBrains Mono' },
-                { value: '"Fira Code", Monaco, Consolas, monospace', label: 'Fira Code' },
-                { value: 'Consolas, Monaco, "Courier New", monospace', label: 'Consolas' },
-                { value: '"Source Code Pro", Monaco, Consolas, monospace', label: 'Source Code Pro' },
+                {
+                  value:
+                    'Monaco, "Cascadia Code", "SF Mono", Consolas, monospace',
+                  label: 'Monaco (Default)',
+                },
+                {
+                  value: '"JetBrains Mono", Monaco, Consolas, monospace',
+                  label: 'JetBrains Mono',
+                },
+                {
+                  value: '"Fira Code", Monaco, Consolas, monospace',
+                  label: 'Fira Code',
+                },
+                {
+                  value: 'Consolas, Monaco, "Courier New", monospace',
+                  label: 'Consolas',
+                },
+                {
+                  value: '"Source Code Pro", Monaco, Consolas, monospace',
+                  label: 'Source Code Pro',
+                },
               ],
               'Monospace font for terminal'
             )}
             {renderFormField(
               'Theme',
               settings.terminal.theme,
-              (value) => updateSettings('terminal', 'theme', value),
+              value => updateSettings('terminal', 'theme', value),
               'select',
               [
                 { value: 'auto', label: 'Auto (Follow system)' },
@@ -359,7 +425,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             {renderFormField(
               'Cursor Blink',
               settings.terminal.cursorBlink,
-              (value) => updateSettings('terminal', 'cursorBlink', value),
+              value => updateSettings('terminal', 'cursorBlink', value),
               'boolean',
               undefined,
               'Make terminal cursor blink'
@@ -367,7 +433,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             {renderFormField(
               'Scrollback Lines',
               settings.terminal.scrollback,
-              (value) => updateSettings('terminal', 'scrollback', value),
+              value => updateSettings('terminal', 'scrollback', value),
               'number',
               undefined,
               'Number of lines to keep in scroll history',
@@ -378,7 +444,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             {renderFormField(
               'Bell Sound',
               settings.terminal.bellSound,
-              (value) => updateSettings('terminal', 'bellSound', value),
+              value => updateSettings('terminal', 'bellSound', value),
               'boolean',
               undefined,
               'Play sound on terminal bell'
@@ -386,7 +452,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             {renderFormField(
               'Word Wrap',
               settings.terminal.wordWrap,
-              (value) => updateSettings('terminal', 'wordWrap', value),
+              value => updateSettings('terminal', 'wordWrap', value),
               'boolean',
               undefined,
               'Wrap long lines in terminal'
@@ -396,11 +462,11 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
 
       case 'appearance':
         return (
-          <div className="space-y-4">
+          <div className='space-y-4'>
             {renderFormField(
               'UI Theme',
               settings.appearance.theme,
-              (value) => updateSettings('appearance', 'theme', value),
+              value => updateSettings('appearance', 'theme', value),
               'select',
               [
                 { value: 'auto', label: 'Auto (Follow system)' },
@@ -412,7 +478,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             {renderFormField(
               'Accent Color',
               settings.appearance.accentColor,
-              (value) => updateSettings('appearance', 'accentColor', value),
+              value => updateSettings('appearance', 'accentColor', value),
               'color',
               undefined,
               'Primary accent color for the interface'
@@ -420,7 +486,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             {renderFormField(
               'Compact Mode',
               settings.appearance.compactMode,
-              (value) => updateSettings('appearance', 'compactMode', value),
+              value => updateSettings('appearance', 'compactMode', value),
               'boolean',
               undefined,
               'Reduce spacing for more content on screen'
@@ -428,7 +494,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             {renderFormField(
               'Show Line Numbers',
               settings.appearance.showLineNumbers,
-              (value) => updateSettings('appearance', 'showLineNumbers', value),
+              value => updateSettings('appearance', 'showLineNumbers', value),
               'boolean',
               undefined,
               'Show line numbers in code editors'
@@ -436,7 +502,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             {renderFormField(
               'Animations',
               settings.appearance.animationsEnabled,
-              (value) => updateSettings('appearance', 'animationsEnabled', value),
+              value => updateSettings('appearance', 'animationsEnabled', value),
               'boolean',
               undefined,
               'Enable UI animations and transitions'
@@ -446,11 +512,11 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
 
       case 'notifications':
         return (
-          <div className="space-y-4">
+          <div className='space-y-4'>
             {renderFormField(
               'Notifications Enabled',
               settings.notifications.enabled,
-              (value) => updateSettings('notifications', 'enabled', value),
+              value => updateSettings('notifications', 'enabled', value),
               'boolean',
               undefined,
               'Enable all notifications'
@@ -458,7 +524,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             {renderFormField(
               'Email Notifications',
               settings.notifications.email,
-              (value) => updateSettings('notifications', 'email', value),
+              value => updateSettings('notifications', 'email', value),
               'boolean',
               undefined,
               'Send notifications via email'
@@ -466,7 +532,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             {renderFormField(
               'Desktop Notifications',
               settings.notifications.desktop,
-              (value) => updateSettings('notifications', 'desktop', value),
+              value => updateSettings('notifications', 'desktop', value),
               'boolean',
               undefined,
               'Show browser/desktop notifications'
@@ -474,7 +540,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             {renderFormField(
               'Sound Notifications',
               settings.notifications.sound,
-              (value) => updateSettings('notifications', 'sound', value),
+              value => updateSettings('notifications', 'sound', value),
               'boolean',
               undefined,
               'Play sound for notifications'
@@ -482,7 +548,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             {renderFormField(
               'Security Alerts',
               settings.notifications.security,
-              (value) => updateSettings('notifications', 'security', value),
+              value => updateSettings('notifications', 'security', value),
               'boolean',
               undefined,
               'Notify about security events'
@@ -490,7 +556,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             {renderFormField(
               'System Events',
               settings.notifications.system,
-              (value) => updateSettings('notifications', 'system', value),
+              value => updateSettings('notifications', 'system', value),
               'boolean',
               undefined,
               'Notify about system status changes'
@@ -498,7 +564,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             {renderFormField(
               'Adapter Events',
               settings.notifications.adapters,
-              (value) => updateSettings('notifications', 'adapters', value),
+              value => updateSettings('notifications', 'adapters', value),
               'boolean',
               undefined,
               'Notify about adapter status changes'
@@ -508,11 +574,11 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
 
       case 'performance':
         return (
-          <div className="space-y-4">
+          <div className='space-y-4'>
             {renderFormField(
               'Auto Save',
               settings.performance.autoSave,
-              (value) => updateSettings('performance', 'autoSave', value),
+              value => updateSettings('performance', 'autoSave', value),
               'boolean',
               undefined,
               'Automatically save changes'
@@ -520,7 +586,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             {renderFormField(
               'Max Concurrent Sessions',
               settings.performance.maxSessions,
-              (value) => updateSettings('performance', 'maxSessions', value),
+              value => updateSettings('performance', 'maxSessions', value),
               'number',
               undefined,
               'Maximum number of concurrent terminal sessions',
@@ -531,7 +597,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             {renderFormField(
               'Memory Limit (MB)',
               settings.performance.memoryLimit,
-              (value) => updateSettings('performance', 'memoryLimit', value),
+              value => updateSettings('performance', 'memoryLimit', value),
               'number',
               undefined,
               'Maximum memory usage per session',
@@ -542,7 +608,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             {renderFormField(
               'Disk Cache Size (MB)',
               settings.performance.diskCacheSize,
-              (value) => updateSettings('performance', 'diskCacheSize', value),
+              value => updateSettings('performance', 'diskCacheSize', value),
               'number',
               undefined,
               'Maximum disk cache size',
@@ -553,7 +619,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             {renderFormField(
               'Network Timeout (seconds)',
               settings.performance.networkTimeout,
-              (value) => updateSettings('performance', 'networkTimeout', value),
+              value => updateSettings('performance', 'networkTimeout', value),
               'number',
               undefined,
               'Timeout for network requests',
@@ -566,11 +632,11 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
 
       case 'development':
         return (
-          <div className="space-y-4">
+          <div className='space-y-4'>
             {renderFormField(
               'Debug Mode',
               settings.development.debugMode,
-              (value) => updateSettings('development', 'debugMode', value),
+              value => updateSettings('development', 'debugMode', value),
               'boolean',
               undefined,
               'Enable debug logging and tools'
@@ -578,7 +644,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             {renderFormField(
               'Verbose Logging',
               settings.development.verboseLogging,
-              (value) => updateSettings('development', 'verboseLogging', value),
+              value => updateSettings('development', 'verboseLogging', value),
               'boolean',
               undefined,
               'Show detailed logs in console'
@@ -586,7 +652,8 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             {renderFormField(
               'Performance Metrics',
               settings.development.showPerformanceMetrics,
-              (value) => updateSettings('development', 'showPerformanceMetrics', value),
+              value =>
+                updateSettings('development', 'showPerformanceMetrics', value),
               'boolean',
               undefined,
               'Display performance metrics in UI'
@@ -594,7 +661,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             {renderFormField(
               'Auto Reload',
               settings.development.autoReload,
-              (value) => updateSettings('development', 'autoReload', value),
+              value => updateSettings('development', 'autoReload', value),
               'boolean',
               undefined,
               'Automatically reload on code changes'
@@ -602,7 +669,8 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             {renderFormField(
               'Experimental Features',
               settings.development.experimentalFeatures,
-              (value) => updateSettings('development', 'experimentalFeatures', value),
+              value =>
+                updateSettings('development', 'experimentalFeatures', value),
               'boolean',
               undefined,
               'Enable experimental and beta features'
@@ -612,7 +680,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
 
       default:
         return (
-          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+          <div className='text-center py-8 text-gray-500 dark:text-gray-400'>
             Select a settings category to configure
           </div>
         );
@@ -620,21 +688,23 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
   };
 
   return (
-    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+    <div className='bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden'>
       {/* Header */}
-      <div className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <Settings className="w-6 h-6 text-gray-600 dark:text-gray-400" />
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Settings</h2>
+      <div className='bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4'>
+        <div className='flex items-center justify-between'>
+          <div className='flex items-center space-x-3'>
+            <Settings className='w-6 h-6 text-gray-600 dark:text-gray-400' />
+            <h2 className='text-xl font-semibold text-gray-900 dark:text-white'>
+              Settings
+            </h2>
             {hasUnsavedChanges && (
-              <span className="px-2 py-1 bg-orange-100 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 text-xs rounded-full font-medium">
+              <span className='px-2 py-1 bg-orange-100 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 text-xs rounded-full font-medium'>
                 Unsaved changes
               </span>
             )}
           </div>
-          
-          <div className="flex items-center space-x-2">
+
+          <div className='flex items-center space-x-2'>
             <button
               onClick={() => setShowAdvanced(!showAdvanced)}
               className={`flex items-center space-x-1 px-3 py-1 rounded-lg text-sm ${
@@ -642,60 +712,70 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                   ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400'
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
-              title={showAdvanced ? 'Hide advanced settings' : 'Show advanced settings'}
+              title={
+                showAdvanced
+                  ? 'Hide advanced settings'
+                  : 'Show advanced settings'
+              }
             >
-              {showAdvanced ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              {showAdvanced ? (
+                <EyeOff className='w-4 h-4' />
+              ) : (
+                <Eye className='w-4 h-4' />
+              )}
               <span>Advanced</span>
             </button>
-            
+
             <input
-              type="file"
-              id="import-settings"
-              accept=".json"
+              type='file'
+              id='import-settings'
+              accept='.json'
               onChange={handleFileImport}
-              className="hidden"
+              className='hidden'
             />
             <button
-              onClick={() => document.getElementById('import-settings')?.click()}
-              className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-              title="Import settings"
+              onClick={() =>
+                document.getElementById('import-settings')?.click()
+              }
+              className='p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg'
+              title='Import settings'
             >
-              <Upload className="w-4 h-4" />
+              <Upload className='w-4 h-4' />
             </button>
-            
+
             <button
               onClick={onExport}
-              className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-              title="Export settings"
+              className='p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg'
+              title='Export settings'
             >
-              <Download className="w-4 h-4" />
+              <Download className='w-4 h-4' />
             </button>
           </div>
         </div>
 
         {/* Search */}
-        <div className="mt-4">
+        <div className='mt-4'>
           <input
-            type="text"
-            placeholder="Search settings..."
+            type='text'
+            placeholder='Search settings...'
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            onChange={e => setSearchQuery(e.target.value)}
+            className='w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent'
           />
         </div>
       </div>
 
-      <div className="flex h-96">
+      <div className='flex h-96'>
         {/* Settings Navigation */}
-        <div className="w-1/3 border-r border-gray-200 dark:border-gray-700 overflow-y-auto">
-          <div className="p-4">
-            {filteredSections.map((section) => {
+        <div className='w-1/3 border-r border-gray-200 dark:border-gray-700 overflow-y-auto'>
+          <div className='p-4'>
+            {filteredSections.map(section => {
               const Icon = section.icon;
               const isActive = activeSection === section.id;
               const isExpanded = expandedSections.has(section.id);
-              
+
               return (
-                <div key={section.id} className="mb-2">
+                <div key={section.id} className='mb-2'>
                   <button
                     onClick={() => {
                       setActiveSection(section.id);
@@ -707,17 +787,19 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                         : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
                     }`}
                   >
-                    <div className="flex items-center space-x-3">
-                      <Icon className="w-5 h-5" />
+                    <div className='flex items-center space-x-3'>
+                      <Icon className='w-5 h-5' />
                       <div>
-                        <div className="font-medium">{section.label}</div>
-                        <div className="text-xs opacity-75">{section.description}</div>
+                        <div className='font-medium'>{section.label}</div>
+                        <div className='text-xs opacity-75'>
+                          {section.description}
+                        </div>
                       </div>
                     </div>
                     {isExpanded ? (
-                      <ChevronDown className="w-4 h-4" />
+                      <ChevronDown className='w-4 h-4' />
                     ) : (
-                      <ChevronRight className="w-4 h-4" />
+                      <ChevronRight className='w-4 h-4' />
                     )}
                   </button>
                 </div>
@@ -727,33 +809,31 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
         </div>
 
         {/* Settings Content */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="p-6">
-            {renderSectionContent(activeSection)}
-          </div>
+        <div className='flex-1 overflow-y-auto'>
+          <div className='p-6'>{renderSectionContent(activeSection)}</div>
         </div>
       </div>
 
       {/* Footer */}
-      <div className="bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
+      <div className='bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-6 py-4'>
+        <div className='flex items-center justify-between'>
+          <div className='flex items-center space-x-2'>
             <button
               onClick={onReset}
-              className="flex items-center space-x-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+              className='flex items-center space-x-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg'
             >
-              <RotateCcw className="w-4 h-4" />
+              <RotateCcw className='w-4 h-4' />
               <span>Reset to Defaults</span>
             </button>
           </div>
-          
-          <div className="flex items-center space-x-2">
+
+          <div className='flex items-center space-x-2'>
             <button
               onClick={onSave}
               disabled={loading || !hasUnsavedChanges}
-              className="flex items-center space-x-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className='flex items-center space-x-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed'
             >
-              <Save className="w-4 h-4" />
+              <Save className='w-4 h-4' />
               <span>{loading ? 'Saving...' : 'Save Changes'}</span>
             </button>
           </div>

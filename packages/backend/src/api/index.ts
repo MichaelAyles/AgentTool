@@ -6,8 +6,16 @@ import { v4 as uuidv4 } from 'uuid';
 import { cliInstaller } from '../services/cli-installer.js';
 import { projectManager } from '../services/project-manager.js';
 import { asyncHandler } from '../middleware/error-handler.js';
-import { authenticate, optionalAuth, requireAuthInProduction } from '../auth/middleware.js';
-import { requirePermission, requireAdmin, requireRole } from '../auth/permissions.js';
+import {
+  authenticate,
+  optionalAuth,
+  requireAuthInProduction,
+} from '../auth/middleware.js';
+import {
+  requirePermission,
+  requireAdmin,
+  requireRole,
+} from '../auth/permissions.js';
 import gitRouter from './git.js';
 import authRouter from './auth.js';
 import rolesRouter from './roles.js';
@@ -142,129 +150,183 @@ export function setupRoutes(app: Express, services: Services): void {
   // Adapters
   app.get('/api/adapters', (req, res) => {
     const adapters = services.adapterRegistry.list();
-    res.json(adapters.map(a => ({
-      name: a.name,
-      version: a.version,
-      description: a.description,
-      capabilities: a.capabilities,
-    })));
+    res.json(
+      adapters.map(a => ({
+        name: a.name,
+        version: a.version,
+        description: a.description,
+        capabilities: a.capabilities,
+      }))
+    );
   });
 
   // Projects
-  app.get('/api/projects', requirePermission('project', 'read'), asyncHandler(async (req, res) => {
-    const userId = req.user!.id;
-    const projects = db.getProjectsByUserId(userId);
-    res.json(projects);
-  }));
+  app.get(
+    '/api/projects',
+    requirePermission('project', 'read'),
+    asyncHandler(async (req, res) => {
+      const userId = req.user!.id;
+      const projects = db.getProjectsByUserId(userId);
+      res.json(projects);
+    })
+  );
 
-  app.post('/api/projects', requirePermission('project', 'create'), asyncHandler(async (req, res) => {
-    const { name, path, activeAdapter, gitRemote, description } = req.body;
-    
-    if (!name || !path || !activeAdapter) {
-      return res.status(400).json({ error: 'Name, path, and activeAdapter are required' });
-    }
+  app.post(
+    '/api/projects',
+    requirePermission('project', 'create'),
+    asyncHandler(async (req, res) => {
+      const { name, path, activeAdapter, gitRemote, description } = req.body;
 
-    const userId = req.user!.id;
-    const project = await projectManager.createProject({
-      name,
-      path,
-      activeAdapter,
-      gitRemote,
-      description,
-    }, userId);
-    
-    res.status(201).json(project);
-  }));
+      if (!name || !path || !activeAdapter) {
+        return res
+          .status(400)
+          .json({ error: 'Name, path, and activeAdapter are required' });
+      }
 
-  app.post('/api/projects/clone', requirePermission('project', 'create'), asyncHandler(async (req, res) => {
-    const { repoUrl, localPath, branch, activeAdapter, name, depth } = req.body;
-    
-    if (!repoUrl || !localPath || !activeAdapter) {
-      return res.status(400).json({ error: 'repoUrl, localPath, and activeAdapter are required' });
-    }
+      const userId = req.user!.id;
+      const project = await projectManager.createProject(
+        {
+          name,
+          path,
+          activeAdapter,
+          gitRemote,
+          description,
+        },
+        userId
+      );
 
-    const userId = req.user!.id;
-    const project = await projectManager.cloneProject({
-      repoUrl,
-      localPath,
-      branch,
-      activeAdapter,
-      name,
-      depth,
-    }, userId);
-    
-    res.status(201).json(project);
-  }));
+      res.status(201).json(project);
+    })
+  );
 
-  app.post('/api/projects/init', requirePermission('project', 'create'), asyncHandler(async (req, res) => {
-    const { path, name, activeAdapter, gitInit, template, description } = req.body;
-    
-    if (!path || !name || !activeAdapter) {
-      return res.status(400).json({ error: 'path, name, and activeAdapter are required' });
-    }
+  app.post(
+    '/api/projects/clone',
+    requirePermission('project', 'create'),
+    asyncHandler(async (req, res) => {
+      const { repoUrl, localPath, branch, activeAdapter, name, depth } =
+        req.body;
 
-    const userId = req.user!.id;
-    const project = await projectManager.initializeProject({
-      path,
-      name,
-      activeAdapter,
-      gitInit,
-      template,
-      description,
-    }, userId);
-    
-    res.status(201).json(project);
-  }));
+      if (!repoUrl || !localPath || !activeAdapter) {
+        return res.status(400).json({
+          error: 'repoUrl, localPath, and activeAdapter are required',
+        });
+      }
 
-  app.get('/api/projects/:projectPath(*)/info', requirePermission('project', 'read'), asyncHandler(async (req, res) => {
-    const projectPath = decodeURIComponent(req.params.projectPath);
-    const info = await projectManager.getProjectInfo(projectPath);
-    res.json({ success: true, info });
-  }));
+      const userId = req.user!.id;
+      const project = await projectManager.cloneProject(
+        {
+          repoUrl,
+          localPath,
+          branch,
+          activeAdapter,
+          name,
+          depth,
+        },
+        userId
+      );
 
-  app.post('/api/projects/validate-path', asyncHandler(async (req, res) => {
-    const { path } = req.body;
-    
-    if (!path) {
-      return res.status(400).json({ error: 'path is required' });
-    }
+      res.status(201).json(project);
+    })
+  );
 
-    const validation = await projectManager.validateProjectPath(path);
-    res.json({ success: true, validation });
-  }));
+  app.post(
+    '/api/projects/init',
+    requirePermission('project', 'create'),
+    asyncHandler(async (req, res) => {
+      const { path, name, activeAdapter, gitInit, template, description } =
+        req.body;
+
+      if (!path || !name || !activeAdapter) {
+        return res
+          .status(400)
+          .json({ error: 'path, name, and activeAdapter are required' });
+      }
+
+      const userId = req.user!.id;
+      const project = await projectManager.initializeProject(
+        {
+          path,
+          name,
+          activeAdapter,
+          gitInit,
+          template,
+          description,
+        },
+        userId
+      );
+
+      res.status(201).json(project);
+    })
+  );
+
+  app.get(
+    '/api/projects/:projectPath(*)/info',
+    requirePermission('project', 'read'),
+    asyncHandler(async (req, res) => {
+      const projectPath = decodeURIComponent(req.params.projectPath);
+      const info = await projectManager.getProjectInfo(projectPath);
+      res.json({ success: true, info });
+    })
+  );
+
+  app.post(
+    '/api/projects/validate-path',
+    asyncHandler(async (req, res) => {
+      const { path } = req.body;
+
+      if (!path) {
+        return res.status(400).json({ error: 'path is required' });
+      }
+
+      const validation = await projectManager.validateProjectPath(path);
+      res.json({ success: true, validation });
+    })
+  );
 
   // Sessions
-  app.post('/api/sessions', requirePermission('session', 'create'), (req, res) => {
-    // TODO: Implement session creation
-    res.status(201).json({ id: 'temp-session-id' });
-  });
+  app.post(
+    '/api/sessions',
+    requirePermission('session', 'create'),
+    (req, res) => {
+      // TODO: Implement session creation
+      res.status(201).json({ id: 'temp-session-id' });
+    }
+  );
 
   // Process monitoring endpoints
-  app.get('/api/processes/metrics', requirePermission('system', 'read'), (req, res) => {
-    try {
-      const metrics = services.processManager.getAllMetrics();
-      res.json(metrics);
-    } catch (error) {
-      console.error('Error fetching process metrics:', error);
-      res.status(500).json({ error: 'Failed to fetch process metrics' });
-    }
-  });
-
-  app.get('/api/processes/metrics/:sessionId', requirePermission('session', 'read'), (req, res) => {
-    try {
-      const { sessionId } = req.params;
-      const metrics = services.processManager.getSessionMetrics(sessionId);
-      
-      if (!metrics) {
-        return res.status(404).json({ error: 'Session not found' });
+  app.get(
+    '/api/processes/metrics',
+    requirePermission('system', 'read'),
+    (req, res) => {
+      try {
+        const metrics = services.processManager.getAllMetrics();
+        res.json(metrics);
+      } catch (error) {
+        console.error('Error fetching process metrics:', error);
+        res.status(500).json({ error: 'Failed to fetch process metrics' });
       }
-      
-      res.json(metrics);
-    } catch (error) {
-      console.error('Error fetching session metrics:', error);
-      res.status(500).json({ error: 'Failed to fetch session metrics' });
     }
-  });
+  );
+
+  app.get(
+    '/api/processes/metrics/:sessionId',
+    requirePermission('session', 'read'),
+    (req, res) => {
+      try {
+        const { sessionId } = req.params;
+        const metrics = services.processManager.getSessionMetrics(sessionId);
+
+        if (!metrics) {
+          return res.status(404).json({ error: 'Session not found' });
+        }
+
+        res.json(metrics);
+      } catch (error) {
+        console.error('Error fetching session metrics:', error);
+        res.status(500).json({ error: 'Failed to fetch session metrics' });
+      }
+    }
+  );
 
   app.get('/api/processes/health', (req, res) => {
     try {
@@ -298,47 +360,61 @@ export function setupRoutes(app: Express, services: Services): void {
     }
   });
 
-  app.delete('/api/processes/:sessionId', requirePermission('session', 'terminate'), (req, res) => {
-    try {
-      const { sessionId } = req.params;
-      services.processManager.terminateSession(sessionId);
-      res.status(204).send();
-    } catch (error) {
-      console.error('Error terminating session:', error);
-      res.status(500).json({ error: 'Failed to terminate session' });
+  app.delete(
+    '/api/processes/:sessionId',
+    requirePermission('session', 'terminate'),
+    (req, res) => {
+      try {
+        const { sessionId } = req.params;
+        services.processManager.terminateSession(sessionId);
+        res.status(204).send();
+      } catch (error) {
+        console.error('Error terminating session:', error);
+        res.status(500).json({ error: 'Failed to terminate session' });
+      }
     }
-  });
+  );
 
   // CLI Management endpoints
-  app.get('/api/cli/status', requirePermission('cli', 'read'), async (req, res) => {
-    try {
-      const status = await cliInstaller.getAllCLIStatus();
-      
-      // Enhance with health monitoring data
-      const { cliHealthMonitor } = await import('../services/cli-health-monitor.js');
-      const healthStatuses = cliHealthMonitor.getAllHealthStatuses();
-      
-      const enhancedStatus = status.map(cliStatus => {
-        const healthStatus = healthStatuses.find(h => h.name === cliStatus.name);
-        return {
-          ...cliStatus,
-          health: healthStatus ? {
-            status: healthStatus.status,
-            availability: healthStatus.availability,
-            lastChecked: healthStatus.lastChecked,
-            responseTime: healthStatus.responseTime,
-            errorCount: healthStatus.errors.length,
-            warningCount: healthStatus.warnings.length,
-          } : null,
-        };
-      });
-      
-      res.json(enhancedStatus);
-    } catch (error) {
-      console.error('Error getting CLI status:', error);
-      res.status(500).json({ error: 'Failed to get CLI status' });
+  app.get(
+    '/api/cli/status',
+    requirePermission('cli', 'read'),
+    async (req, res) => {
+      try {
+        const status = await cliInstaller.getAllCLIStatus();
+
+        // Enhance with health monitoring data
+        const { cliHealthMonitor } = await import(
+          '../services/cli-health-monitor.js'
+        );
+        const healthStatuses = cliHealthMonitor.getAllHealthStatuses();
+
+        const enhancedStatus = status.map(cliStatus => {
+          const healthStatus = healthStatuses.find(
+            h => h.name === cliStatus.name
+          );
+          return {
+            ...cliStatus,
+            health: healthStatus
+              ? {
+                  status: healthStatus.status,
+                  availability: healthStatus.availability,
+                  lastChecked: healthStatus.lastChecked,
+                  responseTime: healthStatus.responseTime,
+                  errorCount: healthStatus.errors.length,
+                  warningCount: healthStatus.warnings.length,
+                }
+              : null,
+          };
+        });
+
+        res.json(enhancedStatus);
+      } catch (error) {
+        console.error('Error getting CLI status:', error);
+        res.status(500).json({ error: 'Failed to get CLI status' });
+      }
     }
-  });
+  );
 
   app.get('/api/cli/supported', (req, res) => {
     try {
@@ -354,21 +430,25 @@ export function setupRoutes(app: Express, services: Services): void {
     }
   });
 
-  app.post('/api/cli/:cliName/install', requirePermission('cli', 'install'), async (req, res) => {
-    try {
-      const { cliName } = req.params;
-      const result = await cliInstaller.installCLI(cliName);
-      
-      if (result.success) {
-        res.json(result);
-      } else {
-        res.status(400).json(result);
+  app.post(
+    '/api/cli/:cliName/install',
+    requirePermission('cli', 'install'),
+    async (req, res) => {
+      try {
+        const { cliName } = req.params;
+        const result = await cliInstaller.installCLI(cliName);
+
+        if (result.success) {
+          res.json(result);
+        } else {
+          res.status(400).json(result);
+        }
+      } catch (error) {
+        console.error('Error installing CLI:', error);
+        res.status(500).json({ error: 'Failed to install CLI' });
       }
-    } catch (error) {
-      console.error('Error installing CLI:', error);
-      res.status(500).json({ error: 'Failed to install CLI' });
     }
-  });
+  );
 
   app.get('/api/cli/:cliName/check', async (req, res) => {
     try {
@@ -385,8 +465,11 @@ export function setupRoutes(app: Express, services: Services): void {
     try {
       const { cliName } = req.params;
       const { autoInstall = false } = req.body;
-      
-      const result = await cliInstaller.ensureCLIAvailable(cliName, autoInstall);
+
+      const result = await cliInstaller.ensureCLIAvailable(
+        cliName,
+        autoInstall
+      );
       res.json(result);
     } catch (error) {
       console.error('Error ensuring CLI availability:', error);
@@ -409,7 +492,7 @@ export function setupRoutes(app: Express, services: Services): void {
     try {
       const { cliName } = req.params;
       const { method } = req.body;
-      
+
       const result = await cliInstaller.installWithFallback(cliName, method);
       res.json(result);
     } catch (error) {

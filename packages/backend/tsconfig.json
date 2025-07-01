@@ -11,15 +11,8 @@
     "declarationMap": true,
     "types": ["node"]
   },
-  "include": [
-    "src/**/*"
-  ],
-  "exclude": [
-    "dist",
-    "node_modules",
-    "**/*.test.*",
-    "**/*.spec.*"
-  ],
+  "include": ["src/**/*"],
+  "exclude": ["dist", "node_modules", "**/*.test.*", "**/*.spec.*"],
   "references": [
     {
       "path": "../shared"

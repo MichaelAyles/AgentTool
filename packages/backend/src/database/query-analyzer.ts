@@ -62,7 +62,7 @@ export class QueryAnalyzer extends EventEmitter {
     timestamp: Date;
     plan?: QueryPlan[];
   }> = [];
-  
+
   private config = {
     maxHistorySize: 1000,
     slowQueryThreshold: 100, // ms
@@ -80,8 +80,8 @@ export class QueryAnalyzer extends EventEmitter {
    * Record a query execution for analysis
    */
   recordQuery(
-    query: string, 
-    executionTime: number, 
+    query: string,
+    executionTime: number,
     indexesUsed: string[] = [],
     queryPlan?: QueryPlan[]
   ): void {
@@ -166,7 +166,10 @@ export class QueryAnalyzer extends EventEmitter {
   } {
     const tables = this.analyzeTableUsage(database);
     const indexes = this.analyzeIndexEfficiency(database);
-    const schemaRecommendations = this.generateSchemaRecommendations(tables, indexes);
+    const schemaRecommendations = this.generateSchemaRecommendations(
+      tables,
+      indexes
+    );
 
     return {
       tables,
@@ -191,8 +194,10 @@ export class QueryAnalyzer extends EventEmitter {
     recommendations: QueryRecommendation[];
   } {
     const queries = Array.from(this.queryStats.values());
-    const slowQueries = queries.filter(q => q.averageTime > this.config.slowQueryThreshold);
-    
+    const slowQueries = queries.filter(
+      q => q.averageTime > this.config.slowQueryThreshold
+    );
+
     const topSlowQueries = queries
       .sort((a, b) => b.averageTime - a.averageTime)
       .slice(0, 10);
@@ -210,7 +215,8 @@ export class QueryAnalyzer extends EventEmitter {
       summary: {
         totalQueries,
         slowQueries: slowQueries.length,
-        averageExecutionTime: totalQueries > 0 ? totalExecutionTime / totalQueries : 0,
+        averageExecutionTime:
+          totalQueries > 0 ? totalExecutionTime / totalQueries : 0,
         topSlowQueries,
         mostFrequentQueries,
       },
@@ -258,7 +264,7 @@ export class QueryAnalyzer extends EventEmitter {
     estimatedImpact: string;
   }> {
     const suggestions: Array<any> = [];
-    
+
     // Analyze WHERE clauses for index opportunities
     for (const [queryPattern, stats] of this.queryStats) {
       const whereColumns = this.extractWhereColumns(queryPattern);
@@ -300,22 +306,25 @@ export class QueryAnalyzer extends EventEmitter {
   private normalizeQuery(query: string): string {
     // Remove specific values and normalize for pattern recognition
     return query
-      .replace(/\b\d+\b/g, '?')                    // Replace numbers
-      .replace(/'[^']*'/g, '?')                    // Replace string literals
-      .replace(/\s+/g, ' ')                       // Normalize whitespace
-      .replace(/\b(IN\s*\([^)]+\))/gi, 'IN (?)')  // Normalize IN clauses
+      .replace(/\b\d+\b/g, '?') // Replace numbers
+      .replace(/'[^']*'/g, '?') // Replace string literals
+      .replace(/\s+/g, ' ') // Normalize whitespace
+      .replace(/\b(IN\s*\([^)]+\))/gi, 'IN (?)') // Normalize IN clauses
       .trim()
       .toLowerCase();
   }
 
   private hasTableScan(queryPlan: QueryPlan[]): boolean {
-    return queryPlan.some(step => 
-      step.detail.toLowerCase().includes('scan') && 
-      !step.detail.toLowerCase().includes('index')
+    return queryPlan.some(
+      step =>
+        step.detail.toLowerCase().includes('scan') &&
+        !step.detail.toLowerCase().includes('index')
     );
   }
 
-  private calculatePerformanceRating(stats: QueryAnalysis): 'excellent' | 'good' | 'fair' | 'poor' | 'critical' {
+  private calculatePerformanceRating(
+    stats: QueryAnalysis
+  ): 'excellent' | 'good' | 'fair' | 'poor' | 'critical' {
     const avgTime = stats.averageTime;
     const scanRatio = stats.scanCount / stats.executionCount;
 
@@ -326,7 +335,10 @@ export class QueryAnalyzer extends EventEmitter {
     return 'excellent';
   }
 
-  private generateQueryRecommendations(stats: QueryAnalysis, queryPlan?: QueryPlan[]): QueryRecommendation[] {
+  private generateQueryRecommendations(
+    stats: QueryAnalysis,
+    queryPlan?: QueryPlan[]
+  ): QueryRecommendation[] {
     const recommendations: QueryRecommendation[] = [];
 
     // High execution time recommendations
@@ -348,7 +360,8 @@ export class QueryAnalyzer extends EventEmitter {
         priority: 'high',
         description: 'Query frequently performs table scans',
         implementation: 'Add indexes on filtered columns',
-        estimatedImpact: 'Eliminate table scans, improve performance by 10-100x',
+        estimatedImpact:
+          'Eliminate table scans, improve performance by 10-100x',
         effort: 'low',
       });
     }
@@ -380,17 +393,24 @@ export class QueryAnalyzer extends EventEmitter {
     return [];
   }
 
-  private generateSchemaRecommendations(tables: TableAnalysis[], indexes: IndexAnalysis[]): QueryRecommendation[] {
+  private generateSchemaRecommendations(
+    tables: TableAnalysis[],
+    indexes: IndexAnalysis[]
+  ): QueryRecommendation[] {
     const recommendations: QueryRecommendation[] = [];
 
     // Add recommendations based on table and index analysis
     return recommendations;
   }
 
-  private generateGlobalRecommendations(queries: QueryAnalysis[]): QueryRecommendation[] {
+  private generateGlobalRecommendations(
+    queries: QueryAnalysis[]
+  ): QueryRecommendation[] {
     const recommendations: QueryRecommendation[] = [];
 
-    const slowQueries = queries.filter(q => q.performance === 'poor' || q.performance === 'critical');
+    const slowQueries = queries.filter(
+      q => q.performance === 'poor' || q.performance === 'critical'
+    );
     const frequentQueries = queries.filter(q => q.executionCount > 50);
 
     if (slowQueries.length > queries.length * 0.1) {
@@ -432,7 +452,10 @@ export class QueryAnalyzer extends EventEmitter {
     }
 
     // Suggest LIMIT for potentially large result sets
-    if (!query.toLowerCase().includes('limit') && query.toLowerCase().includes('select')) {
+    if (
+      !query.toLowerCase().includes('limit') &&
+      query.toLowerCase().includes('select')
+    ) {
       optimizations.push('Consider adding LIMIT clause for large result sets');
     }
 
@@ -444,21 +467,28 @@ export class QueryAnalyzer extends EventEmitter {
     return {
       optimizedQuery,
       explanation: optimizations.join('; '),
-      estimatedImprovement: optimizations.length > 0 ? '20-50% performance improvement' : 'No optimizations found',
+      estimatedImprovement:
+        optimizations.length > 0
+          ? '20-50% performance improvement'
+          : 'No optimizations found',
     };
   }
 
   private extractWhereColumns(query: string): string[] {
-    const whereMatch = query.match(/where\s+(.+?)(?:\s+order\s+by|\s+group\s+by|\s+limit|$)/i);
+    const whereMatch = query.match(
+      /where\s+(.+?)(?:\s+order\s+by|\s+group\s+by|\s+limit|$)/i
+    );
     if (!whereMatch) return [];
 
     const whereClause = whereMatch[1];
     const columns: string[] = [];
-    
+
     // Simple column extraction (could be more sophisticated)
     const columnMatches = whereClause.match(/(\w+)\s*[=<>!]/g);
     if (columnMatches) {
-      columns.push(...columnMatches.map(match => match.replace(/\s*[=<>!].*/, '')));
+      columns.push(
+        ...columnMatches.map(match => match.replace(/\s*[=<>!].*/, ''))
+      );
     }
 
     return [...new Set(columns)];
@@ -487,13 +517,13 @@ export class QueryAnalyzer extends EventEmitter {
 
   private performPeriodicAnalysis(): void {
     const report = this.getAnalysisReport();
-    
+
     if (report.summary.slowQueries > 0) {
       structuredLogger.warn('Slow queries detected', {
         slowQueryCount: report.summary.slowQueries,
         averageTime: Math.round(report.summary.averageExecutionTime),
       });
-      
+
       this.emit('analysisComplete', {
         type: 'performance_warning',
         data: report,
@@ -502,7 +532,9 @@ export class QueryAnalyzer extends EventEmitter {
 
     // Auto-optimization if enabled
     if (this.config.enableAutoOptimization) {
-      const criticalQueries = report.queries.filter(q => q.performance === 'critical');
+      const criticalQueries = report.queries.filter(
+        q => q.performance === 'critical'
+      );
       if (criticalQueries.length > 0) {
         this.emit('optimizationRequired', {
           queries: criticalQueries,
@@ -520,7 +552,7 @@ export class QueryAnalyzer extends EventEmitter {
     this.indexUsage.clear();
     this.tableStats.clear();
     this.queryHistory.length = 0;
-    
+
     structuredLogger.info('Query analysis data cleared');
   }
 

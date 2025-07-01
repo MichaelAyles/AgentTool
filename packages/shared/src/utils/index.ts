@@ -28,7 +28,7 @@ export function throttle<T extends (...args: any[]) => any>(
     if (!inThrottle) {
       func(...args);
       inThrottle = true;
-      setTimeout(() => inThrottle = false, limit);
+      setTimeout(() => (inThrottle = false), limit);
     }
   };
 }
@@ -62,7 +62,7 @@ export class CircularBuffer<T> {
     }
     return [
       ...this.buffer.slice(this.pointer),
-      ...this.buffer.slice(0, this.pointer)
+      ...this.buffer.slice(0, this.pointer),
     ];
   }
 

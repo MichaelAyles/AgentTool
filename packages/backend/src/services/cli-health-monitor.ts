@@ -3,7 +3,10 @@ import { spawn } from 'child_process';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { cliInstaller } from './cli-installer.js';
-import { comprehensiveAuditLogger, AuditCategory } from '../security/audit-logger.js';
+import {
+  comprehensiveAuditLogger,
+  AuditCategory,
+} from '../security/audit-logger.js';
 import { SecurityLevel } from '../security/types.js';
 
 // CLI Health Types
@@ -105,7 +108,7 @@ export class CLIHealthMonitor extends EventEmitter {
     try {
       // Get all supported CLIs and start monitoring them
       const supportedCLIs = cliInstaller.getSupportedCLIs();
-      
+
       for (const cliName of supportedCLIs) {
         await this.initializeCLIMonitoring(cliName);
       }
@@ -116,7 +119,7 @@ export class CLIHealthMonitor extends EventEmitter {
 
       this.isInitialized = true;
       this.emit('initialized');
-      
+
       console.log('✅ CLI health monitor initialized');
     } catch (error) {
       console.error('❌ Failed to initialize CLI health monitor:', error);
@@ -134,7 +137,7 @@ export class CLIHealthMonitor extends EventEmitter {
     }
 
     await this.initializeCLIMonitoring(cliName);
-    
+
     // Start periodic health checks
     const interval = setInterval(async () => {
       try {
@@ -146,7 +149,7 @@ export class CLIHealthMonitor extends EventEmitter {
 
     this.monitoringIntervals.set(cliName, interval);
     this.emit('monitoringStarted', cliName);
-    
+
     console.log(`📊 Started monitoring CLI: ${cliName}`);
   }
 
@@ -183,7 +186,7 @@ export class CLIHealthMonitor extends EventEmitter {
   async performHealthCheck(cliName: string): Promise<CLIHealthStatus> {
     const startTime = Date.now();
     let status = this.healthStatuses.get(cliName);
-    
+
     if (!status) {
       status = await this.createInitialHealthStatus(cliName);
       this.healthStatuses.set(cliName, status);
@@ -197,7 +200,7 @@ export class CLIHealthMonitor extends EventEmitter {
       // Basic availability check
       const availabilityCheck = await this.checkAvailability(cliName);
       healthChecks.push(availabilityCheck);
-      
+
       if (availabilityCheck.status === 'fail') {
         errors.push(availabilityCheck.message);
         status.availability = 'unavailable';
@@ -209,7 +212,7 @@ export class CLIHealthMonitor extends EventEmitter {
       if (status.availability === 'available') {
         const versionCheck = await this.checkVersion(cliName);
         healthChecks.push(versionCheck);
-        
+
         if (versionCheck.status === 'pass') {
           status.version = versionCheck.details?.version;
         } else if (versionCheck.status === 'warn') {
@@ -221,7 +224,7 @@ export class CLIHealthMonitor extends EventEmitter {
       if (this.config.enableDeepHealthChecks) {
         const dependencyCheck = await this.checkDependencies(cliName);
         healthChecks.push(dependencyCheck);
-        
+
         if (dependencyCheck.status === 'fail') {
           errors.push(dependencyCheck.message);
         } else if (dependencyCheck.status === 'warn') {
@@ -232,7 +235,7 @@ export class CLIHealthMonitor extends EventEmitter {
       // Configuration check
       const configCheck = await this.checkConfiguration(cliName);
       healthChecks.push(configCheck);
-      
+
       if (configCheck.status === 'fail') {
         errors.push(configCheck.message);
       } else if (configCheck.status === 'warn') {
@@ -243,7 +246,7 @@ export class CLIHealthMonitor extends EventEmitter {
       if (this.config.enablePerformanceMonitoring) {
         const performanceCheck = await this.checkPerformance(cliName);
         healthChecks.push(performanceCheck);
-        
+
         if (performanceCheck.status === 'warn') {
           warnings.push(performanceCheck.message);
         }
@@ -272,12 +275,11 @@ export class CLIHealthMonitor extends EventEmitter {
       await this.checkAlerts(status);
 
       this.emit('healthCheckCompleted', status);
-      
     } catch (error) {
       status.status = 'unknown';
       status.errors = [`Health check failed: ${(error as Error).message}`];
       status.lastChecked = new Date();
-      
+
       await comprehensiveAuditLogger.logAuditEvent({
         category: AuditCategory.SYSTEM_MONITORING,
         action: 'cli_health_check_failed',
@@ -306,7 +308,7 @@ export class CLIHealthMonitor extends EventEmitter {
     recommendations: string[];
   }> {
     const status = await this.performHealthCheck(cliName);
-    
+
     const systemInfo = {
       platform: process.platform,
       arch: process.arch,
@@ -323,13 +325,19 @@ export class CLIHealthMonitor extends EventEmitter {
     if (status.availability === 'unavailable') {
       troubleshooting.push('CLI is not available in the system PATH');
       troubleshooting.push('Check if the CLI is properly installed');
-      recommendations.push('Try reinstalling the CLI using the installation manager');
-      recommendations.push('Verify that the installation directory is in your PATH');
+      recommendations.push(
+        'Try reinstalling the CLI using the installation manager'
+      );
+      recommendations.push(
+        'Verify that the installation directory is in your PATH'
+      );
     }
 
     if (status.errors.length > 0) {
       troubleshooting.push('CLI is reporting errors during health checks');
-      recommendations.push('Review the error messages and check CLI documentation');
+      recommendations.push(
+        'Review the error messages and check CLI documentation'
+      );
     }
 
     if (status.warnings.length > 0) {
@@ -356,13 +364,13 @@ export class CLIHealthMonitor extends EventEmitter {
    */
   updateConfig(newConfig: Partial<CLIMonitoringConfig>): void {
     this.config = { ...this.config, ...newConfig };
-    
+
     // Restart monitoring with new configuration
     for (const cliName of this.monitoringIntervals.keys()) {
       this.stopMonitoring(cliName);
       this.startMonitoring(cliName);
     }
-    
+
     this.emit('configUpdated', this.config);
   }
 
@@ -390,12 +398,14 @@ export class CLIHealthMonitor extends EventEmitter {
   private async initializeCLIMonitoring(cliName: string): Promise<void> {
     const status = await this.createInitialHealthStatus(cliName);
     this.healthStatuses.set(cliName, status);
-    
+
     // Perform initial health check
     await this.performHealthCheck(cliName);
   }
 
-  private async createInitialHealthStatus(cliName: string): Promise<CLIHealthStatus> {
+  private async createInitialHealthStatus(
+    cliName: string
+  ): Promise<CLIHealthStatus> {
     return {
       name: cliName,
       status: 'unknown',
@@ -421,14 +431,16 @@ export class CLIHealthMonitor extends EventEmitter {
 
   private async checkAvailability(cliName: string): Promise<HealthCheckResult> {
     const startTime = Date.now();
-    
+
     try {
       const availability = await cliInstaller.checkCLIAvailability(cliName);
-      
+
       return {
         name: 'availability',
         status: availability.available ? 'pass' : 'fail',
-        message: availability.available ? 'CLI is available' : 'CLI is not available',
+        message: availability.available
+          ? 'CLI is available'
+          : 'CLI is not available',
         timestamp: new Date(),
         duration: Date.now() - startTime,
         details: availability,
@@ -446,7 +458,7 @@ export class CLIHealthMonitor extends EventEmitter {
 
   private async checkVersion(cliName: string): Promise<HealthCheckResult> {
     const startTime = Date.now();
-    
+
     try {
       // Get version command for the CLI
       const versionCommand = this.getVersionCommand(cliName);
@@ -461,7 +473,7 @@ export class CLIHealthMonitor extends EventEmitter {
       }
 
       const version = await this.executeCommand(versionCommand);
-      
+
       return {
         name: 'version',
         status: 'pass',
@@ -484,7 +496,7 @@ export class CLIHealthMonitor extends EventEmitter {
   private async checkDependencies(cliName: string): Promise<HealthCheckResult> {
     const startTime = Date.now();
     const cliInfo = cliInstaller.getCLIInfo(cliName);
-    
+
     if (!cliInfo?.dependencies || cliInfo.dependencies.length === 0) {
       return {
         name: 'dependencies',
@@ -508,9 +520,9 @@ export class CLIHealthMonitor extends EventEmitter {
           status: depAvailability.available ? 'available' : 'missing',
           version: depAvailability.version,
         };
-        
+
         dependencyStatuses.push(depStatus);
-        
+
         if (!depAvailability.available) {
           hasErrors = true;
         }
@@ -533,20 +545,22 @@ export class CLIHealthMonitor extends EventEmitter {
     return {
       name: 'dependencies',
       status: hasErrors ? 'fail' : hasWarnings ? 'warn' : 'pass',
-      message: hasErrors 
+      message: hasErrors
         ? 'Some required dependencies are missing'
-        : hasWarnings 
-        ? 'Some dependencies have warnings'
-        : 'All dependencies are available',
+        : hasWarnings
+          ? 'Some dependencies have warnings'
+          : 'All dependencies are available',
       timestamp: new Date(),
       duration: Date.now() - startTime,
       details: { dependencies: dependencyStatuses },
     };
   }
 
-  private async checkConfiguration(cliName: string): Promise<HealthCheckResult> {
+  private async checkConfiguration(
+    cliName: string
+  ): Promise<HealthCheckResult> {
     const startTime = Date.now();
-    
+
     try {
       // Check common configuration paths
       const configPaths = this.getConfigPaths(cliName);
@@ -567,7 +581,7 @@ export class CLIHealthMonitor extends EventEmitter {
       return {
         name: 'configuration',
         status: configStatus.validConfig ? 'pass' : 'warn',
-        message: configStatus.hasConfig 
+        message: configStatus.hasConfig
           ? 'Configuration found and appears valid'
           : 'No configuration found (may use defaults)',
         timestamp: new Date(),
@@ -588,7 +602,7 @@ export class CLIHealthMonitor extends EventEmitter {
   private async checkPerformance(cliName: string): Promise<HealthCheckResult> {
     const startTime = Date.now();
     const status = this.healthStatuses.get(cliName);
-    
+
     if (!status) {
       return {
         name: 'performance',
@@ -604,52 +618,66 @@ export class CLIHealthMonitor extends EventEmitter {
     const issues: string[] = [];
 
     // Check response time
-    if (performance.averageResponseTime > this.config.alertThresholds.responseTime) {
+    if (
+      performance.averageResponseTime > this.config.alertThresholds.responseTime
+    ) {
       healthStatus = 'warn';
-      issues.push(`High average response time: ${performance.averageResponseTime}ms`);
+      issues.push(
+        `High average response time: ${performance.averageResponseTime}ms`
+      );
     }
 
     // Check error rate
     if (performance.errorRate > this.config.alertThresholds.errorRate) {
       healthStatus = 'warn';
-      issues.push(`High error rate: ${(performance.errorRate * 100).toFixed(1)}%`);
+      issues.push(
+        `High error rate: ${(performance.errorRate * 100).toFixed(1)}%`
+      );
     }
 
     return {
       name: 'performance',
       status: healthStatus,
-      message: issues.length > 0 ? issues.join('; ') : 'Performance is within acceptable limits',
+      message:
+        issues.length > 0
+          ? issues.join('; ')
+          : 'Performance is within acceptable limits',
       timestamp: new Date(),
       duration: Date.now() - startTime,
       details: { performance, issues },
     };
   }
 
-  private updatePerformanceMetrics(status: CLIHealthStatus, success: boolean): void {
+  private updatePerformanceMetrics(
+    status: CLIHealthStatus,
+    success: boolean
+  ): void {
     const { performance } = status;
-    
+
     performance.commandCount++;
     if (!success) {
       performance.errorCount++;
     } else {
       performance.lastSuccessfulCommand = new Date();
     }
-    
-    performance.successRate = (performance.commandCount - performance.errorCount) / performance.commandCount;
+
+    performance.successRate =
+      (performance.commandCount - performance.errorCount) /
+      performance.commandCount;
     performance.errorRate = performance.errorCount / performance.commandCount;
-    
+
     // Update average response time
     if (status.responseTime) {
-      performance.averageResponseTime = (
-        (performance.averageResponseTime * (performance.commandCount - 1) + status.responseTime) /
-        performance.commandCount
-      );
+      performance.averageResponseTime =
+        (performance.averageResponseTime * (performance.commandCount - 1) +
+          status.responseTime) /
+        performance.commandCount;
     }
   }
 
   private async checkAlerts(status: CLIHealthStatus): Promise<void> {
     const { alertThresholds } = this.config;
-    
+
     // Check for consecutive failures
     if (status.performance.errorCount >= alertThresholds.consecutiveFailures) {
       this.emit('alert', {
@@ -660,9 +688,12 @@ export class CLIHealthMonitor extends EventEmitter {
         status,
       });
     }
-    
+
     // Check response time alert
-    if (status.responseTime && status.responseTime > alertThresholds.responseTime) {
+    if (
+      status.responseTime &&
+      status.responseTime > alertThresholds.responseTime
+    ) {
       this.emit('alert', {
         type: 'high_response_time',
         severity: 'medium',
@@ -671,7 +702,7 @@ export class CLIHealthMonitor extends EventEmitter {
         status,
       });
     }
-    
+
     // Check error rate alert
     if (status.performance.errorRate > alertThresholds.errorRate) {
       this.emit('alert', {
@@ -691,27 +722,27 @@ export class CLIHealthMonitor extends EventEmitter {
         stdio: 'pipe',
         timeout: this.config.timeout,
       });
-      
+
       let stdout = '';
       let stderr = '';
-      
-      process.stdout?.on('data', (data) => {
+
+      process.stdout?.on('data', data => {
         stdout += data.toString();
       });
-      
-      process.stderr?.on('data', (data) => {
+
+      process.stderr?.on('data', data => {
         stderr += data.toString();
       });
-      
-      process.on('close', (code) => {
+
+      process.on('close', code => {
         if (code === 0) {
           resolve(stdout);
         } else {
           reject(new Error(`Command failed with code ${code}: ${stderr}`));
         }
       });
-      
-      process.on('error', (error) => {
+
+      process.on('error', error => {
         reject(error);
       });
     });
@@ -720,16 +751,16 @@ export class CLIHealthMonitor extends EventEmitter {
   private getVersionCommand(cliName: string): string | null {
     const versionCommands: Record<string, string> = {
       'claude-code': 'claude --version',
-      'node': 'node --version',
-      'npm': 'npm --version',
-      'git': 'git --version',
-      'python': 'python --version',
-      'pip': 'pip --version',
-      'bun': 'bun --version',
-      'docker': 'docker --version',
-      'kubectl': 'kubectl version --client',
+      node: 'node --version',
+      npm: 'npm --version',
+      git: 'git --version',
+      python: 'python --version',
+      pip: 'pip --version',
+      bun: 'bun --version',
+      docker: 'docker --version',
+      kubectl: 'kubectl version --client',
     };
-    
+
     return versionCommands[cliName] || null;
   }
 
@@ -740,16 +771,10 @@ export class CLIHealthMonitor extends EventEmitter {
         join(home, '.claude', 'config.json'),
         join(home, '.config', 'claude', 'config.json'),
       ],
-      'git': [
-        join(home, '.gitconfig'),
-        join(home, '.config', 'git', 'config'),
-      ],
-      'npm': [
-        join(home, '.npmrc'),
-        join(home, '.config', 'npm', 'config'),
-      ],
+      git: [join(home, '.gitconfig'), join(home, '.config', 'git', 'config')],
+      npm: [join(home, '.npmrc'), join(home, '.config', 'npm', 'config')],
     };
-    
+
     return configPaths[cliName] || [];
   }
 
@@ -760,13 +785,16 @@ export class CLIHealthMonitor extends EventEmitter {
     try {
       // Start monitoring the newly installed CLI
       await this.startMonitoring(cliName);
-      
+
       // Perform immediate health check
       await this.performHealthCheck(cliName);
-      
+
       this.emit('cliInstalled', cliName);
     } catch (error) {
-      console.error(`Failed to start monitoring after CLI installation: ${cliName}`, error);
+      console.error(
+        `Failed to start monitoring after CLI installation: ${cliName}`,
+        error
+      );
     }
   }
 
@@ -777,13 +805,16 @@ export class CLIHealthMonitor extends EventEmitter {
     try {
       // Stop monitoring the uninstalled CLI
       this.stopMonitoring(cliName);
-      
+
       // Remove health status
       this.healthStatuses.delete(cliName);
-      
+
       this.emit('cliUninstalled', cliName);
     } catch (error) {
-      console.error(`Failed to cleanup monitoring after CLI uninstallation: ${cliName}`, error);
+      console.error(
+        `Failed to cleanup monitoring after CLI uninstallation: ${cliName}`,
+        error
+      );
     }
   }
 }

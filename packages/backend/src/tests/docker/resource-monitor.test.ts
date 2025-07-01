@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test';
 import { ResourceMonitor } from '../../docker/resource-monitor.js';
-import { 
+import {
   createMockContainer,
   createMockStats,
   mockServices,
   sleep,
-  waitFor
+  waitFor,
 } from '../test-setup.js';
 
 // Mock Docker
@@ -13,11 +13,13 @@ const mockDocker = {
   getContainer: mock(() => ({
     stats: mock(() => Promise.resolve(createMockStats())),
     update: mock(() => Promise.resolve()),
-    inspect: mock(() => Promise.resolve({
-      Id: 'test-container-1',
-      SizeRw: 1024000,
-      Image: 'node:18',
-    })),
+    inspect: mock(() =>
+      Promise.resolve({
+        Id: 'test-container-1',
+        SizeRw: 1024000,
+        Image: 'node:18',
+      })
+    ),
   })),
   listContainers: mock(() => Promise.resolve([createMockContainer()])),
 };
@@ -25,9 +27,9 @@ const mockDocker = {
 // Mock the Docker import
 mock.module('dockerode', () => {
   return {
-    default: function() {
+    default: function () {
       return mockDocker;
-    }
+    },
   };
 });
 
@@ -48,17 +50,17 @@ describe('ResourceMonitor', () => {
     it('should add container to monitoring', () => {
       const newContainerId = 'test-container-2';
       monitor.addContainer(newContainerId);
-      
+
       const metrics = monitor.getMetrics(newContainerId);
       expect(metrics).toEqual([]);
-      
+
       const alerts = monitor.getAlerts(newContainerId);
       expect(alerts).toEqual([]);
     });
 
     it('should remove container from monitoring', () => {
       monitor.removeContainer(containerId);
-      
+
       // Container should still have historical data but not be actively monitored
       expect(monitor.getMetrics(containerId)).toBeDefined();
     });
@@ -69,9 +71,17 @@ describe('ResourceMonitor', () => {
       const limits = {
         containerId,
         cpu: { cores: 2, percentage: 50 },
-        memory: { limit: 512 * 1024 * 1024, swap: 1024 * 1024 * 1024, reservation: 256 * 1024 * 1024 },
+        memory: {
+          limit: 512 * 1024 * 1024,
+          swap: 1024 * 1024 * 1024,
+          reservation: 256 * 1024 * 1024,
+        },
         network: { bandwidth: 100 * 1024 * 1024, connections: 1000 },
-        disk: { readRate: 50 * 1024 * 1024, writeRate: 30 * 1024 * 1024, space: 10 * 1024 * 1024 * 1024 },
+        disk: {
+          readRate: 50 * 1024 * 1024,
+          writeRate: 30 * 1024 * 1024,
+          space: 10 * 1024 * 1024 * 1024,
+        },
         processes: { max: 100 },
       };
 
@@ -91,9 +101,17 @@ describe('ResourceMonitor', () => {
       const limits = {
         containerId,
         cpu: { cores: 1, percentage: 25 },
-        memory: { limit: 256 * 1024 * 1024, swap: 512 * 1024 * 1024, reservation: 128 * 1024 * 1024 },
+        memory: {
+          limit: 256 * 1024 * 1024,
+          swap: 512 * 1024 * 1024,
+          reservation: 128 * 1024 * 1024,
+        },
         network: { bandwidth: 50 * 1024 * 1024, connections: 500 },
-        disk: { readRate: 25 * 1024 * 1024, writeRate: 15 * 1024 * 1024, space: 5 * 1024 * 1024 * 1024 },
+        disk: {
+          readRate: 25 * 1024 * 1024,
+          writeRate: 15 * 1024 * 1024,
+          space: 5 * 1024 * 1024 * 1024,
+        },
         processes: { max: 50 },
       };
 
@@ -106,10 +124,10 @@ describe('ResourceMonitor', () => {
     it('should collect metrics for container', async () => {
       // Wait for metrics collection
       await sleep(100);
-      
+
       const metrics = monitor.getMetrics(containerId);
       expect(metrics.length).toBeGreaterThan(0);
-      
+
       const latest = metrics[metrics.length - 1];
       expect(latest.containerId).toBe(containerId);
       expect(latest.timestamp).toBeInstanceOf(Date);
@@ -120,10 +138,10 @@ describe('ResourceMonitor', () => {
 
     it('should calculate CPU metrics correctly', async () => {
       await sleep(100);
-      
+
       const metrics = monitor.getMetrics(containerId);
       const latest = metrics[metrics.length - 1];
-      
+
       expect(latest.cpu.usage).toBeGreaterThanOrEqual(0);
       expect(latest.cpu.usage).toBeLessThanOrEqual(100);
       expect(typeof latest.cpu.throttled).toBe('number');
@@ -133,10 +151,10 @@ describe('ResourceMonitor', () => {
 
     it('should calculate memory metrics correctly', async () => {
       await sleep(100);
-      
+
       const metrics = monitor.getMetrics(containerId);
       const latest = metrics[metrics.length - 1];
-      
+
       expect(latest.memory.usage).toBeGreaterThan(0);
       expect(latest.memory.limit).toBeGreaterThan(0);
       expect(latest.memory.percentage).toBeGreaterThanOrEqual(0);
@@ -147,10 +165,10 @@ describe('ResourceMonitor', () => {
 
     it('should calculate network metrics correctly', async () => {
       await sleep(100);
-      
+
       const metrics = monitor.getMetrics(containerId);
       const latest = metrics[metrics.length - 1];
-      
+
       expect(typeof latest.network.rxBytes).toBe('number');
       expect(typeof latest.network.txBytes).toBe('number');
       expect(typeof latest.network.rxPackets).toBe('number');
@@ -167,7 +185,7 @@ describe('ResourceMonitor', () => {
 
       // Should not throw error
       await sleep(100);
-      
+
       // Should still have previous metrics
       const metrics = monitor.getMetrics(containerId);
       expect(Array.isArray(metrics)).toBe(true);
@@ -194,11 +212,11 @@ describe('ResourceMonitor', () => {
       });
 
       await sleep(200); // Wait for metrics collection
-      
+
       const alerts = monitor.getAlerts(containerId);
       const cpuAlerts = alerts.filter(a => a.type === 'cpu');
       expect(cpuAlerts.length).toBeGreaterThan(0);
-      
+
       const criticalAlert = cpuAlerts.find(a => a.severity === 'critical');
       expect(criticalAlert).toBeDefined();
       expect(criticalAlert?.message).toContain('CPU usage');
@@ -220,7 +238,7 @@ describe('ResourceMonitor', () => {
       });
 
       await sleep(200);
-      
+
       const alerts = monitor.getAlerts(containerId);
       const memoryAlerts = alerts.filter(a => a.type === 'memory');
       expect(memoryAlerts.length).toBeGreaterThan(0);
@@ -242,15 +260,17 @@ describe('ResourceMonitor', () => {
 
       // We need to access the private alerts map - in a real test we'd trigger this through normal flow
       const alerts = monitor.getAlerts(containerId);
-      
+
       // Add alert manually for testing
       (monitor as any).alerts.set(containerId, [alert]);
-      
+
       const success = monitor.acknowledgeAlert('test-alert-1');
       expect(success).toBe(true);
-      
+
       const updatedAlerts = monitor.getAlerts(containerId);
-      const acknowledgedAlert = updatedAlerts.find(a => a.id === 'test-alert-1');
+      const acknowledgedAlert = updatedAlerts.find(
+        a => a.id === 'test-alert-1'
+      );
       expect(acknowledgedAlert?.acknowledged).toBe(true);
     });
 
@@ -264,16 +284,16 @@ describe('ResourceMonitor', () => {
   describe('Utilization Summary', () => {
     it('should calculate utilization summary', async () => {
       await sleep(100); // Wait for metrics collection
-      
+
       const summary = monitor.getUtilizationSummary();
-      
+
       expect(summary.totalContainers).toBeGreaterThan(0);
       expect(typeof summary.averageCpuUsage).toBe('number');
       expect(typeof summary.averageMemoryUsage).toBe('number');
       expect(typeof summary.totalMemoryUsed).toBe('number');
       expect(typeof summary.activeAlerts).toBe('number');
       expect(typeof summary.criticalAlerts).toBe('number');
-      
+
       expect(summary.averageCpuUsage).toBeGreaterThanOrEqual(0);
       expect(summary.averageMemoryUsage).toBeGreaterThanOrEqual(0);
       expect(summary.activeAlerts).toBeGreaterThanOrEqual(0);
@@ -283,12 +303,12 @@ describe('ResourceMonitor', () => {
     it('should handle no containers gracefully', () => {
       const emptyMonitor = new ResourceMonitor();
       const summary = emptyMonitor.getUtilizationSummary();
-      
+
       expect(summary.totalContainers).toBe(0);
       expect(summary.averageCpuUsage).toBe(0);
       expect(summary.averageMemoryUsage).toBe(0);
       expect(summary.totalMemoryUsed).toBe(0);
-      
+
       emptyMonitor.close();
     });
   });
@@ -296,25 +316,25 @@ describe('ResourceMonitor', () => {
   describe('Resource Trends', () => {
     it('should calculate resource trends', async () => {
       await sleep(200); // Wait for multiple metrics collection
-      
+
       const trends = monitor.getResourceTrends(containerId, 60000); // 1 minute
-      
+
       expect(Array.isArray(trends.cpu)).toBe(true);
       expect(Array.isArray(trends.memory)).toBe(true);
       expect(Array.isArray(trends.network)).toBe(true);
-      
+
       if (trends.cpu.length > 0) {
         const cpuPoint = trends.cpu[0];
         expect(cpuPoint.timestamp).toBeInstanceOf(Date);
         expect(typeof cpuPoint.value).toBe('number');
       }
-      
+
       if (trends.memory.length > 0) {
         const memoryPoint = trends.memory[0];
         expect(memoryPoint.timestamp).toBeInstanceOf(Date);
         expect(typeof memoryPoint.value).toBe('number');
       }
-      
+
       if (trends.network.length > 0) {
         const networkPoint = trends.network[0];
         expect(networkPoint.timestamp).toBeInstanceOf(Date);
@@ -327,7 +347,7 @@ describe('ResourceMonitor', () => {
   describe('Resource Prediction', () => {
     it('should predict resource usage with insufficient data', () => {
       const prediction = monitor.predictResourceUsage(containerId, 30);
-      
+
       expect(prediction.cpu.predicted).toBe(0);
       expect(prediction.cpu.confidence).toBe(0);
       expect(prediction.memory.predicted).toBe(0);
@@ -341,26 +361,40 @@ describe('ResourceMonitor', () => {
       for (let i = 0; i < 15; i++) {
         metrics.push({
           containerId,
-          timestamp: new Date(Date.now() - (i * 5000)),
+          timestamp: new Date(Date.now() - i * 5000),
           cpu: { usage: 50 + i, throttled: 0, system: 0, user: 0 },
-          memory: { usage: 100000000, limit: 200000000, percentage: 50 + i, cache: 0, rss: 0, swap: 0 },
-          network: { rxBytes: 0, txBytes: 0, rxPackets: 0, txPackets: 0, rxErrors: 0, txErrors: 0 },
+          memory: {
+            usage: 100000000,
+            limit: 200000000,
+            percentage: 50 + i,
+            cache: 0,
+            rss: 0,
+            swap: 0,
+          },
+          network: {
+            rxBytes: 0,
+            txBytes: 0,
+            rxPackets: 0,
+            txPackets: 0,
+            rxErrors: 0,
+            txErrors: 0,
+          },
           disk: { readBytes: 0, writeBytes: 0, readOps: 0, writeOps: 0 },
           processes: { running: 5, sleeping: 0, stopped: 0, zombie: 0 },
         });
       }
-      
+
       // Set metrics manually
       (monitor as any).metrics.set(containerId, metrics);
-      
+
       const prediction = monitor.predictResourceUsage(containerId, 30);
-      
+
       expect(typeof prediction.cpu.predicted).toBe('number');
       expect(typeof prediction.cpu.confidence).toBe('number');
       expect(typeof prediction.memory.predicted).toBe('number');
       expect(typeof prediction.memory.confidence).toBe('number');
       expect(Array.isArray(prediction.alerts)).toBe(true);
-      
+
       expect(prediction.cpu.confidence).toBeGreaterThanOrEqual(0);
       expect(prediction.cpu.confidence).toBeLessThanOrEqual(1);
       expect(prediction.memory.confidence).toBeGreaterThanOrEqual(0);
@@ -371,24 +405,24 @@ describe('ResourceMonitor', () => {
   describe('Event Handling', () => {
     it('should emit events for metrics collection', async () => {
       let metricsCollected = false;
-      
-      monitor.on('metricsCollected', (metrics) => {
+
+      monitor.on('metricsCollected', metrics => {
         metricsCollected = true;
         expect(metrics.containerId).toBe(containerId);
       });
-      
+
       await sleep(100);
       expect(metricsCollected).toBe(true);
     });
 
     it('should emit events for alert creation', async () => {
       let alertCreated = false;
-      
-      monitor.on('alertCreated', (alert) => {
+
+      monitor.on('alertCreated', alert => {
         alertCreated = true;
         expect(alert.containerId).toBe(containerId);
       });
-      
+
       // Mock high resource usage to trigger alert
       const highUsageStats = {
         ...createMockStats(),
@@ -405,7 +439,7 @@ describe('ResourceMonitor', () => {
       mockDocker.getContainer.mockReturnValue({
         stats: mock(() => Promise.resolve(highUsageStats)),
       });
-      
+
       await sleep(200);
       expect(alertCreated).toBe(true);
     });
@@ -418,25 +452,39 @@ describe('ResourceMonitor', () => {
         containerId,
         timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
         cpu: { usage: 10, throttled: 0, system: 0, user: 0 },
-        memory: { usage: 100000000, limit: 200000000, percentage: 50, cache: 0, rss: 0, swap: 0 },
-        network: { rxBytes: 0, txBytes: 0, rxPackets: 0, txPackets: 0, rxErrors: 0, txErrors: 0 },
+        memory: {
+          usage: 100000000,
+          limit: 200000000,
+          percentage: 50,
+          cache: 0,
+          rss: 0,
+          swap: 0,
+        },
+        network: {
+          rxBytes: 0,
+          txBytes: 0,
+          rxPackets: 0,
+          txPackets: 0,
+          rxErrors: 0,
+          txErrors: 0,
+        },
         disk: { readBytes: 0, writeBytes: 0, readOps: 0, writeOps: 0 },
         processes: { running: 5, sleeping: 0, stopped: 0, zombie: 0 },
       };
-      
+
       (monitor as any).metrics.set(containerId, [oldMetric]);
-      
+
       // Trigger cleanup manually
       (monitor as any).startCleanupTask();
-      
+
       await sleep(100);
-      
+
       // Old metrics should be cleaned up
       const metrics = monitor.getMetrics(containerId);
-      const hasOldMetric = metrics.some(m => 
-        Date.now() - m.timestamp.getTime() > 24 * 60 * 60 * 1000
+      const hasOldMetric = metrics.some(
+        m => Date.now() - m.timestamp.getTime() > 24 * 60 * 60 * 1000
       );
-      
+
       // This test might need adjustment based on actual cleanup timing
       expect(hasOldMetric).toBe(true); // Old metric should still be there for now
     });
@@ -444,7 +492,7 @@ describe('ResourceMonitor', () => {
     it('should properly close monitor', () => {
       const testMonitor = new ResourceMonitor();
       testMonitor.addContainer('test-container');
-      
+
       // Should not throw
       expect(() => testMonitor.close()).not.toThrow();
     });

@@ -1,5 +1,10 @@
 import { EventEmitter } from 'events';
-import { processStateMachine, ProcessState, ProcessEvent, ProcessContext } from './state-machine.js';
+import {
+  processStateMachine,
+  ProcessState,
+  ProcessEvent,
+  ProcessContext,
+} from './state-machine.js';
 import { processQueueManager, JobType, JobPriority } from '../queue/index.js';
 import { structuredLogger } from '../middleware/logging.js';
 import { securityNotificationService } from '../dangerous/notifications.js';
@@ -101,10 +106,10 @@ export class ProcessLifecycleManager extends EventEmitter {
 
     this.isInitialized = true;
     structuredLogger.info('Process lifecycle manager initialized');
-    
+
     // Setup cleanup handler integration
     this.setupCleanupIntegration();
-    
+
     this.emit('initialized');
   }
 
@@ -122,16 +127,24 @@ export class ProcessLifecycleManager extends EventEmitter {
     dangerousModeEnabled?: boolean;
     resourceLimits?: Partial<LifecycleConfig['defaultResourceLimits']>;
   }): Promise<boolean> {
-    const { sessionId, userId, adapterName, dangerousModeEnabled = false } = params;
+    const {
+      sessionId,
+      userId,
+      adapterName,
+      dangerousModeEnabled = false,
+    } = params;
 
     // Check concurrency limits
     const activeProcesses = this.getActiveProcessCount();
     if (activeProcesses >= this.config.maxConcurrentProcesses) {
-      structuredLogger.warn('Process creation rejected - concurrency limit reached', {
-        sessionId,
-        activeProcesses,
-        limit: this.config.maxConcurrentProcesses,
-      });
+      structuredLogger.warn(
+        'Process creation rejected - concurrency limit reached',
+        {
+          sessionId,
+          activeProcesses,
+          limit: this.config.maxConcurrentProcesses,
+        }
+      );
       return false;
     }
 
@@ -161,17 +174,30 @@ export class ProcessLifecycleManager extends EventEmitter {
     this.initializeMetrics(sessionId, adapterName);
 
     // Start the process lifecycle
-    const initialized = await processStateMachine.triggerEvent(sessionId, ProcessEvent.INITIALIZE);
+    const initialized = await processStateMachine.triggerEvent(
+      sessionId,
+      ProcessEvent.INITIALIZE
+    );
     if (initialized) {
-      const started = await processStateMachine.triggerEvent(sessionId, ProcessEvent.START);
+      const started = await processStateMachine.triggerEvent(
+        sessionId,
+        ProcessEvent.START
+      );
       if (started) {
-        structuredLogger.info('Process created and started', { sessionId, adapterName });
+        structuredLogger.info('Process created and started', {
+          sessionId,
+          adapterName,
+        });
         this.emit('processStarted', { sessionId, context });
         return true;
       }
     }
 
-    structuredLogger.error('Failed to start process', new Error('Process lifecycle failed'), { sessionId });
+    structuredLogger.error(
+      'Failed to start process',
+      new Error('Process lifecycle failed'),
+      { sessionId }
+    );
     return false;
   }
 
@@ -184,9 +210,14 @@ export class ProcessLifecycleManager extends EventEmitter {
       return false;
     }
 
-    const success = await processStateMachine.triggerEvent(sessionId, ProcessEvent.PAUSE);
+    const success = await processStateMachine.triggerEvent(
+      sessionId,
+      ProcessEvent.PAUSE
+    );
     if (success) {
-      this.updateMetrics(sessionId, { eventCounts: { [ProcessEvent.PAUSE]: 1 } });
+      this.updateMetrics(sessionId, {
+        eventCounts: { [ProcessEvent.PAUSE]: 1 },
+      });
       this.emit('processPaused', { sessionId });
     }
     return success;
@@ -201,9 +232,14 @@ export class ProcessLifecycleManager extends EventEmitter {
       return false;
     }
 
-    const success = await processStateMachine.triggerEvent(sessionId, ProcessEvent.RESUME);
+    const success = await processStateMachine.triggerEvent(
+      sessionId,
+      ProcessEvent.RESUME
+    );
     if (success) {
-      this.updateMetrics(sessionId, { eventCounts: { [ProcessEvent.RESUME]: 1 } });
+      this.updateMetrics(sessionId, {
+        eventCounts: { [ProcessEvent.RESUME]: 1 },
+      });
       this.emit('processResumed', { sessionId });
     }
     return success;
@@ -212,21 +248,35 @@ export class ProcessLifecycleManager extends EventEmitter {
   /**
    * Stop a process gracefully
    */
-  async stopProcess(sessionId: string, graceful: boolean = true): Promise<boolean> {
+  async stopProcess(
+    sessionId: string,
+    graceful: boolean = true
+  ): Promise<boolean> {
     const state = processStateMachine.getState(sessionId);
-    if (!state || [ProcessState.STOPPED, ProcessState.TERMINATED].includes(state)) {
+    if (
+      !state ||
+      [ProcessState.STOPPED, ProcessState.TERMINATED].includes(state)
+    ) {
       return false;
     }
 
     let success: boolean;
     if (graceful) {
-      success = await processStateMachine.triggerEvent(sessionId, ProcessEvent.STOP);
+      success = await processStateMachine.triggerEvent(
+        sessionId,
+        ProcessEvent.STOP
+      );
     } else {
-      success = await processStateMachine.forceTerminate(sessionId, 'force_stop');
+      success = await processStateMachine.forceTerminate(
+        sessionId,
+        'force_stop'
+      );
     }
 
     if (success) {
-      this.updateMetrics(sessionId, { eventCounts: { [ProcessEvent.STOP]: 1 } });
+      this.updateMetrics(sessionId, {
+        eventCounts: { [ProcessEvent.STOP]: 1 },
+      });
       this.scheduleCleanup(sessionId);
       this.emit('processStopped', { sessionId, graceful });
     }
@@ -249,13 +299,19 @@ export class ProcessLifecycleManager extends EventEmitter {
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     // Reset state machine
-    const resetSuccess = await processStateMachine.triggerEvent(sessionId, ProcessEvent.RESET);
+    const resetSuccess = await processStateMachine.triggerEvent(
+      sessionId,
+      ProcessEvent.RESET
+    );
     if (!resetSuccess) {
       return false;
     }
 
     // Start again
-    const startSuccess = await processStateMachine.triggerEvent(sessionId, ProcessEvent.START);
+    const startSuccess = await processStateMachine.triggerEvent(
+      sessionId,
+      ProcessEvent.START
+    );
     if (startSuccess) {
       this.updateMetrics(sessionId, { restartCount: 1 });
       this.emit('processRestarted', { sessionId });
@@ -295,7 +351,7 @@ export class ProcessLifecycleManager extends EventEmitter {
       ProcessState.RUNNING,
       ProcessState.PAUSED,
     ];
-    
+
     return activeStates.reduce((count, state) => {
       return count + processStateMachine.getProcessesByState(state).length;
     }, 0);
@@ -315,9 +371,12 @@ export class ProcessLifecycleManager extends EventEmitter {
     errorRate: number;
   } {
     const stateDistribution = processStateMachine.getStateStatistics();
-    const totalProcesses = Object.values(stateDistribution).reduce((sum, count) => sum + count, 0);
+    const totalProcesses = Object.values(stateDistribution).reduce(
+      (sum, count) => sum + count,
+      0
+    );
     const activeProcesses = this.getActiveProcessCount();
-    
+
     let healthySystems = 0;
     let totalUptime = 0;
     let totalMemory = 0;
@@ -334,10 +393,14 @@ export class ProcessLifecycleManager extends EventEmitter {
     for (const metrics of this.metrics.values()) {
       totalUptime += metrics.totalRuntime;
       totalErrors += metrics.errorCount;
-      totalEvents += Object.values(metrics.eventCounts).reduce((sum, count) => sum + count, 0);
+      totalEvents += Object.values(metrics.eventCounts).reduce(
+        (sum, count) => sum + count,
+        0
+      );
     }
 
-    const averageUptime = this.metrics.size > 0 ? totalUptime / this.metrics.size : 0;
+    const averageUptime =
+      this.metrics.size > 0 ? totalUptime / this.metrics.size : 0;
     const errorRate = totalEvents > 0 ? totalErrors / totalEvents : 0;
 
     return {
@@ -356,7 +419,9 @@ export class ProcessLifecycleManager extends EventEmitter {
    * Force cleanup all terminated processes
    */
   async cleanupTerminatedProcesses(): Promise<number> {
-    const terminatedProcesses = processStateMachine.getProcessesByState(ProcessState.TERMINATED);
+    const terminatedProcesses = processStateMachine.getProcessesByState(
+      ProcessState.TERMINATED
+    );
     let cleanedCount = 0;
 
     for (const sessionId of terminatedProcesses) {
@@ -365,7 +430,10 @@ export class ProcessLifecycleManager extends EventEmitter {
       }
     }
 
-    structuredLogger.info('Cleanup completed', { cleanedCount, total: terminatedProcesses.length });
+    structuredLogger.info('Cleanup completed', {
+      cleanedCount,
+      total: terminatedProcesses.length,
+    });
     return cleanedCount;
   }
 
@@ -374,9 +442,12 @@ export class ProcessLifecycleManager extends EventEmitter {
    */
   async emergencyShutdown(reason: string = 'system_shutdown'): Promise<void> {
     const activeProcesses = this.getActiveProcesses();
-    
-    structuredLogger.warn('Emergency shutdown initiated', { reason, activeProcesses: activeProcesses.length });
-    
+
+    structuredLogger.warn('Emergency shutdown initiated', {
+      reason,
+      activeProcesses: activeProcesses.length,
+    });
+
     // Notify security system
     await securityNotificationService.sendEmergencyDisableNotification(
       `Process system emergency shutdown: ${reason}`,
@@ -384,36 +455,39 @@ export class ProcessLifecycleManager extends EventEmitter {
     );
 
     // Force terminate all active processes
-    const terminationPromises = activeProcesses.map(sessionId => 
+    const terminationPromises = activeProcesses.map(sessionId =>
       processStateMachine.forceTerminate(sessionId, reason)
     );
 
     await Promise.all(terminationPromises);
-    
+
     // Stop monitoring
     this.stopMonitoring();
-    
-    this.emit('emergencyShutdown', { reason, affectedProcesses: activeProcesses });
+
+    this.emit('emergencyShutdown', {
+      reason,
+      affectedProcesses: activeProcesses,
+    });
   }
 
   // Private methods
 
   private setupEventListeners(): void {
     // Listen to state machine events
-    processStateMachine.on('stateChanged', (event) => {
+    processStateMachine.on('stateChanged', event => {
       this.handleStateChange(event);
     });
 
-    processStateMachine.on('stateError', (event) => {
+    processStateMachine.on('stateError', event => {
       this.handleStateError(event);
     });
 
-    processStateMachine.on('processCreated', (event) => {
+    processStateMachine.on('processCreated', event => {
       this.initializeHealthTracking(event.sessionId);
       this.initializeMetrics(event.sessionId, event.context.adapterName);
     });
 
-    processStateMachine.on('processCleanedUp', (event) => {
+    processStateMachine.on('processCleanedUp', event => {
       this.healthChecks.delete(event.sessionId);
       this.metrics.delete(event.sessionId);
       this.cleanupQueue.delete(event.sessionId);
@@ -426,14 +500,21 @@ export class ProcessLifecycleManager extends EventEmitter {
     setTimeout(async () => {
       try {
         const { processCleanupHandler } = await import('./cleanup-handler.js');
-        
+
         // Listen for process stopped events to trigger cleanup
         this.on('processStopped', async ({ sessionId, graceful }) => {
           if (!graceful) {
             try {
-              await processCleanupHandler.performCleanup(sessionId, 'process_stopped_ungraceful');
+              await processCleanupHandler.performCleanup(
+                sessionId,
+                'process_stopped_ungraceful'
+              );
             } catch (error) {
-              structuredLogger.error('Failed to perform cleanup after ungraceful stop', error as Error, { sessionId });
+              structuredLogger.error(
+                'Failed to perform cleanup after ungraceful stop',
+                error as Error,
+                { sessionId }
+              );
             }
           }
         });
@@ -443,7 +524,11 @@ export class ProcessLifecycleManager extends EventEmitter {
           try {
             await processCleanupHandler.handleProcessError(sessionId, error);
           } catch (cleanupError) {
-            structuredLogger.error('Failed to handle process error with cleanup handler', cleanupError as Error, { sessionId });
+            structuredLogger.error(
+              'Failed to handle process error with cleanup handler',
+              cleanupError as Error,
+              { sessionId }
+            );
           }
         });
 
@@ -451,23 +536,32 @@ export class ProcessLifecycleManager extends EventEmitter {
         this.on('healthCheck', async ({ sessionId, health }) => {
           if (!health.healthy && health.consecutiveFailures >= 5) {
             try {
-              await processCleanupHandler.performCleanup(sessionId, 'health_check_failures');
+              await processCleanupHandler.performCleanup(
+                sessionId,
+                'health_check_failures'
+              );
             } catch (error) {
-              structuredLogger.error('Failed to perform cleanup after health failures', error as Error, { sessionId });
+              structuredLogger.error(
+                'Failed to perform cleanup after health failures',
+                error as Error,
+                { sessionId }
+              );
             }
           }
         });
 
         structuredLogger.info('Process cleanup integration established');
       } catch (error) {
-        structuredLogger.warn('Could not establish cleanup integration', { error: (error as Error).message });
+        structuredLogger.warn('Could not establish cleanup integration', {
+          error: (error as Error).message,
+        });
       }
     }, 100); // Small delay to allow cleanup handler to initialize
   }
 
   private handleStateChange(event: any): void {
     const { sessionId, currentState, previousState, duration } = event;
-    
+
     // Update metrics
     this.updateMetrics(sessionId, {
       stateTransitions: { [currentState]: 1 },
@@ -491,7 +585,7 @@ export class ProcessLifecycleManager extends EventEmitter {
 
   private handleStateError(event: any): void {
     const { sessionId, error } = event;
-    
+
     this.updateMetrics(sessionId, {
       errorCount: 1,
       lastActivity: new Date(),
@@ -516,7 +610,7 @@ export class ProcessLifecycleManager extends EventEmitter {
     if (!context) return;
 
     const error = context.error || new Error('Unknown error');
-    
+
     structuredLogger.error('Process entered error state', error, {
       sessionId,
       adapterName: context.adapterName,
@@ -540,11 +634,17 @@ export class ProcessLifecycleManager extends EventEmitter {
     structuredLogger.info('Attempting process recovery', { sessionId });
 
     // Try to cleanup and reset
-    const cleanupSuccess = await processStateMachine.triggerEvent(sessionId, ProcessEvent.CLEANUP);
+    const cleanupSuccess = await processStateMachine.triggerEvent(
+      sessionId,
+      ProcessEvent.CLEANUP
+    );
     if (cleanupSuccess) {
       // Wait a bit then try to restart
       setTimeout(async () => {
-        const resetSuccess = await processStateMachine.triggerEvent(sessionId, ProcessEvent.RESET);
+        const resetSuccess = await processStateMachine.triggerEvent(
+          sessionId,
+          ProcessEvent.RESET
+        );
         if (resetSuccess) {
           this.emit('processRecovered', { sessionId });
         }
@@ -579,14 +679,20 @@ export class ProcessLifecycleManager extends EventEmitter {
       totalRuntime: 0,
       memoryPeak: 0,
       cpuPeak: 0,
-      stateTransitions: Object.values(ProcessState).reduce((acc, state) => {
-        acc[state] = 0;
-        return acc;
-      }, {} as Record<ProcessState, number>),
-      eventCounts: Object.values(ProcessEvent).reduce((acc, event) => {
-        acc[event] = 0;
-        return acc;
-      }, {} as Record<ProcessEvent, number>),
+      stateTransitions: Object.values(ProcessState).reduce(
+        (acc, state) => {
+          acc[state] = 0;
+          return acc;
+        },
+        {} as Record<ProcessState, number>
+      ),
+      eventCounts: Object.values(ProcessEvent).reduce(
+        (acc, event) => {
+          acc[event] = 0;
+          return acc;
+        },
+        {} as Record<ProcessEvent, number>
+      ),
       errorCount: 0,
       restartCount: 0,
       lastActivity: new Date(),
@@ -595,7 +701,10 @@ export class ProcessLifecycleManager extends EventEmitter {
     this.metrics.set(sessionId, metrics);
   }
 
-  private updateMetrics(sessionId: string, updates: Partial<ProcessMetrics>): void {
+  private updateMetrics(
+    sessionId: string,
+    updates: Partial<ProcessMetrics>
+  ): void {
     const metrics = this.metrics.get(sessionId);
     if (!metrics) return;
 
@@ -655,7 +764,7 @@ export class ProcessLifecycleManager extends EventEmitter {
       try {
         const state = processStateMachine.getState(sessionId);
         const context = processStateMachine.getContext(sessionId);
-        
+
         if (!state || !context) {
           continue;
         }
@@ -666,7 +775,11 @@ export class ProcessLifecycleManager extends EventEmitter {
         health.issues = [];
 
         // Check if process is in a healthy state
-        const healthyStates = [ProcessState.IDLE, ProcessState.RUNNING, ProcessState.PAUSED];
+        const healthyStates = [
+          ProcessState.IDLE,
+          ProcessState.RUNNING,
+          ProcessState.PAUSED,
+        ];
         health.healthy = healthyStates.includes(state);
 
         // Check for issues
@@ -699,9 +812,10 @@ export class ProcessLifecycleManager extends EventEmitter {
 
         // Emit health check result
         this.emit('healthCheck', { sessionId, health });
-
       } catch (error) {
-        structuredLogger.error('Health check failed', error as Error, { sessionId });
+        structuredLogger.error('Health check failed', error as Error, {
+          sessionId,
+        });
       }
     }
   }
@@ -720,7 +834,10 @@ export class ProcessLifecycleManager extends EventEmitter {
       // Update peak values in metrics
       const metrics = this.metrics.get(sessionId);
       if (metrics) {
-        metrics.memoryPeak = Math.max(metrics.memoryPeak, health.resourceUsage.memory);
+        metrics.memoryPeak = Math.max(
+          metrics.memoryPeak,
+          health.resourceUsage.memory
+        );
         metrics.cpuPeak = Math.max(metrics.cpuPeak, health.resourceUsage.cpu);
       }
     }

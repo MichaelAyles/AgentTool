@@ -117,11 +117,7 @@
         "type": "select",
         "description": "Output format preference",
         "default": "markdown",
-        "options": [
-          "markdown",
-          "plain",
-          "json"
-        ],
+        "options": ["markdown", "plain", "json"],
         "group": "output"
       },
       "verboseLogging": {
@@ -134,34 +130,21 @@
         "type": "select",
         "description": "Log level",
         "default": "info",
-        "options": [
-          "error",
-          "warn",
-          "info",
-          "debug",
-          "trace"
-        ],
+        "options": ["error", "warn", "info", "debug", "trace"],
         "condition": "verboseLogging === true",
         "group": "debugging"
       }
     },
-    "required": [
-      "executable",
-      "model"
-    ],
+    "required": ["executable", "model"],
     "dependencies": {
       "customApiKey": {
         "condition": "customApiKey === true",
-        "properties": [
-          "apiKey"
-        ],
+        "properties": ["apiKey"],
         "message": "API key is required when using custom API key"
       },
       "enableTools": {
         "condition": "enableTools === true",
-        "properties": [
-          "allowedTools"
-        ],
+        "properties": ["allowedTools"],
         "message": "Allowed tools must be specified when tools are enabled"
       }
     },
@@ -186,11 +169,7 @@
     },
     "metadata": {
       "category": "ai-assistant",
-      "tags": [
-        "claude",
-        "anthropic",
-        "code-generation"
-      ],
+      "tags": ["claude", "anthropic", "code-generation"],
       "documentation": "https://docs.anthropic.com/claude/docs"
     }
   },
@@ -240,11 +219,7 @@
         "type": "select",
         "description": "Gemini model to use",
         "default": "gemini-1.5-pro",
-        "options": [
-          "gemini-1.5-pro",
-          "gemini-1.5-flash",
-          "gemini-1.0-pro"
-        ],
+        "options": ["gemini-1.5-pro", "gemini-1.5-flash", "gemini-1.0-pro"],
         "group": "model"
       },
       "temperature": {
@@ -302,19 +277,11 @@
         "type": "select",
         "description": "Output format preference",
         "default": "markdown",
-        "options": [
-          "markdown",
-          "plain",
-          "json"
-        ],
+        "options": ["markdown", "plain", "json"],
         "group": "output"
       }
     },
-    "required": [
-      "executable",
-      "apiKey",
-      "model"
-    ],
+    "required": ["executable", "apiKey", "model"],
     "validation": {
       "rules": [
         {
@@ -331,11 +298,7 @@
     },
     "metadata": {
       "category": "ai-assistant",
-      "tags": [
-        "gemini",
-        "google",
-        "code-generation"
-      ],
+      "tags": ["gemini", "google", "code-generation"],
       "documentation": "https://ai.google.dev/docs"
     }
   },
@@ -445,9 +408,7 @@
         "group": "advanced"
       }
     },
-    "required": [
-      "defaultInterpreter"
-    ],
+    "required": ["defaultInterpreter"],
     "validation": {
       "rules": [
         {
@@ -469,11 +430,7 @@
     },
     "metadata": {
       "category": "script-execution",
-      "tags": [
-        "scripts",
-        "automation",
-        "flexible"
-      ],
+      "tags": ["scripts", "automation", "flexible"],
       "documentation": "https://docs.vibecode.dev/adapters/custom-script"
     }
   }

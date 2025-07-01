@@ -31,13 +31,7 @@
       "@vibecode/frontend": ["./packages/frontend/src"]
     }
   },
-  "exclude": [
-    "node_modules",
-    "dist",
-    "build",
-    ".next",
-    "coverage"
-  ],
+  "exclude": ["node_modules", "dist", "build", ".next", "coverage"],
   "references": [
     {
       "path": "./packages/shared"

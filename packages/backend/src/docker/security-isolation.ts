@@ -100,7 +100,7 @@ export class SecurityIsolationManager extends EventEmitter {
   private containers = new Map<string, IsolatedContainer>();
   private policies = new Map<string, IsolationPolicy>();
   private monitoringInterval: NodeJS.Timeout;
-  
+
   private config = {
     monitoringInterval: 10000, // 10 seconds
     violationRetention: 86400000, // 24 hours
@@ -110,14 +110,14 @@ export class SecurityIsolationManager extends EventEmitter {
 
   constructor() {
     super();
-    
+
     this.docker = new Docker({
       socketPath: process.env.DOCKER_SOCKET_PATH || '/var/run/docker.sock',
     });
 
     this.initializeDefaultPolicies();
     this.startSecurityMonitoring();
-    
+
     structuredLogger.info('Security isolation manager initialized');
   }
 
@@ -136,7 +136,7 @@ export class SecurityIsolationManager extends EventEmitter {
     } = {}
   ): Promise<string> {
     const containerId = uuidv4();
-    
+
     try {
       const policy = this.policies.get(policyName);
       if (!policy) {
@@ -151,14 +151,14 @@ export class SecurityIsolationManager extends EventEmitter {
 
       // Build security configuration
       const securityConfig = this.buildSecurityConfig(policy, options);
-      
+
       // Create container with security isolation
       const container = await this.docker.createContainer({
         Image: image,
         Cmd: options.command || ['/bin/bash', '-c', 'sleep infinity'],
-        Env: options.environment ? 
-          Object.entries(options.environment).map(([k, v]) => `${k}=${v}`) : 
-          undefined,
+        Env: options.environment
+          ? Object.entries(options.environment).map(([k, v]) => `${k}=${v}`)
+          : undefined,
         AttachStdout: true,
         AttachStderr: true,
         AttachStdin: true,
@@ -167,7 +167,9 @@ export class SecurityIsolationManager extends EventEmitter {
         NetworkMode: policy.networkIsolation.enabled ? 'none' : 'bridge',
         HostConfig: {
           ...securityConfig.hostConfig,
-          Binds: options.volumes?.map(v => `${v.host}:${v.container}:${v.mode}`) || [],
+          Binds:
+            options.volumes?.map(v => `${v.host}:${v.container}:${v.mode}`) ||
+            [],
         },
         Labels: {
           'vibe.isolation.id': containerId,
@@ -180,11 +182,19 @@ export class SecurityIsolationManager extends EventEmitter {
 
       // Set up network isolation if required
       if (policy.networkIsolation.enabled) {
-        await this.configureNetworkIsolation(container, policy.networkIsolation, options.networkPolicy);
+        await this.configureNetworkIsolation(
+          container,
+          policy.networkIsolation,
+          options.networkPolicy
+        );
       }
 
       // Set up filesystem isolation
-      await this.configureFilesystemIsolation(container, policy.filesystemIsolation, options.filesystemPolicy);
+      await this.configureFilesystemIsolation(
+        container,
+        policy.filesystemIsolation,
+        options.filesystemPolicy
+      );
 
       const isolatedContainer: IsolatedContainer = {
         id: containerId,
@@ -218,11 +228,15 @@ export class SecurityIsolationManager extends EventEmitter {
 
       return containerId;
     } catch (error) {
-      structuredLogger.error('Failed to create isolated container', error as Error, {
-        containerId,
-        image,
-        policy: policyName,
-      });
+      structuredLogger.error(
+        'Failed to create isolated container',
+        error as Error,
+        {
+          containerId,
+          image,
+          policy: policyName,
+        }
+      );
       throw error;
     }
   }
@@ -254,11 +268,15 @@ export class SecurityIsolationManager extends EventEmitter {
     try {
       // Validate command against security policy
       const violations = await this.validateCommand(command, args, policy);
-      
+
       if (violations.length > 0) {
-        const criticalViolations = violations.filter(v => v.severity === 'critical');
+        const criticalViolations = violations.filter(
+          v => v.severity === 'critical'
+        );
         if (criticalViolations.length > 0) {
-          throw new Error(`Command blocked due to security violations: ${criticalViolations.map(v => v.description).join(', ')}`);
+          throw new Error(
+            `Command blocked due to security violations: ${criticalViolations.map(v => v.description).join(', ')}`
+          );
         }
       }
 
@@ -266,12 +284,15 @@ export class SecurityIsolationManager extends EventEmitter {
       isolatedContainer.violations.push(...violations);
 
       // Execute command through sandbox manager
-      const result = await sandboxManager.executeCommand(isolatedContainer.containerId, {
-        command,
-        args,
-        timeout: options.timeout || 30000,
-        user: options.user || 'sandbox',
-      });
+      const result = await sandboxManager.executeCommand(
+        isolatedContainer.containerId,
+        {
+          command,
+          args,
+          timeout: options.timeout || 30000,
+          user: options.user || 'sandbox',
+        }
+      );
 
       // Update activity timestamp
       isolatedContainer.lastActivity = new Date();
@@ -283,10 +304,14 @@ export class SecurityIsolationManager extends EventEmitter {
         violations,
       };
     } catch (error) {
-      structuredLogger.error('Command execution failed in isolated container', error as Error, {
-        containerId,
-        command,
-      });
+      structuredLogger.error(
+        'Command execution failed in isolated container',
+        error as Error,
+        {
+          containerId,
+          command,
+        }
+      );
       throw error;
     }
   }
@@ -323,7 +348,7 @@ export class SecurityIsolationManager extends EventEmitter {
    */
   registerPolicy(policy: IsolationPolicy): void {
     this.policies.set(policy.name, policy);
-    
+
     structuredLogger.info('Security policy registered', {
       name: policy.name,
       description: policy.description,
@@ -339,22 +364,26 @@ export class SecurityIsolationManager extends EventEmitter {
 
     try {
       const dockerContainer = this.docker.getContainer(container.containerId);
-      
+
       // Stop container
       await dockerContainer.stop({ t: 10 });
-      
+
       // Remove container
       await dockerContainer.remove({ force: true });
-      
+
       // Remove from tracking
       this.containers.delete(containerId);
-      
+
       this.emit('containerDestroyed', { containerId });
       structuredLogger.info('Isolated container destroyed', { containerId });
-      
+
       return true;
     } catch (error) {
-      structuredLogger.error('Failed to destroy isolated container', error as Error, { containerId });
+      structuredLogger.error(
+        'Failed to destroy isolated container',
+        error as Error,
+        { containerId }
+      );
       return false;
     }
   }
@@ -520,8 +549,16 @@ export class SecurityIsolationManager extends EventEmitter {
       CapDrop: policy.processIsolation.capabilities.drop,
       CapAdd: policy.processIsolation.capabilities.add,
       Ulimits: [
-        { Name: 'nofile', Soft: policy.resourceLimits.openFiles, Hard: policy.resourceLimits.openFiles },
-        { Name: 'nproc', Soft: policy.resourceLimits.pids, Hard: policy.resourceLimits.pids },
+        {
+          Name: 'nofile',
+          Soft: policy.resourceLimits.openFiles,
+          Hard: policy.resourceLimits.openFiles,
+        },
+        {
+          Name: 'nproc',
+          Soft: policy.resourceLimits.pids,
+          Hard: policy.resourceLimits.pids,
+        },
       ],
     };
 
@@ -532,17 +569,23 @@ export class SecurityIsolationManager extends EventEmitter {
 
     // Add seccomp profile
     if (policy.processIsolation.seccompProfile) {
-      hostConfig.SecurityOpt.push(`seccomp=${policy.processIsolation.seccompProfile}`);
+      hostConfig.SecurityOpt.push(
+        `seccomp=${policy.processIsolation.seccompProfile}`
+      );
     }
 
     // Add AppArmor profile
     if (policy.processIsolation.apparmorProfile) {
-      hostConfig.SecurityOpt.push(`apparmor:${policy.processIsolation.apparmorProfile}`);
+      hostConfig.SecurityOpt.push(
+        `apparmor:${policy.processIsolation.apparmorProfile}`
+      );
     }
 
     // Add SELinux label
     if (policy.processIsolation.selinuxLabel) {
-      hostConfig.SecurityOpt.push(`label=${policy.processIsolation.selinuxLabel}`);
+      hostConfig.SecurityOpt.push(
+        `label=${policy.processIsolation.selinuxLabel}`
+      );
     }
 
     // Add tmpfs mounts
@@ -591,13 +634,41 @@ export class SecurityIsolationManager extends EventEmitter {
 
     // Check for dangerous commands
     const dangerousPatterns = [
-      { pattern: /rm\s+-rf\s+\//, severity: 'critical' as const, description: 'Root filesystem deletion attempt' },
-      { pattern: /chmod\s+777/, severity: 'high' as const, description: 'Overly permissive file permissions' },
-      { pattern: /sudo|su\s/, severity: 'critical' as const, description: 'Privilege escalation attempt' },
-      { pattern: /\/proc\/sys/, severity: 'medium' as const, description: 'System configuration access' },
-      { pattern: /\/sys\//, severity: 'medium' as const, description: 'System filesystem access' },
-      { pattern: /nc\s+.*\s+\d+/, severity: 'high' as const, description: 'Network connection attempt' },
-      { pattern: /curl|wget/, severity: 'medium' as const, description: 'External network access' },
+      {
+        pattern: /rm\s+-rf\s+\//,
+        severity: 'critical' as const,
+        description: 'Root filesystem deletion attempt',
+      },
+      {
+        pattern: /chmod\s+777/,
+        severity: 'high' as const,
+        description: 'Overly permissive file permissions',
+      },
+      {
+        pattern: /sudo|su\s/,
+        severity: 'critical' as const,
+        description: 'Privilege escalation attempt',
+      },
+      {
+        pattern: /\/proc\/sys/,
+        severity: 'medium' as const,
+        description: 'System configuration access',
+      },
+      {
+        pattern: /\/sys\//,
+        severity: 'medium' as const,
+        description: 'System filesystem access',
+      },
+      {
+        pattern: /nc\s+.*\s+\d+/,
+        severity: 'high' as const,
+        description: 'Network connection attempt',
+      },
+      {
+        pattern: /curl|wget/,
+        severity: 'medium' as const,
+        description: 'External network access',
+      },
     ];
 
     for (const { pattern, severity, description } of dangerousPatterns) {
@@ -625,7 +696,9 @@ export class SecurityIsolationManager extends EventEmitter {
     }, this.config.monitoringInterval);
   }
 
-  private async startContainerMonitoring(container: IsolatedContainer): Promise<void> {
+  private async startContainerMonitoring(
+    container: IsolatedContainer
+  ): Promise<void> {
     // Start specific monitoring for this container
     // This would integrate with Docker events, logs, etc.
   }
@@ -634,7 +707,7 @@ export class SecurityIsolationManager extends EventEmitter {
     try {
       const dockerContainer = this.docker.getContainer(container.containerId);
       const stats = await dockerContainer.stats({ stream: false });
-      
+
       // Update metrics
       container.metrics = {
         networkConnections: 0, // Would parse from container network stats
@@ -661,12 +734,14 @@ export class SecurityIsolationManager extends EventEmitter {
 
   private calculateCpuUsage(stats: any): number {
     if (!stats.cpu_stats || !stats.precpu_stats) return 0;
-    
-    const cpuDelta = stats.cpu_stats.cpu_usage.total_usage - 
-                    (stats.precpu_stats.cpu_usage.total_usage || 0);
-    const systemDelta = stats.cpu_stats.system_cpu_usage - 
-                       (stats.precpu_stats.system_cpu_usage || 0);
-    
+
+    const cpuDelta =
+      stats.cpu_stats.cpu_usage.total_usage -
+      (stats.precpu_stats.cpu_usage.total_usage || 0);
+    const systemDelta =
+      stats.cpu_stats.system_cpu_usage -
+      (stats.precpu_stats.system_cpu_usage || 0);
+
     return systemDelta > 0 ? (cpuDelta / systemDelta) * 100 : 0;
   }
 
@@ -726,10 +801,10 @@ export class SecurityIsolationManager extends EventEmitter {
 
     if (violations.length > 0) {
       container.violations.push(...violations);
-      
+
       for (const violation of violations) {
         this.emit('securityViolation', { container, violation });
-        
+
         if (violation.severity === 'critical') {
           this.emit('criticalViolation', { container, violation });
         }
@@ -737,13 +812,19 @@ export class SecurityIsolationManager extends EventEmitter {
     }
   }
 
-  private calculateRiskLevel(container: IsolatedContainer): 'low' | 'medium' | 'high' | 'critical' {
+  private calculateRiskLevel(
+    container: IsolatedContainer
+  ): 'low' | 'medium' | 'high' | 'critical' {
     const recentViolations = container.violations.filter(
       v => Date.now() - v.timestamp.getTime() < 3600000 // Last hour
     );
 
-    const criticalCount = recentViolations.filter(v => v.severity === 'critical').length;
-    const highCount = recentViolations.filter(v => v.severity === 'high').length;
+    const criticalCount = recentViolations.filter(
+      v => v.severity === 'critical'
+    ).length;
+    const highCount = recentViolations.filter(
+      v => v.severity === 'high'
+    ).length;
     const totalCount = recentViolations.length;
 
     if (criticalCount > 0) return 'critical';
@@ -752,7 +833,9 @@ export class SecurityIsolationManager extends EventEmitter {
     return 'low';
   }
 
-  private generateSecurityRecommendations(container: IsolatedContainer): string[] {
+  private generateSecurityRecommendations(
+    container: IsolatedContainer
+  ): string[] {
     const recommendations: string[] = [];
     const riskLevel = this.calculateRiskLevel(container);
 
@@ -779,7 +862,7 @@ export class SecurityIsolationManager extends EventEmitter {
     if (this.monitoringInterval) {
       clearInterval(this.monitoringInterval);
     }
-    
+
     this.removeAllListeners();
     structuredLogger.info('Security isolation manager closed');
   }

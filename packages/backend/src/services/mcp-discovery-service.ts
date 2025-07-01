@@ -1,7 +1,14 @@
 import { EventEmitter } from 'events';
 import { v4 as uuidv4 } from 'uuid';
-import { mcpConnectionManager, MCPTool, MCPResource } from './mcp-connection-manager.js';
-import { comprehensiveAuditLogger, AuditCategory } from '../security/audit-logger.js';
+import {
+  mcpConnectionManager,
+  MCPTool,
+  MCPResource,
+} from './mcp-connection-manager.js';
+import {
+  comprehensiveAuditLogger,
+  AuditCategory,
+} from '../security/audit-logger.js';
 import { SecurityLevel } from '../security/types.js';
 
 // Discovery Types
@@ -124,10 +131,10 @@ export class MCPDiscoveryService extends EventEmitter {
     try {
       // Discover tools and resources from existing connections
       await this.discoverFromExistingConnections();
-      
+
       this.isInitialized = true;
       this.emit('initialized');
-      
+
       console.log('✅ MCP discovery service initialized');
     } catch (error) {
       console.error('❌ Failed to initialize MCP discovery service:', error);
@@ -138,7 +145,10 @@ export class MCPDiscoveryService extends EventEmitter {
   /**
    * Search for tools across all connected MCP servers
    */
-  async searchTools(query: ToolSearchQuery, userId?: string): Promise<{
+  async searchTools(
+    query: ToolSearchQuery,
+    userId?: string
+  ): Promise<{
     tools: DiscoveredTool[];
     total: number;
     categories: string[];
@@ -156,10 +166,11 @@ export class MCPDiscoveryService extends EventEmitter {
     // Apply filters
     if (query.query) {
       const searchTerm = query.query.toLowerCase();
-      tools = tools.filter(tool =>
-        tool.name.toLowerCase().includes(searchTerm) ||
-        tool.description.toLowerCase().includes(searchTerm) ||
-        tool.metadata.tags.some(tag => tag.toLowerCase().includes(searchTerm))
+      tools = tools.filter(
+        tool =>
+          tool.name.toLowerCase().includes(searchTerm) ||
+          tool.description.toLowerCase().includes(searchTerm) ||
+          tool.metadata.tags.some(tag => tag.toLowerCase().includes(searchTerm))
       );
     }
 
@@ -178,20 +189,24 @@ export class MCPDiscoveryService extends EventEmitter {
     }
 
     if (query.deprecated !== undefined) {
-      tools = tools.filter(tool => tool.metadata.deprecated === query.deprecated);
+      tools = tools.filter(
+        tool => tool.metadata.deprecated === query.deprecated
+      );
     }
 
     if (query.experimental !== undefined) {
-      tools = tools.filter(tool => tool.metadata.experimental === query.experimental);
+      tools = tools.filter(
+        tool => tool.metadata.experimental === query.experimental
+      );
     }
 
     // Sort results
     const sortBy = query.sortBy || 'name';
     const sortOrder = query.sortOrder || 'asc';
-    
+
     tools.sort((a, b) => {
       let comparison = 0;
-      
+
       switch (sortBy) {
         case 'name':
           comparison = a.name.localeCompare(b.name);
@@ -208,7 +223,7 @@ export class MCPDiscoveryService extends EventEmitter {
           comparison = a.usage.successRate - b.usage.successRate;
           break;
       }
-      
+
       return sortOrder === 'asc' ? comparison : -comparison;
     });
 
@@ -235,7 +250,10 @@ export class MCPDiscoveryService extends EventEmitter {
   /**
    * Search for resources across all connected MCP servers
    */
-  async searchResources(query: ResourceSearchQuery, userId?: string): Promise<{
+  async searchResources(
+    query: ResourceSearchQuery,
+    userId?: string
+  ): Promise<{
     resources: DiscoveredResource[];
     total: number;
     categories: string[];
@@ -247,22 +265,30 @@ export class MCPDiscoveryService extends EventEmitter {
     if (userId) {
       const userConnections = mcpConnectionManager.getConnections(userId);
       const userConnectionIds = new Set(userConnections.map(c => c.id));
-      resources = resources.filter(resource => userConnectionIds.has(resource.connectionId));
+      resources = resources.filter(resource =>
+        userConnectionIds.has(resource.connectionId)
+      );
     }
 
     // Apply filters
     if (query.query) {
       const searchTerm = query.query.toLowerCase();
-      resources = resources.filter(resource =>
-        resource.name.toLowerCase().includes(searchTerm) ||
-        (resource.description && resource.description.toLowerCase().includes(searchTerm)) ||
-        resource.uri.toLowerCase().includes(searchTerm) ||
-        resource.metadata.tags.some(tag => tag.toLowerCase().includes(searchTerm))
+      resources = resources.filter(
+        resource =>
+          resource.name.toLowerCase().includes(searchTerm) ||
+          (resource.description &&
+            resource.description.toLowerCase().includes(searchTerm)) ||
+          resource.uri.toLowerCase().includes(searchTerm) ||
+          resource.metadata.tags.some(tag =>
+            tag.toLowerCase().includes(searchTerm)
+          )
       );
     }
 
     if (query.category) {
-      resources = resources.filter(resource => resource.metadata.category === query.category);
+      resources = resources.filter(
+        resource => resource.metadata.category === query.category
+      );
     }
 
     if (query.tags && query.tags.length > 0) {
@@ -272,20 +298,24 @@ export class MCPDiscoveryService extends EventEmitter {
     }
 
     if (query.mimeType) {
-      resources = resources.filter(resource => resource.mimeType === query.mimeType);
+      resources = resources.filter(
+        resource => resource.mimeType === query.mimeType
+      );
     }
 
     if (query.serverId) {
-      resources = resources.filter(resource => resource.serverId === query.serverId);
+      resources = resources.filter(
+        resource => resource.serverId === query.serverId
+      );
     }
 
     // Sort results
     const sortBy = query.sortBy || 'name';
     const sortOrder = query.sortOrder || 'asc';
-    
+
     resources.sort((a, b) => {
       let comparison = 0;
-      
+
       switch (sortBy) {
         case 'name':
           comparison = a.name.localeCompare(b.name);
@@ -304,7 +334,7 @@ export class MCPDiscoveryService extends EventEmitter {
           comparison = aTime - bTime;
           break;
       }
-      
+
       return sortOrder === 'asc' ? comparison : -comparison;
     });
 
@@ -315,7 +345,9 @@ export class MCPDiscoveryService extends EventEmitter {
 
     // Get available categories and mime types
     const categories = Array.from(this.resourceCategories);
-    const mimeTypes = Array.from(new Set(resources.map(r => r.mimeType).filter(Boolean))) as string[];
+    const mimeTypes = Array.from(
+      new Set(resources.map(r => r.mimeType).filter(Boolean))
+    ) as string[];
 
     return {
       resources: paginatedResources,
@@ -376,7 +408,7 @@ export class MCPDiscoveryService extends EventEmitter {
       );
 
       const duration = Date.now() - startTime;
-      
+
       result = {
         toolId,
         result: response,
@@ -388,10 +420,12 @@ export class MCPDiscoveryService extends EventEmitter {
       // Update usage statistics
       tool.usage.callCount++;
       tool.usage.lastCalled = new Date();
-      tool.usage.averageExecutionTime = 
-        (tool.usage.averageExecutionTime * (tool.usage.callCount - 1) + duration) /
+      tool.usage.averageExecutionTime =
+        (tool.usage.averageExecutionTime * (tool.usage.callCount - 1) +
+          duration) /
         tool.usage.callCount;
-      tool.usage.successRate = (tool.usage.callCount - tool.usage.errorCount) / tool.usage.callCount;
+      tool.usage.successRate =
+        (tool.usage.callCount - tool.usage.errorCount) / tool.usage.callCount;
 
       this.emit('toolExecuted', result);
 
@@ -410,10 +444,9 @@ export class MCPDiscoveryService extends EventEmitter {
           parametersProvided: Object.keys(parameters).length,
         },
       });
-
     } catch (error) {
       const duration = Date.now() - startTime;
-      
+
       result = {
         toolId,
         result: null,
@@ -425,7 +458,8 @@ export class MCPDiscoveryService extends EventEmitter {
 
       // Update error statistics
       tool.usage.errorCount++;
-      tool.usage.successRate = (tool.usage.callCount - tool.usage.errorCount) / tool.usage.callCount;
+      tool.usage.successRate =
+        (tool.usage.callCount - tool.usage.errorCount) / tool.usage.callCount;
 
       this.emit('toolExecutionFailed', result, error);
 
@@ -463,7 +497,9 @@ export class MCPDiscoveryService extends EventEmitter {
     }
 
     // Verify user has access to the connection
-    const connection = mcpConnectionManager.getConnection(resource.connectionId);
+    const connection = mcpConnectionManager.getConnection(
+      resource.connectionId
+    );
     if (!connection) {
       throw new Error(`Connection not found: ${resource.connectionId}`);
     }
@@ -485,7 +521,9 @@ export class MCPDiscoveryService extends EventEmitter {
       );
 
       const duration = Date.now() - startTime;
-      const size = response.contents ? JSON.stringify(response.contents).length : 0;
+      const size = response.contents
+        ? JSON.stringify(response.contents).length
+        : 0;
 
       result = {
         resourceId,
@@ -499,10 +537,13 @@ export class MCPDiscoveryService extends EventEmitter {
       // Update access statistics
       resource.access.readCount++;
       resource.access.lastAccessed = new Date();
-      resource.access.averageLoadTime = 
-        (resource.access.averageLoadTime * (resource.access.readCount - 1) + duration) /
+      resource.access.averageLoadTime =
+        (resource.access.averageLoadTime * (resource.access.readCount - 1) +
+          duration) /
         resource.access.readCount;
-      resource.access.successRate = (resource.access.readCount - resource.access.errorCount) / resource.access.readCount;
+      resource.access.successRate =
+        (resource.access.readCount - resource.access.errorCount) /
+        resource.access.readCount;
 
       // Update metadata if available
       if (size > 0) {
@@ -527,7 +568,6 @@ export class MCPDiscoveryService extends EventEmitter {
           duration,
         },
       });
-
     } catch (error) {
       const duration = Date.now() - startTime;
 
@@ -542,7 +582,9 @@ export class MCPDiscoveryService extends EventEmitter {
 
       // Update error statistics
       resource.access.errorCount++;
-      resource.access.successRate = (resource.access.readCount - resource.access.errorCount) / resource.access.readCount;
+      resource.access.successRate =
+        (resource.access.readCount - resource.access.errorCount) /
+        resource.access.readCount;
 
       this.emit('resourceAccessFailed', result, error);
 
@@ -577,7 +619,11 @@ export class MCPDiscoveryService extends EventEmitter {
     toolCategories: string[];
     resourceCategories: string[];
     topTools: Array<{ name: string; callCount: number; serverName: string }>;
-    topResources: Array<{ name: string; readCount: number; serverName: string }>;
+    topResources: Array<{
+      name: string;
+      readCount: number;
+      serverName: string;
+    }>;
   } {
     const tools = Array.from(this.discoveredTools.values());
     const resources = Array.from(this.discoveredResources.values());
@@ -617,26 +663,26 @@ export class MCPDiscoveryService extends EventEmitter {
   // Private methods
 
   private setupConnectionListeners(): void {
-    mcpConnectionManager.on('connected', async (connection) => {
+    mcpConnectionManager.on('connected', async connection => {
       await this.discoverFromConnection(connection.id);
     });
 
-    mcpConnectionManager.on('disconnected', (connection) => {
+    mcpConnectionManager.on('disconnected', connection => {
       this.removeDiscoveredItems(connection.id);
     });
 
-    mcpConnectionManager.on('toolsChanged', async (connection) => {
+    mcpConnectionManager.on('toolsChanged', async connection => {
       await this.discoverFromConnection(connection.id);
     });
 
-    mcpConnectionManager.on('resourcesChanged', async (connection) => {
+    mcpConnectionManager.on('resourcesChanged', async connection => {
       await this.discoverFromConnection(connection.id);
     });
   }
 
   private async discoverFromExistingConnections(): Promise<void> {
     const connections = mcpConnectionManager.getConnections();
-    
+
     for (const connection of connections) {
       if (connection.status === 'connected') {
         await this.discoverFromConnection(connection.id);
@@ -708,7 +754,10 @@ export class MCPDiscoveryService extends EventEmitter {
         };
 
         // Categorize resource
-        const category = this.categorizeItem(resource.name, resource.description || '');
+        const category = this.categorizeItem(
+          resource.name,
+          resource.description || ''
+        );
         if (category) {
           discoveredResource.metadata.category = category;
           this.resourceCategories.add(category);
@@ -727,9 +776,11 @@ export class MCPDiscoveryService extends EventEmitter {
         toolCount: connection.metadata.tools.length,
         resourceCount: connection.metadata.resources.length,
       });
-
     } catch (error) {
-      console.error(`Failed to discover from connection ${connectionId}:`, error);
+      console.error(
+        `Failed to discover from connection ${connectionId}:`,
+        error
+      );
     }
   }
 
@@ -749,22 +800,25 @@ export class MCPDiscoveryService extends EventEmitter {
     }
   }
 
-  private categorizeItem(name: string, description: string): string | undefined {
+  private categorizeItem(
+    name: string,
+    description: string
+  ): string | undefined {
     const text = `${name} ${description}`.toLowerCase();
-    
+
     const categories = {
       'file-system': ['file', 'directory', 'path', 'folder', 'read', 'write'],
-      'database': ['database', 'sql', 'query', 'table', 'record'],
-      'web': ['http', 'api', 'request', 'url', 'web', 'fetch'],
-      'ai': ['ai', 'ml', 'model', 'predict', 'classify', 'generate'],
-      'code': ['code', 'git', 'repository', 'commit', 'syntax'],
-      'text': ['text', 'string', 'parse', 'format', 'translate'],
-      'image': ['image', 'photo', 'picture', 'visual', 'graphics'],
-      'audio': ['audio', 'sound', 'music', 'voice', 'speech'],
-      'video': ['video', 'movie', 'stream', 'media'],
-      'system': ['system', 'process', 'command', 'exec', 'shell'],
-      'math': ['math', 'calculate', 'compute', 'formula'],
-      'utility': ['utility', 'tool', 'helper', 'convert'],
+      database: ['database', 'sql', 'query', 'table', 'record'],
+      web: ['http', 'api', 'request', 'url', 'web', 'fetch'],
+      ai: ['ai', 'ml', 'model', 'predict', 'classify', 'generate'],
+      code: ['code', 'git', 'repository', 'commit', 'syntax'],
+      text: ['text', 'string', 'parse', 'format', 'translate'],
+      image: ['image', 'photo', 'picture', 'visual', 'graphics'],
+      audio: ['audio', 'sound', 'music', 'voice', 'speech'],
+      video: ['video', 'movie', 'stream', 'media'],
+      system: ['system', 'process', 'command', 'exec', 'shell'],
+      math: ['math', 'calculate', 'compute', 'formula'],
+      utility: ['utility', 'tool', 'helper', 'convert'],
     };
 
     for (const [category, keywords] of Object.entries(categories)) {
@@ -779,12 +833,31 @@ export class MCPDiscoveryService extends EventEmitter {
   private extractTags(text: string): string[] {
     const tags = new Set<string>();
     const words = text.toLowerCase().match(/\b\w+\b/g) || [];
-    
+
     // Common technical terms that make good tags
     const tagPatterns = [
-      'api', 'json', 'xml', 'csv', 'pdf', 'image', 'text', 'file',
-      'database', 'sql', 'web', 'http', 'git', 'code', 'ai', 'ml',
-      'async', 'sync', 'stream', 'batch', 'real-time', 'cache',
+      'api',
+      'json',
+      'xml',
+      'csv',
+      'pdf',
+      'image',
+      'text',
+      'file',
+      'database',
+      'sql',
+      'web',
+      'http',
+      'git',
+      'code',
+      'ai',
+      'ml',
+      'async',
+      'sync',
+      'stream',
+      'batch',
+      'real-time',
+      'cache',
     ];
 
     for (const word of words) {

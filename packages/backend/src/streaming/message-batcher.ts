@@ -42,7 +42,7 @@ export class MessageBatcher extends EventEmitter {
     private config: BatchConfig
   ) {
     super();
-    
+
     this.metrics = {
       totalMessages: 0,
       batchesSent: 0,
@@ -82,7 +82,10 @@ export class MessageBatcher extends EventEmitter {
     };
 
     // Apply compression if enabled and data is large enough
-    if (this.config.enableCompression && message.size >= this.config.compressionThreshold) {
+    if (
+      this.config.enableCompression &&
+      message.size >= this.config.compressionThreshold
+    ) {
       const compressedData = this.compressData(data);
       if (compressedData && this.estimateSize(compressedData) < message.size) {
         message.data = compressedData;
@@ -150,23 +153,31 @@ export class MessageBatcher extends EventEmitter {
 
     // Flush if total size is getting large
     const totalSize = this.messageQueue.reduce((sum, msg) => sum + msg.size, 0);
-    if (totalSize >= 256 * 1024) { // 256KB
+    if (totalSize >= 256 * 1024) {
+      // 256KB
       return true;
     }
 
     // Flush if oldest message is too old
     const oldestMessage = this.messageQueue[0];
-    if (oldestMessage && Date.now() - oldestMessage.timestamp >= this.config.maxBatchDelay) {
+    if (
+      oldestMessage &&
+      Date.now() - oldestMessage.timestamp >= this.config.maxBatchDelay
+    ) {
       return true;
     }
 
     // Flush if we have high priority messages waiting
     if (this.config.enablePrioritization) {
-      const hasHighPriority = this.messageQueue.some(msg => msg.priority === 'high');
-      const hasNormalWithDelay = this.messageQueue.some(msg => 
-        msg.priority === 'normal' && Date.now() - msg.timestamp > this.config.maxBatchDelay / 2
+      const hasHighPriority = this.messageQueue.some(
+        msg => msg.priority === 'high'
       );
-      
+      const hasNormalWithDelay = this.messageQueue.some(
+        msg =>
+          msg.priority === 'normal' &&
+          Date.now() - msg.timestamp > this.config.maxBatchDelay / 2
+      );
+
       if (hasHighPriority && hasNormalWithDelay) {
         return true;
       }
@@ -244,9 +255,10 @@ export class MessageBatcher extends EventEmitter {
     // Update metrics
     const latency = Date.now() - startTime;
     this.metrics.batchesSent++;
-    this.metrics.averageBatchSize = (this.metrics.averageBatchSize + messages.length) / 2;
+    this.metrics.averageBatchSize =
+      (this.metrics.averageBatchSize + messages.length) / 2;
     this.metrics.averageLatency = (this.metrics.averageLatency + latency) / 2;
-    
+
     // Update compression ratio
     const compressedMessages = messages.filter(m => m.compressed).length;
     if (compressedMessages > 0) {
@@ -269,7 +281,7 @@ export class MessageBatcher extends EventEmitter {
   private sendImmediately(message: QueuedMessage): void {
     this.socket.emit(message.event, message.data);
     this.metrics.totalMessages++;
-    
+
     this.emit('message_sent', {
       messageId: message.id,
       event: message.event,
@@ -285,11 +297,11 @@ export class MessageBatcher extends EventEmitter {
     if (Buffer.isBuffer(data)) {
       return data.length;
     }
-    
+
     if (typeof data === 'string') {
       return Buffer.byteLength(data, 'utf8');
     }
-    
+
     // Rough estimate for objects
     try {
       return Buffer.byteLength(JSON.stringify(data), 'utf8');
@@ -304,15 +316,15 @@ export class MessageBatcher extends EventEmitter {
   private compressData(data: any): any {
     try {
       const zlib = require('zlib');
-      
+
       if (Buffer.isBuffer(data)) {
         return zlib.deflateSync(data);
       }
-      
+
       if (typeof data === 'string') {
         return zlib.deflateSync(Buffer.from(data, 'utf8'));
       }
-      
+
       if (typeof data === 'object') {
         const jsonString = JSON.stringify(data);
         const compressed = zlib.deflateSync(Buffer.from(jsonString, 'utf8'));
@@ -321,7 +333,7 @@ export class MessageBatcher extends EventEmitter {
           data: compressed.toString('base64'),
         };
       }
-      
+
       return null;
     } catch (error) {
       console.warn('Compression failed:', error);
@@ -439,7 +451,7 @@ export class MessageBatcherFactory {
    */
   getBatcher(socket: Socket, config?: BatchConfig): MessageBatcher {
     const socketId = socket.id;
-    
+
     if (this.batchers.has(socketId)) {
       return this.batchers.get(socketId)!;
     }
@@ -477,8 +489,10 @@ export class MessageBatcherFactory {
    * Get metrics for all batchers
    */
   getAggregatedMetrics(): BatchMetrics {
-    const allMetrics = this.getAllBatchers().map(batcher => batcher.getMetrics());
-    
+    const allMetrics = this.getAllBatchers().map(batcher =>
+      batcher.getMetrics()
+    );
+
     if (allMetrics.length === 0) {
       return {
         totalMessages: 0,
@@ -494,11 +508,20 @@ export class MessageBatcherFactory {
     return {
       totalMessages: allMetrics.reduce((sum, m) => sum + m.totalMessages, 0),
       batchesSent: allMetrics.reduce((sum, m) => sum + m.batchesSent, 0),
-      averageBatchSize: allMetrics.reduce((sum, m) => sum + m.averageBatchSize, 0) / allMetrics.length,
-      averageLatency: allMetrics.reduce((sum, m) => sum + m.averageLatency, 0) / allMetrics.length,
-      compressionRatio: allMetrics.reduce((sum, m) => sum + m.compressionRatio, 0) / allMetrics.length,
+      averageBatchSize:
+        allMetrics.reduce((sum, m) => sum + m.averageBatchSize, 0) /
+        allMetrics.length,
+      averageLatency:
+        allMetrics.reduce((sum, m) => sum + m.averageLatency, 0) /
+        allMetrics.length,
+      compressionRatio:
+        allMetrics.reduce((sum, m) => sum + m.compressionRatio, 0) /
+        allMetrics.length,
       queueLength: allMetrics.reduce((sum, m) => sum + m.queueLength, 0),
-      droppedMessages: allMetrics.reduce((sum, m) => sum + m.droppedMessages, 0),
+      droppedMessages: allMetrics.reduce(
+        (sum, m) => sum + m.droppedMessages,
+        0
+      ),
     };
   }
 

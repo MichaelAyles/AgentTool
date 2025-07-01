@@ -1,8 +1,14 @@
 import { EventEmitter } from 'events';
 import { SecurityLevel, SecurityEventType } from '../security/types.js';
 import { securityEventLogger } from '../security/event-logger.js';
-import { comprehensiveAuditLogger, AuditCategory } from '../security/audit-logger.js';
-import { CommandValidator, CommandRisk } from '../security/command-validator.js';
+import {
+  comprehensiveAuditLogger,
+  AuditCategory,
+} from '../security/audit-logger.js';
+import {
+  CommandValidator,
+  CommandRisk,
+} from '../security/command-validator.js';
 
 // Dangerous mode states
 export enum DangerousModeState {
@@ -10,7 +16,7 @@ export enum DangerousModeState {
   PENDING_CONFIRMATION = 'pending_confirmation',
   ENABLED = 'enabled',
   COOLDOWN = 'cooldown',
-  SUSPENDED = 'suspended'
+  SUSPENDED = 'suspended',
 }
 
 // Dangerous mode configuration
@@ -45,7 +51,11 @@ export interface DangerousModeSession {
 // Warning types for dangerous mode
 export interface DangerousWarning {
   id: string;
-  type: 'timeout_warning' | 'risk_increase' | 'suspicious_activity' | 'command_blocked';
+  type:
+    | 'timeout_warning'
+    | 'risk_increase'
+    | 'suspicious_activity'
+    | 'command_blocked';
   message: string;
   timestamp: Date;
   severity: SecurityLevel;
@@ -94,16 +104,23 @@ export class DangerousModeController extends EventEmitter {
     expiresAt?: Date;
     warnings?: string[];
   }> {
-    const { sessionId, userId, userRole, reason, ipAddress, userAgent } = params;
+    const { sessionId, userId, userRole, reason, ipAddress, userAgent } =
+      params;
 
     // Check if emergency stop is active
     if (this.emergencyStop) {
-      await this.auditDangerousAction('enable_request', sessionId, userId, 'blocked', {
-        reason: 'emergency_stop_active',
-        ipAddress,
-        userAgent,
-      });
-      
+      await this.auditDangerousAction(
+        'enable_request',
+        sessionId,
+        userId,
+        'blocked',
+        {
+          reason: 'emergency_stop_active',
+          ipAddress,
+          userAgent,
+        }
+      );
+
       return {
         success: false,
         state: DangerousModeState.SUSPENDED,
@@ -113,12 +130,18 @@ export class DangerousModeController extends EventEmitter {
 
     // Check role permissions
     if (!this.config.allowedRoles.includes(userRole.toLowerCase())) {
-      await this.auditDangerousAction('enable_request', sessionId, userId, 'blocked', {
-        reason: 'insufficient_role',
-        role: userRole,
-        ipAddress,
-      });
-      
+      await this.auditDangerousAction(
+        'enable_request',
+        sessionId,
+        userId,
+        'blocked',
+        {
+          reason: 'insufficient_role',
+          role: userRole,
+          ipAddress,
+        }
+      );
+
       return {
         success: false,
         state: DangerousModeState.DISABLED,
@@ -144,12 +167,18 @@ export class DangerousModeController extends EventEmitter {
     // Check activation limits
     const activationCheck = this.checkActivationLimits(session);
     if (!activationCheck.allowed) {
-      await this.auditDangerousAction('enable_request', sessionId, userId, 'blocked', {
-        reason: 'activation_limit_exceeded',
-        count: session.activationCount,
-        limit: this.config.maxActivationsPerHour,
-      });
-      
+      await this.auditDangerousAction(
+        'enable_request',
+        sessionId,
+        userId,
+        'blocked',
+        {
+          reason: 'activation_limit_exceeded',
+          count: session.activationCount,
+          limit: this.config.maxActivationsPerHour,
+        }
+      );
+
       return {
         success: false,
         state: session.state,
@@ -173,19 +202,30 @@ export class DangerousModeController extends EventEmitter {
       session.state = DangerousModeState.PENDING_CONFIRMATION;
       session.reason = reason;
 
-      await this.auditDangerousAction('enable_request', sessionId, userId, 'pending_confirmation', {
-        reason,
-        confirmationRequired: true,
-        ipAddress,
-      });
+      await this.auditDangerousAction(
+        'enable_request',
+        sessionId,
+        userId,
+        'pending_confirmation',
+        {
+          reason,
+          confirmationRequired: true,
+          ipAddress,
+        }
+      );
 
-      this.emit('confirmationRequired', { sessionId, userId, confirmationCode });
+      this.emit('confirmationRequired', {
+        sessionId,
+        userId,
+        confirmationCode,
+      });
 
       return {
         success: true,
         state: session.state,
         confirmationCode,
-        message: 'Confirmation code generated. Use it to confirm dangerous mode activation.',
+        message:
+          'Confirmation code generated. Use it to confirm dangerous mode activation.',
       };
     }
 
@@ -224,11 +264,17 @@ export class DangerousModeController extends EventEmitter {
     }
 
     if (session.confirmationCode !== confirmationCode) {
-      await this.auditDangerousAction('confirm_enable', sessionId, session.userId, 'blocked', {
-        reason: 'invalid_confirmation_code',
-        providedCode: confirmationCode,
-      });
-      
+      await this.auditDangerousAction(
+        'confirm_enable',
+        sessionId,
+        session.userId,
+        'blocked',
+        {
+          reason: 'invalid_confirmation_code',
+          providedCode: confirmationCode,
+        }
+      );
+
       return {
         success: false,
         state: session.state,
@@ -278,13 +324,23 @@ export class DangerousModeController extends EventEmitter {
       this.disableDangerousMode(sessionId, 'timeout');
     }, this.config.maxDuration);
 
-    await this.auditDangerousAction('enabled', sessionId, session.userId, 'success', {
-      reason: session.reason,
-      duration: this.config.maxDuration,
-      expiresAt: expiresAt.toISOString(),
-    });
+    await this.auditDangerousAction(
+      'enabled',
+      sessionId,
+      session.userId,
+      'success',
+      {
+        reason: session.reason,
+        duration: this.config.maxDuration,
+        expiresAt: expiresAt.toISOString(),
+      }
+    );
 
-    this.emit('dangerousModeEnabled', { sessionId, userId: session.userId, expiresAt });
+    this.emit('dangerousModeEnabled', {
+      sessionId,
+      userId: session.userId,
+      expiresAt,
+    });
 
     return {
       success: true,
@@ -299,7 +355,12 @@ export class DangerousModeController extends EventEmitter {
    */
   async disableDangerousMode(
     sessionId: string,
-    reason: 'user_request' | 'timeout' | 'emergency' | 'suspicious_activity' | 'admin_disable' = 'user_request'
+    reason:
+      | 'user_request'
+      | 'timeout'
+      | 'emergency'
+      | 'suspicious_activity'
+      | 'admin_disable' = 'user_request'
   ): Promise<{
     success: boolean;
     state: DangerousModeState;
@@ -323,7 +384,10 @@ export class DangerousModeController extends EventEmitter {
     }
 
     const previousState = session.state;
-    session.state = reason === 'emergency' ? DangerousModeState.SUSPENDED : DangerousModeState.COOLDOWN;
+    session.state =
+      reason === 'emergency'
+        ? DangerousModeState.SUSPENDED
+        : DangerousModeState.COOLDOWN;
     session.enabledAt = undefined;
     session.expiresAt = undefined;
 
@@ -336,14 +400,24 @@ export class DangerousModeController extends EventEmitter {
       }, this.config.cooldownPeriod);
     }
 
-    await this.auditDangerousAction('disabled', sessionId, session.userId, 'success', {
-      reason,
-      previousState,
-      commandsExecuted: session.commandsExecuted,
-      finalRiskScore: session.riskScore,
-    });
+    await this.auditDangerousAction(
+      'disabled',
+      sessionId,
+      session.userId,
+      'success',
+      {
+        reason,
+        previousState,
+        commandsExecuted: session.commandsExecuted,
+        finalRiskScore: session.riskScore,
+      }
+    );
 
-    this.emit('dangerousModeDisabled', { sessionId, userId: session.userId, reason });
+    this.emit('dangerousModeDisabled', {
+      sessionId,
+      userId: session.userId,
+      reason,
+    });
 
     return {
       success: true,
@@ -409,14 +483,16 @@ export class DangerousModeController extends EventEmitter {
     }
 
     // Calculate risk increase
-    const riskIncrease = this.calculateCommandRisk(validation.classification.risk);
+    const riskIncrease = this.calculateCommandRisk(
+      validation.classification.risk
+    );
     session.riskScore += riskIncrease;
     session.commandsExecuted++;
 
     // Check if risk score exceeds threshold
     if (session.riskScore > this.config.maxRiskScore) {
       await this.disableDangerousMode(sessionId, 'suspicious_activity');
-      
+
       return {
         allowed: false,
         message: 'Dangerous mode disabled due to high risk score',
@@ -482,8 +558,8 @@ export class DangerousModeController extends EventEmitter {
     await comprehensiveAuditLogger.logSystemChange({
       action: 'emergency_disable_all',
       component: 'dangerous_mode',
-      changes: { 
-        emergencyStop: true, 
+      changes: {
+        emergencyStop: true,
         reason,
         affectedSessions: affectedSessions.length,
       },
@@ -500,7 +576,7 @@ export class DangerousModeController extends EventEmitter {
    */
   async clearEmergencyStop(): Promise<void> {
     this.emergencyStop = false;
-    
+
     await comprehensiveAuditLogger.logSystemChange({
       action: 'clear_emergency_stop',
       component: 'dangerous_mode',
@@ -515,7 +591,10 @@ export class DangerousModeController extends EventEmitter {
 
   // Private helper methods
 
-  private createSession(sessionId: string, userId: string): DangerousModeSession {
+  private createSession(
+    sessionId: string,
+    userId: string
+  ): DangerousModeSession {
     const session: DangerousModeSession = {
       sessionId,
       userId,
@@ -530,7 +609,10 @@ export class DangerousModeController extends EventEmitter {
     return session;
   }
 
-  private checkActivationLimits(session: DangerousModeSession): { allowed: boolean; message: string } {
+  private checkActivationLimits(session: DangerousModeSession): {
+    allowed: boolean;
+    message: string;
+  } {
     const now = new Date();
     const hourAgo = new Date(now.getTime() - 60 * 60 * 1000);
 
@@ -555,15 +637,23 @@ export class DangerousModeController extends EventEmitter {
 
   private calculateCommandRisk(risk: CommandRisk): number {
     switch (risk) {
-      case CommandRisk.SAFE: return 1;
-      case CommandRisk.MODERATE: return 5;
-      case CommandRisk.DANGEROUS: return 15;
-      case CommandRisk.CRITICAL: return 50;
-      default: return 1;
+      case CommandRisk.SAFE:
+        return 1;
+      case CommandRisk.MODERATE:
+        return 5;
+      case CommandRisk.DANGEROUS:
+        return 15;
+      case CommandRisk.CRITICAL:
+        return 50;
+      default:
+        return 1;
     }
   }
 
-  private async addWarning(session: DangerousModeSession, warning: Omit<DangerousWarning, 'id' | 'timestamp'>): Promise<void> {
+  private async addWarning(
+    session: DangerousModeSession,
+    warning: Omit<DangerousWarning, 'id' | 'timestamp'>
+  ): Promise<void> {
     const fullWarning: DangerousWarning = {
       id: `warning_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
       timestamp: new Date(),
@@ -599,7 +689,10 @@ export class DangerousModeController extends EventEmitter {
       userId,
       sessionId,
       outcome: outcome === 'pending_confirmation' ? 'success' : outcome,
-      severity: outcome === 'blocked' ? SecurityLevel.DANGEROUS : SecurityLevel.MODERATE,
+      severity:
+        outcome === 'blocked'
+          ? SecurityLevel.DANGEROUS
+          : SecurityLevel.MODERATE,
       details,
     });
   }
@@ -616,9 +709,11 @@ export class DangerousModeController extends EventEmitter {
         }
 
         // Remove old disabled sessions
-        if (session.state === DangerousModeState.DISABLED && 
-            session.lastActivation && 
-            now.getTime() - session.lastActivation.getTime() > 24 * 60 * 60 * 1000) {
+        if (
+          session.state === DangerousModeState.DISABLED &&
+          session.lastActivation &&
+          now.getTime() - session.lastActivation.getTime() > 24 * 60 * 60 * 1000
+        ) {
           sessionsToClean.push(sessionId);
         }
       }
@@ -635,9 +730,12 @@ export class DangerousModeController extends EventEmitter {
       for (const [sessionId, session] of this.sessions.entries()) {
         if (session.state === DangerousModeState.ENABLED && session.expiresAt) {
           const timeUntilExpiry = session.expiresAt.getTime() - Date.now();
-          
+
           // Warn at 5 minutes before expiry
-          if (timeUntilExpiry <= 5 * 60 * 1000 && timeUntilExpiry > 4 * 60 * 1000) {
+          if (
+            timeUntilExpiry <= 5 * 60 * 1000 &&
+            timeUntilExpiry > 4 * 60 * 1000
+          ) {
             this.addWarning(session, {
               type: 'timeout_warning',
               message: 'Dangerous mode will expire in 5 minutes',

@@ -3,20 +3,27 @@ import { useSettings as useSettingsStore, useSettingsActions } from '../store';
 
 export function useSettings() {
   const settings = useSettingsStore();
-  const { updateSettings, updateTerminalSettings, toggleDangerousMode } = useSettingsActions();
+  const { updateSettings, updateTerminalSettings, toggleDangerousMode } =
+    useSettingsActions();
 
-  const updateSetting = useCallback((key: keyof typeof settings, value: any) => {
-    updateSettings({ [key]: value });
-  }, [updateSettings]);
+  const updateSetting = useCallback(
+    (key: keyof typeof settings, value: any) => {
+      updateSettings({ [key]: value });
+    },
+    [updateSettings]
+  );
 
-  const updateTerminalSetting = useCallback((key: keyof typeof settings.terminalSettings, value: any) => {
-    updateTerminalSettings({ [key]: value });
-  }, [updateTerminalSettings]);
+  const updateTerminalSetting = useCallback(
+    (key: keyof typeof settings.terminalSettings, value: any) => {
+      updateTerminalSettings({ [key]: value });
+    },
+    [updateTerminalSettings]
+  );
 
   const getDangerousModeStatus = useCallback(() => {
     return {
       enabled: settings.dangerousMode,
-      warning: settings.dangerousMode 
+      warning: settings.dangerousMode
         ? 'Dangerous mode is enabled. Commands will run without safety checks.'
         : 'Dangerous mode is disabled. Commands are filtered for safety.',
     };
@@ -37,7 +44,7 @@ export function useSettings() {
     toggleDangerousMode,
     getDangerousModeStatus,
     getTerminalThemeVariables,
-    
+
     // Convenience methods
     isDangerousMode: settings.dangerousMode,
     isAutoSaveEnabled: settings.autoSave,
@@ -52,15 +59,18 @@ export function useDangerousMode() {
   const { toggleDangerousMode } = useSettingsActions();
 
   const executeWithConfirmation = useCallback(
-    async (action: () => Promise<void> | void, options?: {
-      title?: string;
-      message?: string;
-      skipConfirmation?: boolean;
-    }) => {
+    async (
+      action: () => Promise<void> | void,
+      options?: {
+        title?: string;
+        message?: string;
+        skipConfirmation?: boolean;
+      }
+    ) => {
       const {
         title = 'Dangerous Operation',
         message = 'This operation may be dangerous. Are you sure you want to continue?',
-        skipConfirmation = false
+        skipConfirmation = false,
       } = options || {};
 
       if (!isDangerousMode && !skipConfirmation) {

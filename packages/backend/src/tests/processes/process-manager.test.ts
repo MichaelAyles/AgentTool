@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test';
 import { ProcessManager } from '../../processes/process-manager.js';
-import { 
+import {
   createTestSession,
   createMockProcessMetrics,
   mockServices,
   sleep,
-  waitFor
+  waitFor,
 } from '../test-setup.js';
 
 // Mock node:pty
@@ -43,7 +43,7 @@ describe('ProcessManager', () => {
 
   beforeEach(() => {
     processManager = new ProcessManager();
-    
+
     // Reset mocks
     mockPty.spawn.mockClear();
     Object.values(mockProcess).forEach(mockFn => {
@@ -148,7 +148,7 @@ describe('ProcessManager', () => {
 
     it('should write input to session', () => {
       const input = 'hello world\n';
-      
+
       const result = processManager.writeToSession(testSession.id, input);
 
       expect(result).toBe(true);
@@ -199,14 +199,20 @@ describe('ProcessManager', () => {
     });
 
     it('should terminate session gracefully', async () => {
-      const result = await processManager.terminateSession(testSession.id, false);
+      const result = await processManager.terminateSession(
+        testSession.id,
+        false
+      );
 
       expect(result).toBe(true);
       expect(mockPty.spawn().kill).toHaveBeenCalledWith('SIGTERM');
     });
 
     it('should force terminate session', async () => {
-      const result = await processManager.terminateSession(testSession.id, true);
+      const result = await processManager.terminateSession(
+        testSession.id,
+        true
+      );
 
       expect(result).toBe(true);
       expect(mockPty.spawn().kill).toHaveBeenCalledWith('SIGKILL');
@@ -233,7 +239,11 @@ describe('ProcessManager', () => {
         cwd: '/tmp',
       });
 
-      const result = await processManager.terminateSession('hanging-session', false, 100); // 100ms timeout
+      const result = await processManager.terminateSession(
+        'hanging-session',
+        false,
+        100
+      ); // 100ms timeout
 
       expect(result).toBe(true); // Should still succeed via force kill
     });
@@ -310,7 +320,9 @@ describe('ProcessManager', () => {
       const updatedLimits = processManager.getResourceLimits();
 
       expect(updatedLimits.maxSessions).toBe(newLimits.maxSessions);
-      expect(updatedLimits.maxMemoryPerSession).toBe(newLimits.maxMemoryPerSession);
+      expect(updatedLimits.maxMemoryPerSession).toBe(
+        newLimits.maxMemoryPerSession
+      );
       expect(updatedLimits.maxCpuPerSession).toBe(newLimits.maxCpuPerSession);
       expect(updatedLimits.sessionTimeout).toBe(newLimits.sessionTimeout);
     });
@@ -343,8 +355,8 @@ describe('ProcessManager', () => {
   describe('Event Handling', () => {
     it('should emit session created event', async () => {
       let sessionCreated = false;
-      
-      processManager.on('sessionCreated', (session) => {
+
+      processManager.on('sessionCreated', session => {
         sessionCreated = true;
         expect(session.sessionId).toBe(testSession.id);
       });
@@ -362,7 +374,7 @@ describe('ProcessManager', () => {
     it('should emit session terminated event', async () => {
       let sessionTerminated = false;
 
-      processManager.on('sessionTerminated', (session) => {
+      processManager.on('sessionTerminated', session => {
         sessionTerminated = true;
         expect(session.sessionId).toBe(testSession.id);
       });
@@ -382,7 +394,7 @@ describe('ProcessManager', () => {
     it('should emit output events', async () => {
       let outputReceived = false;
 
-      processManager.on('sessionOutput', (data) => {
+      processManager.on('sessionOutput', data => {
         outputReceived = true;
         expect(data.sessionId).toBe(testSession.id);
         expect(data.type).toBe('stdout');
@@ -498,18 +510,20 @@ describe('ProcessManager', () => {
   describe('Performance', () => {
     it('should handle multiple concurrent sessions', async () => {
       const sessionPromises = [];
-      
+
       for (let i = 0; i < 10; i++) {
-        sessionPromises.push(processManager.createSession({
-          sessionId: `concurrent-session-${i}`,
-          command: 'claude-code',
-          args: [],
-          cwd: '/tmp',
-        }));
+        sessionPromises.push(
+          processManager.createSession({
+            sessionId: `concurrent-session-${i}`,
+            command: 'claude-code',
+            args: [],
+            cwd: '/tmp',
+          })
+        );
       }
 
       const results = await Promise.all(sessionPromises);
-      
+
       expect(results.every(r => r.success)).toBe(true);
       expect(processManager.getAllMetrics().length).toBe(10);
     });
@@ -526,7 +540,7 @@ describe('ProcessManager', () => {
       }
 
       const startTime = Date.now();
-      
+
       // Perform operations
       for (let i = 0; i < 5; i++) {
         processManager.writeToSession(`load-session-${i}`, 'test input\n');

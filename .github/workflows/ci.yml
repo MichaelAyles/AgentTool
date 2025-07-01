@@ -2,9 +2,9 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, working, develop ]
+    branches: [main, working, develop]
   pull_request:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
 env:
@@ -305,7 +305,7 @@ jobs:
           test -f README.md || { echo "Missing README.md"; exit 1; }
           test -f CLAUDE.md || { echo "Missing CLAUDE.md"; exit 1; }
           test -f TODO.md || { echo "Missing TODO.md"; exit 1; }
-          
+
           # Check for API documentation
           find packages/backend/src/api -name "*.ts" | while read file; do
             if ! grep -q "/**" "$file"; then
@@ -346,7 +346,7 @@ jobs:
           # Extract version from root package.json
           ROOT_VERSION=$(node -p "require('./package.json').version")
           echo "Root version: $ROOT_VERSION"
-          
+
           # Check all package versions match
           find packages -name "package.json" -exec node -e "
             const pkg = require('{}');

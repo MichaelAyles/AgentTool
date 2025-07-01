@@ -2,7 +2,10 @@ import { EventEmitter } from 'events';
 import { WebSocket } from 'ws';
 import { spawn, ChildProcess } from 'child_process';
 import { v4 as uuidv4 } from 'uuid';
-import { comprehensiveAuditLogger, AuditCategory } from '../security/audit-logger.js';
+import {
+  comprehensiveAuditLogger,
+  AuditCategory,
+} from '../security/audit-logger.js';
 import { SecurityLevel } from '../security/types.js';
 import { db } from '../database/index.js';
 
@@ -12,7 +15,12 @@ export interface MCPServerConnection {
   serverId: string;
   name: string;
   transport: MCPTransportType;
-  status: 'connecting' | 'connected' | 'disconnected' | 'error' | 'reconnecting';
+  status:
+    | 'connecting'
+    | 'connected'
+    | 'disconnected'
+    | 'error'
+    | 'reconnecting';
   connectionInfo: {
     url?: string;
     host?: string;
@@ -99,11 +107,14 @@ export class MCPConnectionManager extends EventEmitter {
   private connections: Map<string, MCPServerConnection> = new Map();
   private websockets: Map<string, WebSocket> = new Map();
   private processes: Map<string, ChildProcess> = new Map();
-  private pendingRequests: Map<string, {
-    resolve: (value: any) => void;
-    reject: (error: any) => void;
-    timeout: NodeJS.Timeout;
-  }> = new Map();
+  private pendingRequests: Map<
+    string,
+    {
+      resolve: (value: any) => void;
+      reject: (error: any) => void;
+      timeout: NodeJS.Timeout;
+    }
+  > = new Map();
   private heartbeatIntervals: Map<string, NodeJS.Timeout> = new Map();
   private reconnectTimeouts: Map<string, NodeJS.Timeout> = new Map();
   private reconnectAttempts: Map<string, number> = new Map();
@@ -122,9 +133,12 @@ export class MCPConnectionManager extends EventEmitter {
   /**
    * Connect to an MCP server
    */
-  async connect(config: MCPConnectionConfig, userId: string): Promise<MCPServerConnection> {
+  async connect(
+    config: MCPConnectionConfig,
+    userId: string
+  ): Promise<MCPServerConnection> {
     const connectionId = uuidv4();
-    
+
     const connection: MCPServerConnection = {
       id: connectionId,
       serverId: config.serverId,
@@ -160,7 +174,7 @@ export class MCPConnectionManager extends EventEmitter {
 
     try {
       await this.establishConnection(connection);
-      
+
       await comprehensiveAuditLogger.logAuditEvent({
         category: AuditCategory.SYSTEM_ACCESS,
         action: 'mcp_server_connected',
@@ -180,7 +194,7 @@ export class MCPConnectionManager extends EventEmitter {
     } catch (error) {
       connection.status = 'error';
       this.emit('connectionError', connection, error);
-      
+
       await comprehensiveAuditLogger.logAuditEvent({
         category: AuditCategory.SYSTEM_ACCESS,
         action: 'mcp_server_connection_failed',
@@ -226,7 +240,7 @@ export class MCPConnectionManager extends EventEmitter {
 
     connection.status = 'disconnected';
     connection.stats.disconnectedAt = new Date();
-    
+
     this.emit('connectionClosed', connection);
 
     await comprehensiveAuditLogger.logAuditEvent({
@@ -249,11 +263,11 @@ export class MCPConnectionManager extends EventEmitter {
    */
   getConnections(userId?: string): MCPServerConnection[] {
     const connections = Array.from(this.connections.values());
-    
+
     if (userId) {
       return connections.filter(conn => conn.userId === userId);
     }
-    
+
     return connections;
   }
 
@@ -312,8 +326,10 @@ export class MCPConnectionManager extends EventEmitter {
       // Update stats
       const duration = Date.now() - startTime;
       connection.stats.requestCount++;
-      connection.stats.averageResponseTime = 
-        (connection.stats.averageResponseTime * (connection.stats.requestCount - 1) + duration) /
+      connection.stats.averageResponseTime =
+        (connection.stats.averageResponseTime *
+          (connection.stats.requestCount - 1) +
+          duration) /
         connection.stats.requestCount;
     });
   }
@@ -335,9 +351,10 @@ export class MCPConnectionManager extends EventEmitter {
       ? Date.now() - connection.stats.connectedAt.getTime()
       : 0;
 
-    const errorRate = connection.stats.requestCount > 0
-      ? connection.stats.errorCount / connection.stats.requestCount
-      : 0;
+    const errorRate =
+      connection.stats.requestCount > 0
+        ? connection.stats.errorCount / connection.stats.requestCount
+        : 0;
 
     return {
       status: connection.status,
@@ -365,7 +382,9 @@ export class MCPConnectionManager extends EventEmitter {
 
   // Private methods
 
-  private async establishConnection(connection: MCPServerConnection): Promise<void> {
+  private async establishConnection(
+    connection: MCPServerConnection
+  ): Promise<void> {
     switch (connection.transport) {
       case MCPTransportType.WEBSOCKET:
         await this.connectWebSocket(connection);
@@ -385,16 +404,18 @@ export class MCPConnectionManager extends EventEmitter {
 
     // Initialize connection
     await this.initializeConnection(connection);
-    
+
     // Start heartbeat
     this.startHeartbeat(connection);
-    
+
     connection.status = 'connected';
     connection.stats.connectedAt = new Date();
     this.emit('connected', connection);
   }
 
-  private async connectWebSocket(connection: MCPServerConnection): Promise<void> {
+  private async connectWebSocket(
+    connection: MCPServerConnection
+  ): Promise<void> {
     if (!connection.connectionInfo.url) {
       throw new Error('WebSocket URL required');
     }
@@ -407,11 +428,11 @@ export class MCPConnectionManager extends EventEmitter {
       console.log(`WebSocket connected to ${connection.name}`);
     });
 
-    ws.on('message', (data) => {
+    ws.on('message', data => {
       this.handleMessage(connection, JSON.parse(data.toString()));
     });
 
-    ws.on('error', (error) => {
+    ws.on('error', error => {
       console.error(`WebSocket error for ${connection.name}:`, error);
       this.handleConnectionError(connection, error);
     });
@@ -442,12 +463,12 @@ export class MCPConnectionManager extends EventEmitter {
     );
 
     let buffer = '';
-    
-    process.stdout?.on('data', (data) => {
+
+    process.stdout?.on('data', data => {
       buffer += data.toString();
       const lines = buffer.split('\n');
       buffer = lines.pop() || '';
-      
+
       for (const line of lines) {
         if (line.trim()) {
           try {
@@ -460,17 +481,20 @@ export class MCPConnectionManager extends EventEmitter {
       }
     });
 
-    process.stderr?.on('data', (data) => {
+    process.stderr?.on('data', data => {
       console.error(`Stdio stderr for ${connection.name}:`, data.toString());
     });
 
-    process.on('error', (error) => {
+    process.on('error', error => {
       console.error(`Stdio process error for ${connection.name}:`, error);
       this.handleConnectionError(connection, error);
     });
 
     process.on('exit', (code, signal) => {
-      console.log(`Stdio process exited for ${connection.name}:`, { code, signal });
+      console.log(`Stdio process exited for ${connection.name}:`, {
+        code,
+        signal,
+      });
       this.handleConnectionClose(connection);
     });
 
@@ -487,7 +511,9 @@ export class MCPConnectionManager extends EventEmitter {
     throw new Error('IPC transport not yet implemented');
   }
 
-  private async initializeConnection(connection: MCPServerConnection): Promise<void> {
+  private async initializeConnection(
+    connection: MCPServerConnection
+  ): Promise<void> {
     try {
       // Get server info
       const info = await this.sendRequest(connection.id, 'initialize', {
@@ -506,7 +532,10 @@ export class MCPConnectionManager extends EventEmitter {
       connection.metadata.tools = toolsResponse.tools || [];
 
       // Get available resources
-      const resourcesResponse = await this.sendRequest(connection.id, 'resources/list');
+      const resourcesResponse = await this.sendRequest(
+        connection.id,
+        'resources/list'
+      );
       connection.metadata.resources = resourcesResponse.resources || [];
 
       this.emit('initialized', connection);
@@ -538,7 +567,10 @@ export class MCPConnectionManager extends EventEmitter {
     this.heartbeatIntervals.set(connection.id, interval);
   }
 
-  private async sendMessage(connection: MCPServerConnection, message: MCPMessage): Promise<void> {
+  private async sendMessage(
+    connection: MCPServerConnection,
+    message: MCPMessage
+  ): Promise<void> {
     const messageStr = JSON.stringify(message);
 
     switch (connection.transport) {
@@ -568,11 +600,11 @@ export class MCPConnectionManager extends EventEmitter {
           },
           body: messageStr,
         });
-        
+
         if (!response.ok) {
           throw new Error(`HTTP request failed: ${response.statusText}`);
         }
-        
+
         const result = await response.json();
         this.handleMessage(connection, result);
         break;
@@ -582,10 +614,15 @@ export class MCPConnectionManager extends EventEmitter {
     }
   }
 
-  private handleMessage(connection: MCPServerConnection, message: MCPMessage): void {
+  private handleMessage(
+    connection: MCPServerConnection,
+    message: MCPMessage
+  ): void {
     // Handle response to a pending request
     if (message.id && this.pendingRequests.has(message.id)) {
-      const { resolve, reject, timeout } = this.pendingRequests.get(message.id)!;
+      const { resolve, reject, timeout } = this.pendingRequests.get(
+        message.id
+      )!;
       clearTimeout(timeout);
       this.pendingRequests.delete(message.id);
 
@@ -594,11 +631,11 @@ export class MCPConnectionManager extends EventEmitter {
       } else {
         resolve(message.result);
       }
-    } 
+    }
     // Handle server-initiated messages
     else if (message.method) {
       this.emit('serverMessage', connection, message);
-      
+
       // Handle specific server methods
       switch (message.method) {
         case 'tools/changed':
@@ -614,7 +651,10 @@ export class MCPConnectionManager extends EventEmitter {
     }
   }
 
-  private handleToolsChanged(connection: MCPServerConnection, params: any): void {
+  private handleToolsChanged(
+    connection: MCPServerConnection,
+    params: any
+  ): void {
     // Update tools list
     this.sendRequest(connection.id, 'tools/list')
       .then(response => {
@@ -626,7 +666,10 @@ export class MCPConnectionManager extends EventEmitter {
       });
   }
 
-  private handleResourcesChanged(connection: MCPServerConnection, params: any): void {
+  private handleResourcesChanged(
+    connection: MCPServerConnection,
+    params: any
+  ): void {
     // Update resources list
     this.sendRequest(connection.id, 'resources/list')
       .then(response => {
@@ -638,7 +681,10 @@ export class MCPConnectionManager extends EventEmitter {
       });
   }
 
-  private handleConnectionError(connection: MCPServerConnection, error: Error): void {
+  private handleConnectionError(
+    connection: MCPServerConnection,
+    error: Error
+  ): void {
     connection.status = 'error';
     connection.stats.errorCount++;
     this.emit('error', connection, error);
@@ -660,7 +706,7 @@ export class MCPConnectionManager extends EventEmitter {
 
   private scheduleReconnect(connection: MCPServerConnection): void {
     const attempts = this.reconnectAttempts.get(connection.id) || 0;
-    
+
     if (attempts >= connection.options.maxReconnectAttempts) {
       console.error(`Max reconnect attempts reached for ${connection.name}`);
       connection.status = 'error';
@@ -668,9 +714,11 @@ export class MCPConnectionManager extends EventEmitter {
     }
 
     const delay = connection.options.reconnectDelay * Math.pow(2, attempts);
-    
-    console.log(`Scheduling reconnect for ${connection.name} in ${delay}ms (attempt ${attempts + 1})`);
-    
+
+    console.log(
+      `Scheduling reconnect for ${connection.name} in ${delay}ms (attempt ${attempts + 1})`
+    );
+
     const timeout = setTimeout(() => {
       this.reconnectAttempts.set(connection.id, attempts + 1);
       this.reconnect(connection.id).catch(error => {
@@ -701,19 +749,24 @@ export class MCPConnectionManager extends EventEmitter {
     }
   }
 
-  private getAuthHeaders(connection: MCPServerConnection): Record<string, string> {
-    if (!connection.authentication || connection.authentication.type === 'none') {
+  private getAuthHeaders(
+    connection: MCPServerConnection
+  ): Record<string, string> {
+    if (
+      !connection.authentication ||
+      connection.authentication.type === 'none'
+    ) {
       return {};
     }
 
     switch (connection.authentication.type) {
       case 'token':
         return {
-          'Authorization': `Bearer ${connection.authentication.credentials.token}`,
+          Authorization: `Bearer ${connection.authentication.credentials.token}`,
         };
       case 'oauth':
         return {
-          'Authorization': `Bearer ${connection.authentication.credentials.accessToken}`,
+          Authorization: `Bearer ${connection.authentication.credentials.accessToken}`,
         };
       default:
         return {};
@@ -729,7 +782,7 @@ export class MCPConnectionManager extends EventEmitter {
         console.error(`Failed to disconnect ${connectionId}:`, error);
       });
     }
-    
+
     this.connections.clear();
     this.websockets.clear();
     this.processes.clear();

@@ -22,7 +22,7 @@ export enum MessagePriority {
   CRITICAL = 0,
   HIGH = 1,
   NORMAL = 2,
-  LOW = 3
+  LOW = 3,
 }
 
 export interface BatchConfig {
@@ -82,7 +82,7 @@ export class EnhancedMessageBatcher extends EventEmitter {
 
   constructor(config: Partial<BatchConfig> = {}) {
     super();
-    
+
     this.config = {
       maxBatchSize: 20,
       maxBatchDelay: 50, // 50ms
@@ -99,10 +99,10 @@ export class EnhancedMessageBatcher extends EventEmitter {
 
     this.globalMetrics = this.initializeMetrics();
     this.initializePriorityQueues();
-    
+
     // Start periodic processing
     this.startPeriodicProcessing();
-    
+
     // Monitor connection pool events
     this.setupConnectionPoolMonitoring();
   }
@@ -138,7 +138,9 @@ export class EnhancedMessageBatcher extends EventEmitter {
       sessionId: options.sessionId,
       size: this.estimateMessageSize(data),
       retryCount: 0,
-      expiresAt: options.timeout ? Date.now() + options.timeout : Date.now() + this.config.messageTimeout,
+      expiresAt: options.timeout
+        ? Date.now() + options.timeout
+        : Date.now() + this.config.messageTimeout,
     };
 
     // Apply compression if enabled and beneficial
@@ -172,14 +174,16 @@ export class EnhancedMessageBatcher extends EventEmitter {
   ): string {
     const connectionPool = getConnectionPool();
     const roomConnections = this.getRoomConnections(roomName);
-    
+
     if (roomConnections.length === 0) {
-      structuredLogger.warn('No connections found for room broadcast', { roomName });
+      structuredLogger.warn('No connections found for room broadcast', {
+        roomName,
+      });
       return '';
     }
 
     const messageId = this.generateMessageId();
-    
+
     // Create batched message for each connection in the room
     roomConnections.forEach(socketId => {
       this.addMessage(socketId, event, data, {
@@ -202,14 +206,14 @@ export class EnhancedMessageBatcher extends EventEmitter {
   ): string {
     const connectionPool = getConnectionPool();
     const userConnections = connectionPool.getUserConnections(userId);
-    
+
     if (userConnections.length === 0) {
       structuredLogger.warn('No connections found for user', { userId });
       return '';
     }
 
     const messageId = this.generateMessageId();
-    
+
     // Send to all user connections
     userConnections.forEach(connection => {
       this.addMessage(connection.socketId, event, data, {
@@ -228,7 +232,7 @@ export class EnhancedMessageBatcher extends EventEmitter {
     for (const batcher of this.connectionBatchers.values()) {
       this.flushConnectionBatcher(batcher);
     }
-    
+
     this.flushRoomBatchers();
     this.flushUserBatchers();
     this.flushPriorityQueues();
@@ -242,7 +246,7 @@ export class EnhancedMessageBatcher extends EventEmitter {
     if (!batcher || batcher.queue.length === 0) {
       return false;
     }
-    
+
     this.flushConnectionBatcher(batcher);
     return true;
   }
@@ -260,7 +264,9 @@ export class EnhancedMessageBatcher extends EventEmitter {
    */
   getConnectionMetrics(socketId: string): any {
     const batcher = this.connectionBatchers.get(socketId);
-    return batcher ? { ...batcher.metrics, queueLength: batcher.queue.length } : null;
+    return batcher
+      ? { ...batcher.metrics, queueLength: batcher.queue.length }
+      : null;
   }
 
   /**
@@ -276,24 +282,27 @@ export class EnhancedMessageBatcher extends EventEmitter {
    */
   async shutdown(): Promise<void> {
     this.isShuttingDown = true;
-    
+
     // Flush all pending messages
     this.flushAll();
-    
+
     // Clear all timers
     this.clearAllTimers();
-    
+
     // Wait a bit for messages to be sent
     await new Promise(resolve => setTimeout(resolve, 100));
-    
+
     this.removeAllListeners();
   }
 
   // Private methods
 
-  private addConnectionMessage(socketId: string, message: BatchedMessage): void {
+  private addConnectionMessage(
+    socketId: string,
+    message: BatchedMessage
+  ): void {
     let batcher = this.connectionBatchers.get(socketId);
-    
+
     if (!batcher) {
       batcher = this.createConnectionBatcher(socketId);
       this.connectionBatchers.set(socketId, batcher);
@@ -317,7 +326,7 @@ export class EnhancedMessageBatcher extends EventEmitter {
   private addRoomMessage(message: BatchedMessage): void {
     const roomName = message.targetRoom!;
     let roomQueue = this.roomBatchers.get(roomName);
-    
+
     if (!roomQueue) {
       roomQueue = [];
       this.roomBatchers.set(roomName, roomQueue);
@@ -338,7 +347,7 @@ export class EnhancedMessageBatcher extends EventEmitter {
   private addUserMessage(message: BatchedMessage): void {
     const userId = message.targetUser!;
     let userQueue = this.userBatchers.get(userId);
-    
+
     if (!userQueue) {
       userQueue = [];
       this.userBatchers.set(userId, userQueue);
@@ -380,27 +389,40 @@ export class EnhancedMessageBatcher extends EventEmitter {
     const now = Date.now();
     const queueLength = batcher.queue.length;
     const timeSinceLastFlush = now - batcher.lastFlush;
-    
+
     // Immediate flush conditions
-    if (queueLength >= (this.config.adaptiveBatching ? batcher.adaptiveConfig.currentBatchSize : this.config.maxBatchSize)) {
+    if (
+      queueLength >=
+      (this.config.adaptiveBatching
+        ? batcher.adaptiveConfig.currentBatchSize
+        : this.config.maxBatchSize)
+    ) {
       return true;
     }
-    
-    if (timeSinceLastFlush >= (this.config.adaptiveBatching ? batcher.adaptiveConfig.currentDelay : this.config.maxBatchDelay)) {
+
+    if (
+      timeSinceLastFlush >=
+      (this.config.adaptiveBatching
+        ? batcher.adaptiveConfig.currentDelay
+        : this.config.maxBatchDelay)
+    ) {
       return true;
     }
-    
+
     // Priority-based flushing
     if (this.config.enablePrioritization && queueLength > 0) {
       const highestPriority = Math.min(...batcher.queue.map(m => m.priority));
-      if (highestPriority <= MessagePriority.HIGH && timeSinceLastFlush > this.config.maxBatchDelay / 2) {
+      if (
+        highestPriority <= MessagePriority.HIGH &&
+        timeSinceLastFlush > this.config.maxBatchDelay / 2
+      ) {
         return true;
       }
       if (highestPriority === MessagePriority.CRITICAL) {
         return true;
       }
     }
-    
+
     return false;
   }
 
@@ -411,7 +433,7 @@ export class EnhancedMessageBatcher extends EventEmitter {
 
     const connectionPool = getConnectionPool();
     const socket = this.getSocketFromPool(batcher.socketId);
-    
+
     if (!socket) {
       // Connection no longer exists, remove batcher
       this.connectionBatchers.delete(batcher.socketId);
@@ -421,7 +443,7 @@ export class EnhancedMessageBatcher extends EventEmitter {
     const startTime = Date.now();
     const messages = [...batcher.queue];
     batcher.queue.length = 0;
-    
+
     // Clear flush timer
     if (batcher.flushTimer) {
       clearTimeout(batcher.flushTimer);
@@ -430,17 +452,17 @@ export class EnhancedMessageBatcher extends EventEmitter {
 
     // Send messages
     this.sendMessagesToSocket(socket, messages);
-    
+
     // Update metrics
     const latency = Date.now() - startTime;
     this.updateBatcherMetrics(batcher, messages.length, latency);
     this.updateGlobalBatchMetrics(messages.length, latency);
-    
+
     // Adaptive batching adjustment
     if (this.config.adaptiveBatching) {
       this.adjustAdaptiveBatching(batcher, latency);
     }
-    
+
     batcher.lastFlush = Date.now();
   }
 
@@ -463,7 +485,7 @@ export class EnhancedMessageBatcher extends EventEmitter {
         batchId: this.generateBatchId(),
         timestamp: Date.now(),
       };
-      
+
       socket.emit('message_batch', batchPayload);
     }
   }
@@ -514,7 +536,7 @@ export class EnhancedMessageBatcher extends EventEmitter {
     // Get user connections and send to each
     const connectionPool = getConnectionPool();
     const userConnections = connectionPool.getUserConnections(userId);
-    
+
     userConnections.forEach(connection => {
       messages.forEach(message => {
         this.addConnectionMessage(connection.socketId, { ...message });
@@ -541,37 +563,42 @@ export class EnhancedMessageBatcher extends EventEmitter {
       return; // Timer already scheduled
     }
 
-    const delay = this.config.adaptiveBatching ? 
-      batcher.adaptiveConfig.currentDelay : 
-      this.config.maxBatchDelay;
+    const delay = this.config.adaptiveBatching
+      ? batcher.adaptiveConfig.currentDelay
+      : this.config.maxBatchDelay;
 
     batcher.flushTimer = setTimeout(() => {
       this.flushConnectionBatcher(batcher);
     }, delay);
   }
 
-  private insertMessageByPriority(queue: BatchedMessage[], message: BatchedMessage): void {
+  private insertMessageByPriority(
+    queue: BatchedMessage[],
+    message: BatchedMessage
+  ): void {
     let insertIndex = queue.length;
-    
+
     for (let i = 0; i < queue.length; i++) {
       if (message.priority < queue[i].priority) {
         insertIndex = i;
         break;
       }
     }
-    
+
     queue.splice(insertIndex, 0, message);
   }
 
   private shouldCompressMessage(message: BatchedMessage): boolean {
-    return this.config.enableCompression && 
-           message.size >= this.config.compressionThreshold;
+    return (
+      this.config.enableCompression &&
+      message.size >= this.config.compressionThreshold
+    );
   }
 
   private compressMessage(data: any): any {
     try {
       const zlib = require('zlib');
-      
+
       if (typeof data === 'object') {
         const jsonString = JSON.stringify(data);
         const compressed = zlib.deflateSync(Buffer.from(jsonString, 'utf8'));
@@ -580,7 +607,7 @@ export class EnhancedMessageBatcher extends EventEmitter {
           data: compressed.toString('base64'),
         };
       }
-      
+
       return data;
     } catch (error) {
       structuredLogger.warn('Message compression failed', { error });
@@ -593,11 +620,11 @@ export class EnhancedMessageBatcher extends EventEmitter {
       if (Buffer.isBuffer(data)) {
         return data.length;
       }
-      
+
       if (typeof data === 'string') {
         return Buffer.byteLength(data, 'utf8');
       }
-      
+
       return Buffer.byteLength(JSON.stringify(data), 'utf8');
     } catch {
       return 1024; // Default estimate
@@ -612,10 +639,15 @@ export class EnhancedMessageBatcher extends EventEmitter {
     return `batch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
-  private updateBatcherMetrics(batcher: ConnectionBatcher, messageCount: number, latency: number): void {
+  private updateBatcherMetrics(
+    batcher: ConnectionBatcher,
+    messageCount: number,
+    latency: number
+  ): void {
     batcher.metrics.messagesSent += messageCount;
     batcher.metrics.batchesSent++;
-    batcher.metrics.averageLatency = (batcher.metrics.averageLatency + latency) / 2;
+    batcher.metrics.averageLatency =
+      (batcher.metrics.averageLatency + latency) / 2;
     batcher.metrics.lastBatchSize = messageCount;
   }
 
@@ -625,39 +657,59 @@ export class EnhancedMessageBatcher extends EventEmitter {
     this.globalMetrics.priorityDistribution[message.priority]++;
   }
 
-  private updateGlobalBatchMetrics(messageCount: number, latency: number): void {
+  private updateGlobalBatchMetrics(
+    messageCount: number,
+    latency: number
+  ): void {
     this.globalMetrics.batchesSent++;
-    this.globalMetrics.averageBatchSize = 
+    this.globalMetrics.averageBatchSize =
       (this.globalMetrics.averageBatchSize + messageCount) / 2;
-    this.globalMetrics.averageLatency = 
+    this.globalMetrics.averageLatency =
       (this.globalMetrics.averageLatency + latency) / 2;
     this.globalMetrics.queueLength -= messageCount;
   }
 
-  private adjustAdaptiveBatching(batcher: ConnectionBatcher, latency: number): void {
+  private adjustAdaptiveBatching(
+    batcher: ConnectionBatcher,
+    latency: number
+  ): void {
     const adaptive = batcher.adaptiveConfig;
     adaptive.latencyHistory.push(latency);
-    
+
     // Keep only recent history
     if (adaptive.latencyHistory.length > 10) {
       adaptive.latencyHistory.shift();
     }
-    
-    const averageLatency = adaptive.latencyHistory.reduce((a, b) => a + b, 0) / adaptive.latencyHistory.length;
-    
+
+    const averageLatency =
+      adaptive.latencyHistory.reduce((a, b) => a + b, 0) /
+      adaptive.latencyHistory.length;
+
     if (averageLatency > this.config.targetLatency * 1.2) {
       // Latency too high, reduce batch size or delay
       if (adaptive.adjustmentDirection !== 'decrease') {
         adaptive.adjustmentDirection = 'decrease';
-        adaptive.currentBatchSize = Math.max(1, Math.floor(adaptive.currentBatchSize * 0.8));
-        adaptive.currentDelay = Math.max(10, Math.floor(adaptive.currentDelay * 0.8));
+        adaptive.currentBatchSize = Math.max(
+          1,
+          Math.floor(adaptive.currentBatchSize * 0.8)
+        );
+        adaptive.currentDelay = Math.max(
+          10,
+          Math.floor(adaptive.currentDelay * 0.8)
+        );
       }
     } else if (averageLatency < this.config.targetLatency * 0.8) {
       // Latency good, can increase batch size or delay
       if (adaptive.adjustmentDirection !== 'increase') {
         adaptive.adjustmentDirection = 'increase';
-        adaptive.currentBatchSize = Math.min(this.config.maxBatchSize, Math.ceil(adaptive.currentBatchSize * 1.1));
-        adaptive.currentDelay = Math.min(this.config.maxBatchDelay, Math.ceil(adaptive.currentDelay * 1.1));
+        adaptive.currentBatchSize = Math.min(
+          this.config.maxBatchSize,
+          Math.ceil(adaptive.currentBatchSize * 1.1)
+        );
+        adaptive.currentDelay = Math.min(
+          this.config.maxBatchDelay,
+          Math.ceil(adaptive.currentDelay * 1.1)
+        );
       }
     } else {
       adaptive.adjustmentDirection = 'stable';
@@ -667,9 +719,10 @@ export class EnhancedMessageBatcher extends EventEmitter {
   private updateNetworkUtilization(): void {
     const connectionPool = getConnectionPool();
     const stats = connectionPool.getStatistics();
-    
+
     // Simple network utilization calculation
-    this.globalMetrics.networkUtilization = Math.min(100, 
+    this.globalMetrics.networkUtilization = Math.min(
+      100,
       (stats.messagesPerSecond / (stats.totalConnections * 10)) * 100
     );
   }
@@ -708,7 +761,12 @@ export class EnhancedMessageBatcher extends EventEmitter {
   }
 
   private initializePriorityQueues(): void {
-    for (const priority of [MessagePriority.CRITICAL, MessagePriority.HIGH, MessagePriority.NORMAL, MessagePriority.LOW]) {
+    for (const priority of [
+      MessagePriority.CRITICAL,
+      MessagePriority.HIGH,
+      MessagePriority.NORMAL,
+      MessagePriority.LOW,
+    ]) {
       this.priorityQueues.set(priority, []);
     }
   }
@@ -740,14 +798,20 @@ export class EnhancedMessageBatcher extends EventEmitter {
     // Clean room batchers
     for (const [roomName, queue] of this.roomBatchers.entries()) {
       const initialLength = queue.length;
-      this.roomBatchers.set(roomName, queue.filter(msg => msg.expiresAt! > now));
+      this.roomBatchers.set(
+        roomName,
+        queue.filter(msg => msg.expiresAt! > now)
+      );
       droppedCount += initialLength - queue.length;
     }
 
     // Clean user batchers
     for (const [userId, queue] of this.userBatchers.entries()) {
       const initialLength = queue.length;
-      this.userBatchers.set(userId, queue.filter(msg => msg.expiresAt! > now));
+      this.userBatchers.set(
+        userId,
+        queue.filter(msg => msg.expiresAt! > now)
+      );
       droppedCount += initialLength - queue.length;
     }
 
@@ -761,14 +825,15 @@ export class EnhancedMessageBatcher extends EventEmitter {
   private setupConnectionPoolMonitoring(): void {
     try {
       const connectionPool = getConnectionPool();
-      
+
       connectionPool.on('connectionRemoved', ({ socketId }) => {
         this.removeConnectionBatcher(socketId);
       });
-      
     } catch (error) {
       // Connection pool might not be initialized yet
-      structuredLogger.warn('Could not setup connection pool monitoring', { error });
+      structuredLogger.warn('Could not setup connection pool monitoring', {
+        error,
+      });
     }
   }
 
@@ -777,12 +842,12 @@ export class EnhancedMessageBatcher extends EventEmitter {
     if (batcher) {
       // Flush any remaining messages
       this.flushConnectionBatcher(batcher);
-      
+
       // Clear timer
       if (batcher.flushTimer) {
         clearTimeout(batcher.flushTimer);
       }
-      
+
       this.connectionBatchers.delete(socketId);
     }
   }
@@ -799,18 +864,22 @@ export class EnhancedMessageBatcher extends EventEmitter {
 // Singleton factory
 let enhancedBatcherInstance: EnhancedMessageBatcher | null = null;
 
-export function createEnhancedMessageBatcher(config?: Partial<BatchConfig>): EnhancedMessageBatcher {
+export function createEnhancedMessageBatcher(
+  config?: Partial<BatchConfig>
+): EnhancedMessageBatcher {
   if (enhancedBatcherInstance) {
     return enhancedBatcherInstance;
   }
-  
+
   enhancedBatcherInstance = new EnhancedMessageBatcher(config);
   return enhancedBatcherInstance;
 }
 
 export function getEnhancedMessageBatcher(): EnhancedMessageBatcher {
   if (!enhancedBatcherInstance) {
-    throw new Error('Enhanced message batcher not initialized. Call createEnhancedMessageBatcher first.');
+    throw new Error(
+      'Enhanced message batcher not initialized. Call createEnhancedMessageBatcher first.'
+    );
   }
   return enhancedBatcherInstance;
 }

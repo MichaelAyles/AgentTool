@@ -1,17 +1,18 @@
 # Vibe Code Web App Architecture
 
 ## Overview
+
 A web application for managing AI coding assistants (claude-code, gemini-cli, etc.) with support for project management, git operations, CI/CD, and MCP servers.
 
 ## Core Architecture
 
 ### Technology Stack
+
 - **Backend**: Node.js + TypeScript
   - Express.js for REST API
   - Socket.io for real-time bidirectional communication
   - Bull/BullMQ for job queue management
   - node-pty for terminal emulation
-  
 - **Frontend**: React + TypeScript
   - Vite for build tooling
   - Zustand for state management
@@ -56,24 +57,25 @@ A web application for managing AI coding assistants (claude-code, gemini-cli, et
 ## CLI Adapter System
 
 ### Interface Definition
+
 ```typescript
 interface CLIAdapter {
   name: string;
   version: string;
   capabilities: CLICapabilities;
-  
+
   // Lifecycle
   initialize(config: AdapterConfig): Promise<void>;
   dispose(): Promise<void>;
-  
+
   // Execution
   execute(command: string, options: ExecuteOptions): Promise<ProcessHandle>;
   streamOutput(handle: ProcessHandle): AsyncIterable<OutputChunk>;
-  
+
   // Project operations
   createProject(path: string, template?: string): Promise<void>;
   openProject(path: string): Promise<void>;
-  
+
   // MCP operations (if supported)
   listMCPServers?(): Promise<MCPServer[]>;
   connectMCPServer?(server: MCPServer): Promise<void>;
@@ -89,14 +91,15 @@ interface CLICapabilities {
 ```
 
 ### Plugin Registration
+
 ```typescript
 class CLIAdapterRegistry {
   private adapters = new Map<string, CLIAdapter>();
-  
+
   register(adapter: CLIAdapter): void {
     this.adapters.set(adapter.name, adapter);
   }
-  
+
   async loadFromDirectory(path: string): Promise<void> {
     // Dynamic loading of adapter modules
   }
@@ -106,11 +109,12 @@ class CLIAdapterRegistry {
 ## Process Management
 
 ### Process Lifecycle
+
 ```typescript
 class ProcessManager {
   private processes = new Map<string, ChildProcess>();
   private pty = new Map<string, IPty>();
-  
+
   async spawn(
     adapter: CLIAdapter,
     command: string,
@@ -120,7 +124,7 @@ class ProcessManager {
     // Manage process lifecycle
     // Handle cleanup on exit
   }
-  
+
   async kill(handle: ProcessHandle): Promise<void> {
     // Graceful shutdown with timeout
   }
@@ -128,6 +132,7 @@ class ProcessManager {
 ```
 
 ### Communication Protocol
+
 - **Input**: Commands sent via WebSocket
 - **Output**: Streamed via WebSocket with chunking
 - **Control**: Process management commands (pause, resume, kill)
@@ -135,21 +140,22 @@ class ProcessManager {
 ## Git Integration
 
 ### Architecture
+
 ```typescript
 interface GitService {
   // Repository operations
   clone(url: string, path: string): Promise<void>;
   init(path: string): Promise<void>;
-  
+
   // Branch operations
   listBranches(): Promise<Branch[]>;
   createBranch(name: string): Promise<void>;
   checkout(ref: string): Promise<void>;
-  
+
   // Worktree support
   listWorktrees(): Promise<Worktree[]>;
   addWorktree(path: string, branch: string): Promise<void>;
-  
+
   // CI/CD
   runCI(config: CIConfig): Promise<CIResult>;
 }
@@ -158,15 +164,16 @@ interface GitService {
 ## MCP Server Integration
 
 ### Bridge Architecture
+
 ```typescript
 class MCPBridge {
   private servers = new Map<string, MCPServerConnection>();
-  
+
   async connect(config: MCPServerConfig): Promise<void> {
     // Establish connection to MCP server
     // Handle protocol negotiation
   }
-  
+
   async forward(
     message: MCPMessage,
     target: MCPServerConnection
@@ -179,6 +186,7 @@ class MCPBridge {
 ## Security Model
 
 ### Modes
+
 1. **Safe Mode** (default)
    - Sandboxed execution
    - File system restrictions
@@ -192,12 +200,13 @@ class MCPBridge {
    - Audit logging enabled
 
 ### Implementation
+
 ```typescript
 interface SecurityContext {
   mode: 'safe' | 'dangerous';
   restrictions: SecurityRestrictions;
   audit: AuditLogger;
-  
+
   validateCommand(cmd: string): boolean;
   validateFileAccess(path: string, mode: string): boolean;
 }
@@ -206,6 +215,7 @@ interface SecurityContext {
 ## Data Models
 
 ### Core Entities
+
 ```typescript
 // Project
 interface Project {
@@ -244,6 +254,7 @@ interface Command {
 ## API Specification
 
 ### REST Endpoints
+
 ```
 # Projects
 GET    /api/projects
@@ -271,6 +282,7 @@ POST   /api/projects/:id/git/branches
 ```
 
 ### WebSocket Events
+
 ```typescript
 // Client → Server
 interface ClientEvents {
@@ -292,6 +304,7 @@ interface ServerEvents {
 ## Frontend Architecture
 
 ### Component Structure
+
 ```
 src/
 ├── components/
@@ -322,6 +335,7 @@ src/
 ```
 
 ### State Management
+
 ```typescript
 // Zustand store example
 interface AppState {
@@ -329,7 +343,7 @@ interface AppState {
   activeProject: Project | null;
   sessions: Map<string, Session>;
   activeSession: Session | null;
-  
+
   // Actions
   createProject: (data: CreateProjectData) => Promise<void>;
   selectProject: (id: string) => void;
@@ -340,6 +354,7 @@ interface AppState {
 ## Deployment Architecture
 
 ### Container Strategy
+
 ```yaml
 # docker-compose.yml
 services:
@@ -351,12 +366,12 @@ services:
     volumes:
       - ./projects:/app/projects
       - ./adapters:/app/adapters
-    
+
   frontend:
     build: ./frontend
     depends_on:
       - backend
-    
+
   postgres:
     image: postgres:15
     volumes:

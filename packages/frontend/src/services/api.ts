@@ -3,7 +3,10 @@ import type { Project } from '@vibecode/shared';
 const API_BASE = '/api';
 
 class ApiService {
-  private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  private async request<T>(
+    endpoint: string,
+    options?: RequestInit
+  ): Promise<T> {
     const response = await fetch(`${API_BASE}${endpoint}`, {
       headers: {
         'Content-Type': 'application/json',
@@ -13,8 +16,12 @@ class ApiService {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: response.statusText }));
-      throw new Error(error.message || `API request failed: ${response.statusText}`);
+      const error = await response
+        .json()
+        .catch(() => ({ message: response.statusText }));
+      throw new Error(
+        error.message || `API request failed: ${response.statusText}`
+      );
     }
 
     // Handle blob responses
@@ -30,7 +37,11 @@ class ApiService {
     return this.request<T>(endpoint, { ...options, method: 'GET' });
   }
 
-  async post<T>(endpoint: string, data?: any, options?: RequestInit): Promise<T> {
+  async post<T>(
+    endpoint: string,
+    data?: any,
+    options?: RequestInit
+  ): Promise<T> {
     return this.request<T>(endpoint, {
       ...options,
       method: 'POST',
@@ -38,7 +49,11 @@ class ApiService {
     });
   }
 
-  async put<T>(endpoint: string, data?: any, options?: RequestInit): Promise<T> {
+  async put<T>(
+    endpoint: string,
+    data?: any,
+    options?: RequestInit
+  ): Promise<T> {
     return this.request<T>(endpoint, {
       ...options,
       method: 'PUT',
@@ -54,7 +69,11 @@ class ApiService {
     return this.request<Project[]>('/projects');
   }
 
-  async createProject(data: { name: string; path: string; activeAdapter: string }): Promise<Project> {
+  async createProject(data: {
+    name: string;
+    path: string;
+    activeAdapter: string;
+  }): Promise<Project> {
     return this.request<Project>('/projects', {
       method: 'POST',
       body: JSON.stringify(data),

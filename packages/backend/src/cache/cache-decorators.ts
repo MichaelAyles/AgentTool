@@ -14,11 +14,15 @@ export interface CacheOptions {
  * Cache decorator for method results
  */
 export function Cacheable(options: CacheOptions = {}) {
-  return function (target: any, propertyName: string, descriptor: PropertyDescriptor) {
+  return function (
+    target: any,
+    propertyName: string,
+    descriptor: PropertyDescriptor
+  ) {
     const originalMethod = descriptor.value;
 
     descriptor.value = async function (...args: any[]) {
-      const cacheKey = options.keyGenerator 
+      const cacheKey = options.keyGenerator
         ? options.keyGenerator(...args)
         : `${target.constructor.name}:${propertyName}:${JSON.stringify(args)}`;
 
@@ -31,7 +35,10 @@ export function Cacheable(options: CacheOptions = {}) {
         // Try to get from cache first
         const cached = await cacheManager.get(cacheKey, options.strategy);
         if (cached !== null) {
-          structuredLogger.debug('Cache hit', { key: cacheKey, method: `${target.constructor.name}.${propertyName}` });
+          structuredLogger.debug('Cache hit', {
+            key: cacheKey,
+            method: `${target.constructor.name}.${propertyName}`,
+          });
           return cached;
         }
 
@@ -46,12 +53,15 @@ export function Cacheable(options: CacheOptions = {}) {
           version: options.version,
         });
 
-        structuredLogger.debug('Cache miss, result cached', { key: cacheKey, method: `${target.constructor.name}.${propertyName}` });
+        structuredLogger.debug('Cache miss, result cached', {
+          key: cacheKey,
+          method: `${target.constructor.name}.${propertyName}`,
+        });
         return result;
       } catch (error) {
-        structuredLogger.error('Cache decorator error', error as Error, { 
-          key: cacheKey, 
-          method: `${target.constructor.name}.${propertyName}` 
+        structuredLogger.error('Cache decorator error', error as Error, {
+          key: cacheKey,
+          method: `${target.constructor.name}.${propertyName}`,
         });
         // Fall back to original method
         return originalMethod.apply(this, args);
@@ -65,14 +75,18 @@ export function Cacheable(options: CacheOptions = {}) {
 /**
  * Cache eviction decorator
  */
-export function CacheEvict(options: { 
-  strategy?: string; 
-  keys?: string[]; 
-  tags?: string[]; 
+export function CacheEvict(options: {
+  strategy?: string;
+  keys?: string[];
+  tags?: string[];
   allEntries?: boolean;
   condition?: (...args: any[]) => boolean;
 }) {
-  return function (target: any, propertyName: string, descriptor: PropertyDescriptor) {
+  return function (
+    target: any,
+    propertyName: string,
+    descriptor: PropertyDescriptor
+  ) {
     const originalMethod = descriptor.value;
 
     descriptor.value = async function (...args: any[]) {
@@ -88,28 +102,30 @@ export function CacheEvict(options: {
         if (options.allEntries) {
           // Clear all cache
           await cacheManager.clear();
-          structuredLogger.info('Cache cleared', { method: `${target.constructor.name}.${propertyName}` });
+          structuredLogger.info('Cache cleared', {
+            method: `${target.constructor.name}.${propertyName}`,
+          });
         } else if (options.tags) {
           // Invalidate by tags
           const deleted = await cacheManager.invalidateByTags(options.tags);
-          structuredLogger.info('Cache invalidated by tags', { 
-            tags: options.tags, 
-            deleted, 
-            method: `${target.constructor.name}.${propertyName}` 
+          structuredLogger.info('Cache invalidated by tags', {
+            tags: options.tags,
+            deleted,
+            method: `${target.constructor.name}.${propertyName}`,
           });
         } else if (options.keys) {
           // Delete specific keys
           for (const key of options.keys) {
             await cacheManager.delete(key, options.strategy);
           }
-          structuredLogger.info('Cache keys evicted', { 
-            keys: options.keys, 
-            method: `${target.constructor.name}.${propertyName}` 
+          structuredLogger.info('Cache keys evicted', {
+            keys: options.keys,
+            method: `${target.constructor.name}.${propertyName}`,
           });
         }
       } catch (error) {
-        structuredLogger.error('Cache eviction error', error as Error, { 
-          method: `${target.constructor.name}.${propertyName}` 
+        structuredLogger.error('Cache eviction error', error as Error, {
+          method: `${target.constructor.name}.${propertyName}`,
         });
       }
 
@@ -124,7 +140,11 @@ export function CacheEvict(options: {
  * Cache put decorator - always cache the result
  */
 export function CachePut(options: CacheOptions = {}) {
-  return function (target: any, propertyName: string, descriptor: PropertyDescriptor) {
+  return function (
+    target: any,
+    propertyName: string,
+    descriptor: PropertyDescriptor
+  ) {
     const originalMethod = descriptor.value;
 
     descriptor.value = async function (...args: any[]) {
@@ -135,7 +155,7 @@ export function CachePut(options: CacheOptions = {}) {
         return result;
       }
 
-      const cacheKey = options.keyGenerator 
+      const cacheKey = options.keyGenerator
         ? options.keyGenerator(...args)
         : `${target.constructor.name}:${propertyName}:${JSON.stringify(args)}`;
 
@@ -147,11 +167,14 @@ export function CachePut(options: CacheOptions = {}) {
           version: options.version,
         });
 
-        structuredLogger.debug('Result cached', { key: cacheKey, method: `${target.constructor.name}.${propertyName}` });
+        structuredLogger.debug('Result cached', {
+          key: cacheKey,
+          method: `${target.constructor.name}.${propertyName}`,
+        });
       } catch (error) {
-        structuredLogger.error('Cache put error', error as Error, { 
-          key: cacheKey, 
-          method: `${target.constructor.name}.${propertyName}` 
+        structuredLogger.error('Cache put error', error as Error, {
+          key: cacheKey,
+          method: `${target.constructor.name}.${propertyName}`,
         });
       }
 
@@ -169,22 +192,26 @@ export const CacheKeyGenerators = {
   /**
    * Generate key from user ID and additional parameters
    */
-  byUser: (userId: string, ...params: any[]) => `user:${userId}:${JSON.stringify(params)}`,
+  byUser: (userId: string, ...params: any[]) =>
+    `user:${userId}:${JSON.stringify(params)}`,
 
   /**
    * Generate key from project ID and additional parameters
    */
-  byProject: (projectId: string, ...params: any[]) => `project:${projectId}:${JSON.stringify(params)}`,
+  byProject: (projectId: string, ...params: any[]) =>
+    `project:${projectId}:${JSON.stringify(params)}`,
 
   /**
    * Generate key from session ID and additional parameters
    */
-  bySession: (sessionId: string, ...params: any[]) => `session:${sessionId}:${JSON.stringify(params)}`,
+  bySession: (sessionId: string, ...params: any[]) =>
+    `session:${sessionId}:${JSON.stringify(params)}`,
 
   /**
    * Generate key from adapter name and additional parameters
    */
-  byAdapter: (adapterName: string, ...params: any[]) => `adapter:${adapterName}:${JSON.stringify(params)}`,
+  byAdapter: (adapterName: string, ...params: any[]) =>
+    `adapter:${adapterName}:${JSON.stringify(params)}`,
 
   /**
    * Generate key from timestamp-based bucketing (useful for time-series data)
@@ -199,7 +226,10 @@ export const CacheKeyGenerators = {
    */
   withHash: (...params: any[]) => {
     const paramString = JSON.stringify(params);
-    const hash = require('crypto').createHash('md5').update(paramString).digest('hex');
+    const hash = require('crypto')
+      .createHash('md5')
+      .update(paramString)
+      .digest('hex');
     return `hash:${hash}`;
   },
 };
@@ -211,7 +241,7 @@ export const CacheConditions = {
   /**
    * Cache only for specific user roles
    */
-  forRoles: (allowedRoles: string[]) => (user: any) => 
+  forRoles: (allowedRoles: string[]) => (user: any) =>
     user && user.role && allowedRoles.includes(user.role),
 
   /**
@@ -235,6 +265,6 @@ export const CacheConditions = {
   /**
    * Cache only when data size is below threshold
    */
-  belowSizeThreshold: (threshold: number) => (data: any) => 
+  belowSizeThreshold: (threshold: number) => (data: any) =>
     JSON.stringify(data).length <= threshold,
 };

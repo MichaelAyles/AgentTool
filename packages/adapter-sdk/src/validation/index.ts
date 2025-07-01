@@ -1,4 +1,8 @@
-import type { AdapterConfig, AdapterCapability, AdapterMetadata } from '../types/index.js';
+import type {
+  AdapterConfig,
+  AdapterCapability,
+  AdapterMetadata,
+} from '../types/index.js';
 
 export interface ValidationResult {
   isValid: boolean;
@@ -30,8 +34,16 @@ export class AdapterValidator {
     const warnings: string[] = [];
 
     // Check if adapter has required methods
-    const requiredMethods = ['getName', 'getVersion', 'getDescription', 'getCapabilities', 'initialize', 'execute', 'cleanup'];
-    
+    const requiredMethods = [
+      'getName',
+      'getVersion',
+      'getDescription',
+      'getCapabilities',
+      'initialize',
+      'execute',
+      'cleanup',
+    ];
+
     for (const method of requiredMethods) {
       if (typeof adapter[method] !== 'function') {
         errors.push(`Missing required method: ${method}`);
@@ -102,7 +114,10 @@ export class AdapterValidator {
     }
 
     if (config.dependencies) {
-      if (typeof config.dependencies !== 'object' || Array.isArray(config.dependencies)) {
+      if (
+        typeof config.dependencies !== 'object' ||
+        Array.isArray(config.dependencies)
+      ) {
         errors.push('Config dependencies must be an object');
       } else {
         for (const [name, version] of Object.entries(config.dependencies)) {
@@ -152,12 +167,16 @@ export class AdapterValidator {
     }
 
     if (name.length > this.options.maxNameLength) {
-      errors.push(`Name exceeds maximum length of ${this.options.maxNameLength} characters`);
+      errors.push(
+        `Name exceeds maximum length of ${this.options.maxNameLength} characters`
+      );
     }
 
     // Check for valid characters
     if (!/^[a-zA-Z0-9\-_\s]+$/.test(name)) {
-      errors.push('Name contains invalid characters. Use only letters, numbers, hyphens, underscores, and spaces.');
+      errors.push(
+        'Name contains invalid characters. Use only letters, numbers, hyphens, underscores, and spaces.'
+      );
     }
 
     // Warnings
@@ -186,10 +205,13 @@ export class AdapterValidator {
     }
 
     // Basic semver check
-    const semverRegex = /^(\d+)\.(\d+)\.(\d+)(?:-([a-zA-Z0-9\-]+))?(?:\+([a-zA-Z0-9\-]+))?$/;
-    
+    const semverRegex =
+      /^(\d+)\.(\d+)\.(\d+)(?:-([a-zA-Z0-9\-]+))?(?:\+([a-zA-Z0-9\-]+))?$/;
+
     if (!semverRegex.test(version)) {
-      errors.push('Version must follow semantic versioning (e.g., 1.0.0, 1.0.0-alpha, 1.0.0+build)');
+      errors.push(
+        'Version must follow semantic versioning (e.g., 1.0.0, 1.0.0-alpha, 1.0.0+build)'
+      );
     }
 
     return {
@@ -213,11 +235,15 @@ export class AdapterValidator {
     }
 
     if (description.length > this.options.maxDescriptionLength) {
-      errors.push(`Description exceeds maximum length of ${this.options.maxDescriptionLength} characters`);
+      errors.push(
+        `Description exceeds maximum length of ${this.options.maxDescriptionLength} characters`
+      );
     }
 
     if (description.length < 10) {
-      warnings.push('Description is very short. Consider providing more details.');
+      warnings.push(
+        'Description is very short. Consider providing more details.'
+      );
     }
 
     return {
@@ -227,7 +253,9 @@ export class AdapterValidator {
     };
   }
 
-  private validateCapabilities(capabilities: AdapterCapability[]): ValidationResult {
+  private validateCapabilities(
+    capabilities: AdapterCapability[]
+  ): ValidationResult {
     const errors: string[] = [];
     const warnings: string[] = [];
 
@@ -254,7 +282,9 @@ export class AdapterValidator {
       }
 
       if (!validCapabilities.includes(capability)) {
-        errors.push(`Invalid capability: ${capability}. Valid capabilities are: ${validCapabilities.join(', ')}`);
+        errors.push(
+          `Invalid capability: ${capability}. Valid capabilities are: ${validCapabilities.join(', ')}`
+        );
       }
 
       if (seenCapabilities.has(capability)) {
@@ -264,8 +294,13 @@ export class AdapterValidator {
       seenCapabilities.add(capability);
     }
 
-    if (this.options.requireAllCapabilities && capabilities.length !== validCapabilities.length) {
-      warnings.push('Not all capabilities are declared. Consider adding missing capabilities.');
+    if (
+      this.options.requireAllCapabilities &&
+      capabilities.length !== validCapabilities.length
+    ) {
+      warnings.push(
+        'Not all capabilities are declared. Consider adding missing capabilities.'
+      );
     }
 
     return {
@@ -276,12 +311,18 @@ export class AdapterValidator {
   }
 }
 
-export function validateAdapter(adapter: any, options?: AdapterValidationOptions): ValidationResult {
+export function validateAdapter(
+  adapter: any,
+  options?: AdapterValidationOptions
+): ValidationResult {
   const validator = new AdapterValidator(options);
   return validator.validateAdapter(adapter);
 }
 
-export function validateAdapterConfig(config: AdapterConfig, options?: AdapterValidationOptions): ValidationResult {
+export function validateAdapterConfig(
+  config: AdapterConfig,
+  options?: AdapterValidationOptions
+): ValidationResult {
   const validator = new AdapterValidator(options);
   return validator.validateConfig(config);
 }

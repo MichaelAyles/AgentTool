@@ -1,15 +1,18 @@
 # Vibe Code Project Context
 
 ## USER INSTRUCTIONS FOR CLAUDE
+
 After every feature checked off the todo list, run the project and/or check for errors or run CI if implemented, then commit to working branch and push working branch to remote.
 Maintain a user visible todo.md, update after every feature implementation with the commit reference
 Update Readme.md and claude.md if the state of the project is different from whats currently written.
 After current todo list cleared, check for errors or run CI if implemented, then summarise branch and consult user whether to run a PR
 
 ## Project Overview
+
 Vibe Code is a comprehensive web application for managing AI coding assistants (claude-code, gemini-cli, etc.) with support for project management, git operations, CI/CD, MCP servers, and extensible CLI tool integration.
 
 ## Technology Stack
+
 - **Backend**: Node.js + TypeScript, Express.js, Socket.io, Bull/BullMQ, mock PTY (node-pty replacement)
 - **Frontend**: React + TypeScript, Vite, Zustand, xterm.js, React Query, Tailwind CSS
 - **Database**: SQLite3 (development), PostgreSQL (production)
@@ -18,6 +21,7 @@ Vibe Code is a comprehensive web application for managing AI coding assistants (
 - **Runtime**: Bun for development, Node.js for production
 
 ## Key Features
+
 - **Multi-AI Support**: Extensible adapter system for Claude Code, Gemini CLI, and custom tools
 - **Real-time Terminal**: WebSocket-based streaming with PTY support
 - **Git Integration**: Branch management, worktrees, CI/CD pipeline support
@@ -27,6 +31,7 @@ Vibe Code is a comprehensive web application for managing AI coding assistants (
 - **Multi-user Support**: Authentication, authorization, role-based access control
 
 ## Architecture Highlights
+
 - Plugin-based CLI adapter system for extensibility
 - Process management with resource monitoring and cleanup
 - Real-time bidirectional communication via WebSocket
@@ -35,6 +40,7 @@ Vibe Code is a comprehensive web application for managing AI coding assistants (
 - Containerized deployment with horizontal scaling
 
 ## Development Guidelines
+
 - TypeScript-first for type safety
 - Comprehensive test coverage (unit, integration, E2E)
 - Security-first design with audit logging
@@ -43,6 +49,7 @@ Vibe Code is a comprehensive web application for managing AI coding assistants (
 - Extensive documentation and examples
 
 ## Project Structure
+
 ```
 vibecode/
 ├── packages/
@@ -60,17 +67,20 @@ vibecode/
 ```
 
 ## Implementation Phases
+
 1. **Foundation** (Weeks 1-4): Project setup, core backend, CLI adapter framework, basic frontend
 2. **Core Features** (Weeks 5-8): Process management, first adapters, real-time communication, git integration
 3. **Advanced Features** (Weeks 9-12): Security framework, dangerous mode, MCP integration, advanced UI
 4. **Polish & Production** (Weeks 13-16): Performance optimization, sandboxing, testing, deployment
 
 ## Competitive Analysis
+
 - **Crystal**: Existing Electron app focused on Claude Code with excellent git worktree integration
 - **Vibe Code Differentiation**: Multi-AI platform, web-based, enterprise features, extensible architecture
 - **Market Position**: Universal AI coding platform vs. Crystal's focused Claude Code solution
 
 ## Security Considerations
+
 - **Safe Mode**: Default sandboxed execution with restricted file system, network, and command access
 - **Dangerous Mode**: Full system access with explicit user consent, audit logging, and timeout controls
 - **Authentication**: Multi-provider support (local, OAuth, SAML)
@@ -78,6 +88,7 @@ vibecode/
 - **Audit Trail**: Comprehensive logging of all security-relevant actions
 
 ## Performance Requirements
+
 - Response time < 100ms for API calls
 - Terminal latency < 50ms for interactive sessions
 - 99.9% uptime for production deployment
@@ -85,6 +96,7 @@ vibecode/
 - Support for 100+ concurrent users
 
 ## Development Commands
+
 ```bash
 # One-line setup (recommended)
 curl -fsSL https://raw.githubusercontent.com/your-org/vibe-code/main/setup.sh | bash
@@ -107,6 +119,7 @@ docker compose build    # Build containers
 ```
 
 ## Key Files to Reference
+
 - `ARCHITECTURE.md` - Complete system architecture and design
 - `CLI_ADAPTER_SPEC.md` - Plugin system for AI tool integration
 - `PROCESS_MANAGEMENT_SPEC.md` - Real-time process handling
@@ -117,9 +130,11 @@ docker compose build    # Build containers
 - `CRYSTAL_COMPARISON.md` - Competitive analysis and differentiation
 
 ## Current Status
+
 **Phase 2: Core Features - 47% Complete**
 
 ✅ **Completed:**
+
 - Monorepo structure with Bun workspaces
 - Backend API server with Express.js and WebSocket support
 - CLI adapter SDK and registry system
@@ -134,9 +149,11 @@ docker compose build    # Build containers
 - **Security context management with risk scoring and monitoring**
 
 🚧 **In Progress:**
+
 - Real node-pty integration (currently using mock)
 
 📋 **Next Priority:**
+
 - Command validation and filtering
 - Comprehensive audit logging
 - Dangerous mode implementation
@@ -144,6 +161,7 @@ docker compose build    # Build containers
 **Progress: 38/81 tasks completed (46.9%)**
 
 ## How to Run
+
 ```bash
 # Quick start
 git clone <repository>

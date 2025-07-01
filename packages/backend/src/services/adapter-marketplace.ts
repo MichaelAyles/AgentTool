@@ -4,7 +4,10 @@ import { join, dirname } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import { spawn } from 'child_process';
-import { comprehensiveAuditLogger, AuditCategory } from '../security/audit-logger.js';
+import {
+  comprehensiveAuditLogger,
+  AuditCategory,
+} from '../security/audit-logger.js';
 import { SecurityLevel } from '../security/types.js';
 
 // Adapter Marketplace Types
@@ -29,7 +32,13 @@ export interface MarketplaceAdapter {
   license: string;
   tags: string[];
   keywords: string[];
-  category: 'ai-assistant' | 'cli-tool' | 'development' | 'automation' | 'utility' | 'other';
+  category:
+    | 'ai-assistant'
+    | 'cli-tool'
+    | 'development'
+    | 'automation'
+    | 'utility'
+    | 'other';
   compatibility: {
     platforms: string[]; // ['linux', 'darwin', 'win32']
     nodeVersion?: string;
@@ -77,7 +86,12 @@ export interface MarketplaceAdapter {
     permissions: string[];
     sandbox: boolean;
   };
-  status: 'active' | 'deprecated' | 'archived' | 'security-review' | 'pending-approval';
+  status:
+    | 'active'
+    | 'deprecated'
+    | 'archived'
+    | 'security-review'
+    | 'pending-approval';
   installation: {
     command: string;
     postInstall?: string[];
@@ -170,10 +184,10 @@ export class AdapterMarketplace extends EventEmitter {
       await this.loadMarketplaceData();
       await this.loadInstallations();
       await this.syncWithRegistry();
-      
+
       this.initialized = true;
       this.emit('initialized');
-      
+
       console.log('✅ Adapter marketplace initialized');
     } catch (error) {
       console.error('❌ Failed to initialize adapter marketplace:', error);
@@ -195,17 +209,20 @@ export class AdapterMarketplace extends EventEmitter {
     // Apply filters
     if (search.query) {
       const query = search.query.toLowerCase();
-      filteredAdapters = filteredAdapters.filter(adapter =>
-        adapter.name.toLowerCase().includes(query) ||
-        adapter.displayName.toLowerCase().includes(query) ||
-        adapter.description.toLowerCase().includes(query) ||
-        adapter.keywords.some(keyword => keyword.toLowerCase().includes(query))
+      filteredAdapters = filteredAdapters.filter(
+        adapter =>
+          adapter.name.toLowerCase().includes(query) ||
+          adapter.displayName.toLowerCase().includes(query) ||
+          adapter.description.toLowerCase().includes(query) ||
+          adapter.keywords.some(keyword =>
+            keyword.toLowerCase().includes(query)
+          )
       );
     }
 
     if (search.category) {
-      filteredAdapters = filteredAdapters.filter(adapter =>
-        adapter.category === search.category
+      filteredAdapters = filteredAdapters.filter(
+        adapter => adapter.category === search.category
       );
     }
 
@@ -222,8 +239,8 @@ export class AdapterMarketplace extends EventEmitter {
     }
 
     if (search.verified !== undefined) {
-      filteredAdapters = filteredAdapters.filter(adapter =>
-        adapter.security.verified === search.verified
+      filteredAdapters = filteredAdapters.filter(
+        adapter => adapter.security.verified === search.verified
       );
     }
 
@@ -236,10 +253,10 @@ export class AdapterMarketplace extends EventEmitter {
     // Sort results
     const sortBy = search.sortBy || 'relevance';
     const sortOrder = search.sortOrder || 'desc';
-    
+
     filteredAdapters.sort((a, b) => {
       let comparison = 0;
-      
+
       switch (sortBy) {
         case 'downloads':
           comparison = a.metrics.downloads - b.metrics.downloads;
@@ -248,10 +265,12 @@ export class AdapterMarketplace extends EventEmitter {
           comparison = a.metrics.stars - b.metrics.stars;
           break;
         case 'updated':
-          comparison = a.metrics.lastUpdate.getTime() - b.metrics.lastUpdate.getTime();
+          comparison =
+            a.metrics.lastUpdate.getTime() - b.metrics.lastUpdate.getTime();
           break;
         case 'created':
-          comparison = a.metrics.createdAt.getTime() - b.metrics.createdAt.getTime();
+          comparison =
+            a.metrics.createdAt.getTime() - b.metrics.createdAt.getTime();
           break;
         case 'name':
           comparison = a.displayName.localeCompare(b.displayName);
@@ -264,7 +283,7 @@ export class AdapterMarketplace extends EventEmitter {
           comparison = scoreA - scoreB;
           break;
       }
-      
+
       return sortOrder === 'asc' ? comparison : -comparison;
     });
 
@@ -329,23 +348,23 @@ export class AdapterMarketplace extends EventEmitter {
     try {
       // Security validation
       await this.validateAdapterSecurity(adapter);
-      
+
       // Check system requirements
       await this.checkSystemRequirements(adapter);
-      
+
       // Download and install
       await this.performInstallation(adapter, installation, targetVersion);
-      
+
       // Post-installation configuration
       if (options.configureAfterInstall) {
         await this.configureAfterInstall(adapter, installation);
       }
-      
+
       installation.status = 'installed';
       installation.lastUpdate = new Date();
-      
+
       this.emit('installationCompleted', installation);
-      
+
       await comprehensiveAuditLogger.logAuditEvent({
         category: AuditCategory.SYSTEM_CHANGES,
         action: 'adapter_installed',
@@ -361,16 +380,20 @@ export class AdapterMarketplace extends EventEmitter {
           autoUpdate: installation.autoUpdate,
         },
       });
-      
+
       return installation;
-      
     } catch (error) {
       installation.status = 'failed';
       installation.error = (error as Error).message;
-      
-      this.addInstallationLog(installation, 'error', 'Installation failed', error);
+
+      this.addInstallationLog(
+        installation,
+        'error',
+        'Installation failed',
+        error
+      );
       this.emit('installationFailed', installation, error);
-      
+
       await comprehensiveAuditLogger.logAuditEvent({
         category: AuditCategory.SYSTEM_CHANGES,
         action: 'adapter_installation_failed',
@@ -384,7 +407,7 @@ export class AdapterMarketplace extends EventEmitter {
           error: (error as Error).message,
         },
       });
-      
+
       throw error;
     }
   }
@@ -406,22 +429,22 @@ export class AdapterMarketplace extends EventEmitter {
     try {
       installation.status = 'uninstalling';
       this.emit('uninstallationStarted', installation);
-      
+
       // Run pre-uninstall scripts
       if (adapter.installation.preUninstall) {
         await this.runPreUninstallScripts(adapter, installation);
       }
-      
+
       // Remove installation directory
       if (existsSync(installation.installPath)) {
         await fs.rm(installation.installPath, { recursive: true, force: true });
       }
-      
+
       // Remove from installations
       this.installations.delete(installation.id);
-      
+
       this.emit('uninstallationCompleted', installation);
-      
+
       await comprehensiveAuditLogger.logAuditEvent({
         category: AuditCategory.SYSTEM_CHANGES,
         action: 'adapter_uninstalled',
@@ -435,11 +458,10 @@ export class AdapterMarketplace extends EventEmitter {
           installPath: installation.installPath,
         },
       });
-      
     } catch (error) {
       installation.status = 'failed';
       installation.error = (error as Error).message;
-      
+
       await comprehensiveAuditLogger.logAuditEvent({
         category: AuditCategory.SYSTEM_CHANGES,
         action: 'adapter_uninstallation_failed',
@@ -453,7 +475,7 @@ export class AdapterMarketplace extends EventEmitter {
           error: (error as Error).message,
         },
       });
-      
+
       throw error;
     }
   }
@@ -463,29 +485,37 @@ export class AdapterMarketplace extends EventEmitter {
    */
   async getMarketplaceStats(): Promise<MarketplaceStats> {
     const adapters = Array.from(this.adapters.values());
-    
-    const categoryCounts = adapters.reduce((counts, adapter) => {
-      counts[adapter.category] = (counts[adapter.category] || 0) + 1;
-      return counts;
-    }, {} as Record<string, number>);
-    
+
+    const categoryCounts = adapters.reduce(
+      (counts, adapter) => {
+        counts[adapter.category] = (counts[adapter.category] || 0) + 1;
+        return counts;
+      },
+      {} as Record<string, number>
+    );
+
     const recentAdapters = adapters
       .filter(a => a.status === 'active')
-      .sort((a, b) => b.metrics.createdAt.getTime() - a.metrics.createdAt.getTime())
+      .sort(
+        (a, b) => b.metrics.createdAt.getTime() - a.metrics.createdAt.getTime()
+      )
       .slice(0, 10);
-    
+
     const popularAdapters = adapters
       .filter(a => a.status === 'active')
       .sort((a, b) => b.metrics.downloads - a.metrics.downloads)
       .slice(0, 10);
-    
+
     const featuredAdapters = adapters
       .filter(a => a.status === 'active' && a.metadata.featured)
       .slice(0, 10);
 
     return {
       totalAdapters: adapters.length,
-      totalDownloads: adapters.reduce((total, a) => total + a.metrics.downloads, 0),
+      totalDownloads: adapters.reduce(
+        (total, a) => total + a.metrics.downloads,
+        0
+      ),
       totalAuthors: new Set(adapters.map(a => a.author.name)).size,
       categoryCounts,
       recentAdapters,
@@ -509,7 +539,7 @@ export class AdapterMarketplace extends EventEmitter {
     submitterId: string
   ): Promise<string> {
     const adapterId = uuidv4();
-    
+
     const adapter: MarketplaceAdapter = {
       ...adapterData,
       id: adapterId,
@@ -523,18 +553,18 @@ export class AdapterMarketplace extends EventEmitter {
       },
       status: 'pending-approval',
     };
-    
+
     // Validate adapter submission
     await this.validateAdapterSubmission(adapter);
-    
+
     // Security scan
     await this.performSecurityScan(adapter);
-    
+
     this.adapters.set(adapterId, adapter);
     await this.saveMarketplaceData();
-    
+
     this.emit('adapterSubmitted', adapter, submitterId);
-    
+
     await comprehensiveAuditLogger.logAuditEvent({
       category: AuditCategory.SYSTEM_CHANGES,
       action: 'adapter_submitted',
@@ -549,7 +579,7 @@ export class AdapterMarketplace extends EventEmitter {
         category: adapter.category,
       },
     });
-    
+
     return adapterId;
   }
 
@@ -580,7 +610,7 @@ export class AdapterMarketplace extends EventEmitter {
         console.warn('Failed to load marketplace data:', error);
       }
     }
-    
+
     // Load default/official adapters if empty
     if (this.adapters.size === 0) {
       await this.loadDefaultAdapters();
@@ -593,7 +623,8 @@ export class AdapterMarketplace extends EventEmitter {
         id: 'claude-code-official',
         name: 'claude-code',
         displayName: 'Claude Code (Official)',
-        description: 'Official Claude Code adapter for Anthropic\'s Claude AI assistant',
+        description:
+          "Official Claude Code adapter for Anthropic's Claude AI assistant",
         version: '1.0.0',
         author: {
           name: 'Anthropic',
@@ -623,7 +654,8 @@ export class AdapterMarketplace extends EventEmitter {
           system: ['git'],
         },
         documentation: {
-          readme: 'https://github.com/anthropics/claude-code/blob/main/README.md',
+          readme:
+            'https://github.com/anthropics/claude-code/blob/main/README.md',
         },
         metrics: {
           downloads: 10000,
@@ -693,55 +725,67 @@ export class AdapterMarketplace extends EventEmitter {
     console.log('Syncing with external registries...');
   }
 
-  private calculateRelevanceScore(adapter: MarketplaceAdapter, query: string): number {
+  private calculateRelevanceScore(
+    adapter: MarketplaceAdapter,
+    query: string
+  ): number {
     let score = 0;
     const queryLower = query.toLowerCase();
-    
+
     // Name match (highest weight)
     if (adapter.name.toLowerCase().includes(queryLower)) score += 100;
     if (adapter.displayName.toLowerCase().includes(queryLower)) score += 80;
-    
+
     // Description match
     if (adapter.description.toLowerCase().includes(queryLower)) score += 50;
-    
+
     // Keywords match
     for (const keyword of adapter.keywords) {
       if (keyword.toLowerCase().includes(queryLower)) score += 30;
     }
-    
+
     // Tags match
     for (const tag of adapter.tags) {
       if (tag.toLowerCase().includes(queryLower)) score += 20;
     }
-    
+
     // Popularity boost
     score += Math.log(adapter.metrics.downloads + 1) * 0.1;
     score += adapter.metrics.stars * 0.05;
-    
+
     // Official/verified boost
     if (adapter.metadata.official) score += 50;
     if (adapter.security.verified) score += 25;
     if (adapter.metadata.featured) score += 30;
-    
+
     return score;
   }
 
-  private async validateAdapterSecurity(adapter: MarketplaceAdapter): Promise<void> {
+  private async validateAdapterSecurity(
+    adapter: MarketplaceAdapter
+  ): Promise<void> {
     if (!adapter.security.verified) {
       console.warn(`Installing unverified adapter: ${adapter.name}`);
     }
-    
-    if (adapter.security.scanResults && adapter.security.scanResults.vulnerabilities > 0) {
-      throw new Error(`Adapter has known security vulnerabilities: ${adapter.name}`);
+
+    if (
+      adapter.security.scanResults &&
+      adapter.security.scanResults.vulnerabilities > 0
+    ) {
+      throw new Error(
+        `Adapter has known security vulnerabilities: ${adapter.name}`
+      );
     }
   }
 
-  private async checkSystemRequirements(adapter: MarketplaceAdapter): Promise<void> {
+  private async checkSystemRequirements(
+    adapter: MarketplaceAdapter
+  ): Promise<void> {
     const platform = process.platform;
     if (!adapter.compatibility.platforms.includes(platform)) {
       throw new Error(`Adapter not compatible with platform: ${platform}`);
     }
-    
+
     // Check Node.js version if specified
     if (adapter.compatibility.nodeVersion) {
       const nodeVersion = process.version;
@@ -761,27 +805,35 @@ export class AdapterMarketplace extends EventEmitter {
     version: string
   ): Promise<void> {
     this.addInstallationLog(installation, 'info', 'Starting installation');
-    
+
     // Create installation directory
     if (!existsSync(installation.installPath)) {
       mkdirSync(installation.installPath, { recursive: true });
     }
-    
+
     // Execute installation command
     await this.executeCommand(
       adapter.installation.command,
       installation.installPath,
       installation
     );
-    
+
     // Run post-install scripts
     if (adapter.installation.postInstall) {
       for (const script of adapter.installation.postInstall) {
-        await this.executeCommand(script, installation.installPath, installation);
+        await this.executeCommand(
+          script,
+          installation.installPath,
+          installation
+        );
       }
     }
-    
-    this.addInstallationLog(installation, 'info', 'Installation completed successfully');
+
+    this.addInstallationLog(
+      installation,
+      'info',
+      'Installation completed successfully'
+    );
   }
 
   private async executeCommand(
@@ -795,30 +847,45 @@ export class AdapterMarketplace extends EventEmitter {
         cwd: workingDir,
         stdio: 'pipe',
       });
-      
+
       let stdout = '';
       let stderr = '';
-      
-      process.stdout?.on('data', (data) => {
+
+      process.stdout?.on('data', data => {
         stdout += data.toString();
       });
-      
-      process.stderr?.on('data', (data) => {
+
+      process.stderr?.on('data', data => {
         stderr += data.toString();
       });
-      
-      process.on('close', (code) => {
+
+      process.on('close', code => {
         if (code === 0) {
-          this.addInstallationLog(installation, 'info', `Command completed: ${command}`, { stdout });
+          this.addInstallationLog(
+            installation,
+            'info',
+            `Command completed: ${command}`,
+            { stdout }
+          );
           resolve();
         } else {
-          this.addInstallationLog(installation, 'error', `Command failed: ${command}`, { stderr, code });
+          this.addInstallationLog(
+            installation,
+            'error',
+            `Command failed: ${command}`,
+            { stderr, code }
+          );
           reject(new Error(`Command failed with code ${code}: ${stderr}`));
         }
       });
-      
-      process.on('error', (error) => {
-        this.addInstallationLog(installation, 'error', `Command error: ${command}`, error);
+
+      process.on('error', error => {
+        this.addInstallationLog(
+          installation,
+          'error',
+          `Command error: ${command}`,
+          error
+        );
         reject(error);
       });
     });
@@ -838,7 +905,9 @@ export class AdapterMarketplace extends EventEmitter {
     });
   }
 
-  private findInstallationByAdapterId(adapterId: string): AdapterInstallation | null {
+  private findInstallationByAdapterId(
+    adapterId: string
+  ): AdapterInstallation | null {
     for (const installation of this.installations.values()) {
       if (installation.adapterId === adapterId) {
         return installation;
@@ -862,22 +931,28 @@ export class AdapterMarketplace extends EventEmitter {
   ): Promise<void> {
     if (adapter.installation.preUninstall) {
       for (const script of adapter.installation.preUninstall) {
-        await this.executeCommand(script, installation.installPath, installation);
+        await this.executeCommand(
+          script,
+          installation.installPath,
+          installation
+        );
       }
     }
   }
 
-  private async validateAdapterSubmission(adapter: MarketplaceAdapter): Promise<void> {
+  private async validateAdapterSubmission(
+    adapter: MarketplaceAdapter
+  ): Promise<void> {
     // Validate required fields
     if (!adapter.name || !adapter.displayName || !adapter.description) {
       throw new Error('Missing required adapter fields');
     }
-    
+
     // Validate repository URL
     if (!adapter.repository.url) {
       throw new Error('Repository URL is required');
     }
-    
+
     // Check for duplicate names
     for (const existing of this.adapters.values()) {
       if (existing.name === adapter.name && existing.id !== adapter.id) {
@@ -886,7 +961,9 @@ export class AdapterMarketplace extends EventEmitter {
     }
   }
 
-  private async performSecurityScan(adapter: MarketplaceAdapter): Promise<void> {
+  private async performSecurityScan(
+    adapter: MarketplaceAdapter
+  ): Promise<void> {
     // This would perform actual security scanning
     // For now, it's a placeholder
     adapter.security.scanned = true;

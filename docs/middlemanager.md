@@ -14,10 +14,10 @@ The project is **highly suitable** for this workflow. Its architecture is explic
 
 ### Mapping to Project Components:
 
-*   **The Middle Manager:** This role is fulfilled by the `packages/backend` service. It houses the core logic for API interactions, process management, and task routing.
-*   **The Sub-Agents:** These are the AI models, integrated via the `adapters` architecture (e.g., `adapters/claude-code`, `adapters/gemini-cli`). The system is designed to be model-agnostic, allowing for different sub-agents to be used for different tasks.
-*   **Task Delegation:** When a request is made to the backend API, the `lifecycle-manager.ts` and related services select the appropriate adapter and delegate the task, passing along the necessary context.
-*   **Task Completion:** The adapter communicates with the AI model. The model's output (e.g., code, commands, text) is streamed back to the backend.
+- **The Middle Manager:** This role is fulfilled by the `packages/backend` service. It houses the core logic for API interactions, process management, and task routing.
+- **The Sub-Agents:** These are the AI models, integrated via the `adapters` architecture (e.g., `adapters/claude-code`, `adapters/gemini-cli`). The system is designed to be model-agnostic, allowing for different sub-agents to be used for different tasks.
+- **Task Delegation:** When a request is made to the backend API, the `lifecycle-manager.ts` and related services select the appropriate adapter and delegate the task, passing along the necessary context.
+- **Task Completion:** The adapter communicates with the AI model. The model's output (e.g., code, commands, text) is streamed back to the backend.
 
 ## How It Works (Current State)
 
@@ -41,9 +41,10 @@ Here are the recommended steps to get there:
 For any given task, the "Middle Manager" needs a programmatic way to define success. This could be implemented by extending the API to accept success criteria along with the prompt.
 
 **Examples:**
-*   **For bug fixes:** "The associated unit tests must pass."
-*   **For new features:** "The code must be accompanied by new passing unit tests."
-*   **For all code:** "The code must adhere to the project's linting rules (`eslint`) and pass type checks (`tsc`)."
+
+- **For bug fixes:** "The associated unit tests must pass."
+- **For new features:** "The code must be accompanied by new passing unit tests."
+- **For all code:** "The code must adhere to the project's linting rules (`eslint`) and pass type checks (`tsc`)."
 
 ### 2. Implement an Automated Review Pipeline
 
@@ -55,13 +56,13 @@ After a Sub-Agent returns its work (e.g., new code), the Middle Manager should t
 2.  **Run Static Analysis:** Execute project-standard commands like `npm run lint` and `npm run type-check`. Capture the output.
 3.  **Run Tests:** Execute the relevant test suite (e.g., `npm test`). Capture the results.
 4.  **Analyze Results:** If any of the above steps fail, the review fails. The Middle Manager can then either:
-    *   Report the failure back to the human operator.
-    *   **(Advanced)** Create a new prompt that includes the original request plus the error messages, and re-delegate it to the Sub-Agent for a second attempt.
+    - Report the failure back to the human operator.
+    - **(Advanced)** Create a new prompt that includes the original request plus the error messages, and re-delegate it to the Sub-Agent for a second attempt.
 
 ### 3. Enhance the Backend Logic
 
 The `packages/backend` would need new services to manage this review pipeline:
 
-*   A `ValidationService` that can be configured with the success metrics for a task.
-*   Logic within the `lifecycle-manager.ts` to trigger this `ValidationService` upon task completion from the adapter.
-*   A mechanism to store the results of the validation and associate them with the original task.
+- A `ValidationService` that can be configured with the success metrics for a task.
+- Logic within the `lifecycle-manager.ts` to trigger this `ValidationService` upon task completion from the adapter.
+- A mechanism to store the results of the validation and associate them with the original task.

@@ -14,39 +14,43 @@ export const rolePermissions: RolePermissions = {
     { resource: 'project', action: 'read', conditions: { own: true } },
     { resource: 'project', action: 'update', conditions: { own: true } },
     { resource: 'project', action: 'delete', conditions: { own: true } },
-    
+
     // Sessions
     { resource: 'session', action: 'create', conditions: { own: true } },
     { resource: 'session', action: 'read', conditions: { own: true } },
     { resource: 'session', action: 'terminate', conditions: { own: true } },
-    
+
     // Adapters
     { resource: 'adapter', action: 'read' },
     { resource: 'adapter', action: 'execute', conditions: { own: true } },
-    
+
     // CLI tools
     { resource: 'cli', action: 'read' },
     { resource: 'cli', action: 'install' },
     { resource: 'cli', action: 'check' },
-    
+
     // Git operations
     { resource: 'git', action: 'read', conditions: { own: true } },
     { resource: 'git', action: 'write', conditions: { own: true } },
-    
+
     // User profile
     { resource: 'user', action: 'read', conditions: { own: true } },
     { resource: 'user', action: 'update', conditions: { own: true } },
-    
+
     // System resources
     { resource: 'system', action: 'read' },
-    
+
     // MCP servers
     { resource: 'mcp', action: 'read' },
     { resource: 'mcp', action: 'install' },
     { resource: 'mcp', action: 'configure', conditions: { own: true } },
-    
+
     // Dangerous mode (requires explicit enablement)
-    { resource: 'dangerous', action: 'execute', conditions: { enabled: true, own: true } },
+    {
+      resource: 'dangerous',
+      action: 'execute',
+      conditions: { enabled: true, own: true },
+    },
   ],
 
   [UserRole.VIEWER]: [
@@ -73,13 +77,13 @@ export class PermissionChecker {
     context?: Record<string, any>
   ): boolean {
     const permissions = rolePermissions[role];
-    
+
     for (const permission of permissions) {
       if (this.matchesPermission(permission, resource, action, context)) {
         return true;
       }
     }
-    
+
     return false;
   }
 
@@ -124,26 +128,34 @@ export class PermissionChecker {
   /**
    * Check if a role can access a specific project
    */
-  static canAccessProject(role: UserRole, projectOwnerId: string, userId: string): boolean {
+  static canAccessProject(
+    role: UserRole,
+    projectOwnerId: string,
+    userId: string
+  ): boolean {
     if (role === UserRole.ADMIN) {
       return true;
     }
 
-    return this.hasPermission(role, 'project', 'read', { 
-      own: projectOwnerId === userId 
+    return this.hasPermission(role, 'project', 'read', {
+      own: projectOwnerId === userId,
     });
   }
 
   /**
    * Check if a role can modify a specific project
    */
-  static canModifyProject(role: UserRole, projectOwnerId: string, userId: string): boolean {
+  static canModifyProject(
+    role: UserRole,
+    projectOwnerId: string,
+    userId: string
+  ): boolean {
     if (role === UserRole.ADMIN) {
       return true;
     }
 
-    return this.hasPermission(role, 'project', 'update', { 
-      own: projectOwnerId === userId 
+    return this.hasPermission(role, 'project', 'update', {
+      own: projectOwnerId === userId,
     });
   }
 
@@ -151,8 +163,8 @@ export class PermissionChecker {
    * Check if a role can execute dangerous commands
    */
   static canExecuteDangerous(
-    role: UserRole, 
-    userId: string, 
+    role: UserRole,
+    userId: string,
     projectOwnerId: string,
     dangerousModeEnabled: boolean
   ): boolean {
@@ -160,9 +172,9 @@ export class PermissionChecker {
       return true;
     }
 
-    return this.hasPermission(role, 'dangerous', 'execute', { 
+    return this.hasPermission(role, 'dangerous', 'execute', {
       enabled: dangerousModeEnabled,
-      own: projectOwnerId === userId 
+      own: projectOwnerId === userId,
     });
   }
 
@@ -183,7 +195,7 @@ export class PermissionChecker {
     return items.filter(item => {
       const ownerId = item.userId || item.ownerId;
       return this.hasPermission(role, resource, action, {
-        own: ownerId === userId
+        own: ownerId === userId,
       });
     });
   }
@@ -248,14 +260,14 @@ export class PermissionChecker {
    * Get resource ownership context from database
    */
   static async getResourceContext(
-    resourceType: string, 
-    resourceId: string, 
+    resourceType: string,
+    resourceId: string,
     userId: string,
     db: Database
   ): Promise<Record<string, any>> {
     const context: Record<string, any> = {
       own: false,
-      enabled: false
+      enabled: false,
     };
 
     try {
@@ -277,7 +289,10 @@ export class PermissionChecker {
           context.own = true; // Default to owned for unknown resources
       }
     } catch (error) {
-      console.error(`Error getting resource context for ${resourceType}:${resourceId}:`, error);
+      console.error(
+        `Error getting resource context for ${resourceType}:${resourceId}:`,
+        error
+      );
     }
 
     return context;
@@ -289,7 +304,7 @@ export function requirePermission(resource: string, action: string) {
   return async (req: any, res: any, next: any) => {
     try {
       const user = req.user;
-      
+
       if (!user) {
         return res.status(401).json({ error: 'Authentication required' });
       }
@@ -302,10 +317,11 @@ export function requirePermission(resource: string, action: string) {
       }
 
       // Determine resource ID from common request patterns
-      const resourceId = req.params.projectId || 
-                        req.params.sessionId || 
-                        req.params.id || 
-                        req.body.id;
+      const resourceId =
+        req.params.projectId ||
+        req.params.sessionId ||
+        req.params.id ||
+        req.body.id;
 
       // Build context from request and database
       let context: Record<string, any> = {
@@ -315,9 +331,9 @@ export function requirePermission(resource: string, action: string) {
 
       if (resourceId) {
         context = await PermissionChecker.getResourceContext(
-          resource, 
-          resourceId, 
-          user.id, 
+          resource,
+          resourceId,
+          user.id,
           db
         );
       } else if (resource === 'dangerous') {
@@ -328,11 +344,13 @@ export function requirePermission(resource: string, action: string) {
       }
 
       // Check permissions
-      if (!PermissionChecker.hasPermission(user.role, resource, action, context)) {
-        return res.status(403).json({ 
+      if (
+        !PermissionChecker.hasPermission(user.role, resource, action, context)
+      ) {
+        return res.status(403).json({
           error: 'Insufficient permissions',
           required: { resource, action },
-          context: context
+          context: context,
         });
       }
 
@@ -350,15 +368,15 @@ export function requirePermission(resource: string, action: string) {
 export function requireAdmin() {
   return (req: any, res: any, next: any) => {
     const user = req.user;
-    
+
     if (!user) {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
     if (user.role !== UserRole.ADMIN) {
-      return res.status(403).json({ 
+      return res.status(403).json({
         error: 'Admin access required',
-        userRole: user.role 
+        userRole: user.role,
       });
     }
 
@@ -369,7 +387,7 @@ export function requireAdmin() {
 export function requireRole(requiredRole: UserRole) {
   return (req: any, res: any, next: any) => {
     const user = req.user;
-    
+
     if (!user) {
       return res.status(401).json({ error: 'Authentication required' });
     }
@@ -378,14 +396,14 @@ export function requireRole(requiredRole: UserRole) {
     const roleHierarchy = {
       [UserRole.ADMIN]: 3,
       [UserRole.USER]: 2,
-      [UserRole.VIEWER]: 1
+      [UserRole.VIEWER]: 1,
     };
 
     if (roleHierarchy[user.role] < roleHierarchy[requiredRole]) {
-      return res.status(403).json({ 
+      return res.status(403).json({
         error: 'Insufficient role permissions',
         required: requiredRole,
-        current: user.role
+        current: user.role,
       });
     }
 
@@ -398,7 +416,7 @@ export function requireOwnership(resourceParam: string = 'id') {
   return async (req: any, res: any, next: any) => {
     try {
       const user = req.user;
-      
+
       if (!user) {
         return res.status(401).json({ error: 'Authentication required' });
       }
@@ -429,9 +447,9 @@ export function requireOwnership(resourceParam: string = 'id') {
       );
 
       if (!context.own) {
-        return res.status(403).json({ 
+        return res.status(403).json({
           error: 'Resource access denied - not owner',
-          resourceId 
+          resourceId,
         });
       }
 

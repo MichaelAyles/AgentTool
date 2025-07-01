@@ -31,14 +31,16 @@ export function setupWebSocket(io: Server, services: Services): void {
   setupConnectionPoolHandlers(io, connectionPool);
 
   io.on('connection', async (socket: Socket) => {
-    structuredLogger.info('WebSocket connection attempt', { socketId: socket.id });
+    structuredLogger.info('WebSocket connection attempt', {
+      socketId: socket.id,
+    });
 
     // Try to add connection to pool
     const added = await connectionPool.addConnection(socket);
     if (!added) {
-      socket.emit('connection_rejected', { 
+      socket.emit('connection_rejected', {
         reason: 'Pool capacity exceeded or rate limit',
-        message: 'Too many connections. Please try again later.'
+        message: 'Too many connections. Please try again later.',
       });
       socket.disconnect(true);
       return;
@@ -50,7 +52,7 @@ export function setupWebSocket(io: Server, services: Services): void {
       // For now, just set a default user and authenticate in pool
       const userId = 'default-user'; // This should come from actual auth
       socket.data.user = { id: userId, username: 'user' };
-      
+
       // Authenticate connection in pool
       connectionPool.authenticateConnection(socket.id, userId);
       next();
@@ -63,18 +65,18 @@ export function setupWebSocket(io: Server, services: Services): void {
     setupProcessMonitoringHandlers(socket, services.processManager);
 
     // Legacy command execution (keeping for compatibility)
-    socket.on('execute-command', async (data) => {
+    socket.on('execute-command', async data => {
       try {
         const { command, adapter: adapterName, workingDirectory } = data;
         const adapter = services.adapterRegistry.get(adapterName);
-        
+
         if (!adapter) {
           socket.emit('error', { message: `Adapter ${adapterName} not found` });
           return;
         }
 
         const handle = await adapter.execute(command, { workingDirectory });
-        
+
         // Stream output
         for await (const chunk of adapter.streamOutput(handle)) {
           socket.emit('output', {
@@ -83,15 +85,17 @@ export function setupWebSocket(io: Server, services: Services): void {
           });
         }
       } catch (error) {
-        socket.emit('error', { message: error instanceof Error ? error.message : 'Unknown error' });
+        socket.emit('error', {
+          message: error instanceof Error ? error.message : 'Unknown error',
+        });
       }
     });
 
-    socket.on('disconnect', (reason) => {
-      structuredLogger.info('WebSocket client disconnected', { 
-        socketId: socket.id, 
+    socket.on('disconnect', reason => {
+      structuredLogger.info('WebSocket client disconnected', {
+        socketId: socket.id,
         reason,
-        userId: socket.data.user?.id 
+        userId: socket.data.user?.id,
       });
       // Connection pool will handle cleanup automatically
     });
@@ -139,15 +143,18 @@ function setupConnectionPoolHandlers(io: Server, connectionPool: any): void {
     });
   });
 
-  connectionPool.on('connectionRemoved', ({ socketId, metadata, reason }: any) => {
-    // Notify admins about disconnections
-    io.to('admin_room').emit('pool:connection_removed', {
-      socketId,
-      userId: metadata.userId,
-      reason,
-      connectionDuration: Date.now() - metadata.connectedAt.getTime(),
-    });
-  });
+  connectionPool.on(
+    'connectionRemoved',
+    ({ socketId, metadata, reason }: any) => {
+      // Notify admins about disconnections
+      io.to('admin_room').emit('pool:connection_removed', {
+        socketId,
+        userId: metadata.userId,
+        reason,
+        connectionDuration: Date.now() - metadata.connectedAt.getTime(),
+      });
+    }
+  );
 
   connectionPool.on('connectionAuthenticated', ({ socketId, userId }: any) => {
     // Notify about successful authentications
@@ -157,14 +164,17 @@ function setupConnectionPoolHandlers(io: Server, connectionPool: any): void {
     });
   });
 
-  connectionPool.on('messageRateLimitExceeded', ({ socketId, metadata }: any) => {
-    // Notify admins about rate limit violations
-    io.to('admin_room').emit('pool:rate_limit_exceeded', {
-      socketId,
-      userId: metadata.userId,
-      ipAddress: metadata.ipAddress,
-    });
-  });
+  connectionPool.on(
+    'messageRateLimitExceeded',
+    ({ socketId, metadata }: any) => {
+      // Notify admins about rate limit violations
+      io.to('admin_room').emit('pool:rate_limit_exceeded', {
+        socketId,
+        userId: metadata.userId,
+        ipAddress: metadata.ipAddress,
+      });
+    }
+  );
 
   // Global pool events
   connectionPool.on('poolInitialized', () => {
@@ -172,17 +182,23 @@ function setupConnectionPoolHandlers(io: Server, connectionPool: any): void {
   });
 
   // Optimized broadcasting for room events
-  connectionPool.on('roomBroadcast', ({ roomName, event, messageSize, connectionCount }: any) => {
-    structuredLogger.debug('Room broadcast completed', {
-      roomName,
-      event,
-      messageSize,
-      connectionCount,
-    });
-  });
+  connectionPool.on(
+    'roomBroadcast',
+    ({ roomName, event, messageSize, connectionCount }: any) => {
+      structuredLogger.debug('Room broadcast completed', {
+        roomName,
+        event,
+        messageSize,
+        connectionCount,
+      });
+    }
+  );
 }
 
-function setupProcessMonitoring(io: Server, processManager: ProcessManager): void {
+function setupProcessMonitoring(
+  io: Server,
+  processManager: ProcessManager
+): void {
   // Forward process manager events to all connected clients
   processManager.on('session-state', (sessionId: string, state: string) => {
     io.emit('process:session-state', { sessionId, state });
@@ -208,7 +224,7 @@ function setupProcessMonitoring(io: Server, processManager: ProcessManager): voi
   setInterval(() => {
     const health = processManager.getHealthStatus();
     const metrics = processManager.getAllMetrics();
-    
+
     io.emit('process:metrics-update', {
       health,
       metrics,
@@ -217,11 +233,14 @@ function setupProcessMonitoring(io: Server, processManager: ProcessManager): voi
   }, 10000); // Every 10 seconds
 }
 
-function setupProcessMonitoringHandlers(socket: Socket, processManager: ProcessManager): void {
+function setupProcessMonitoringHandlers(
+  socket: Socket,
+  processManager: ProcessManager
+): void {
   // Subscribe to specific session metrics
   socket.on('process:subscribe-session', (data: { sessionId: string }) => {
     const { sessionId } = data;
-    
+
     const sendSessionMetrics = () => {
       const metrics = processManager.getSessionMetrics(sessionId);
       if (metrics) {
@@ -231,17 +250,20 @@ function setupProcessMonitoringHandlers(socket: Socket, processManager: ProcessM
 
     // Send initial metrics
     sendSessionMetrics();
-    
+
     // Set up periodic updates for this session
     const interval = setInterval(sendSessionMetrics, 5000);
-    
+
     // Clean up on disconnect or unsubscribe
     socket.on('disconnect', () => clearInterval(interval));
-    socket.on('process:unsubscribe-session', (unsubData: { sessionId: string }) => {
-      if (unsubData.sessionId === sessionId) {
-        clearInterval(interval);
+    socket.on(
+      'process:unsubscribe-session',
+      (unsubData: { sessionId: string }) => {
+        if (unsubData.sessionId === sessionId) {
+          clearInterval(interval);
+        }
       }
-    });
+    );
   });
 
   // Get current health status
@@ -269,23 +291,28 @@ function setupProcessMonitoringHandlers(socket: Socket, processManager: ProcessM
       const newLimits = processManager.getResourceLimits();
       socket.emit('process:limits-updated', newLimits);
     } catch (error) {
-      socket.emit('error', { 
+      socket.emit('error', {
         message: `Failed to update resource limits: ${error.message}`,
-        type: 'resource-limits' 
+        type: 'resource-limits',
       });
     }
   });
 
   // Terminate session
-  socket.on('process:terminate-session', async (data: { sessionId: string }) => {
-    try {
-      await processManager.terminateSession(data.sessionId);
-      socket.emit('process:session-terminated', { sessionId: data.sessionId });
-    } catch (error) {
-      socket.emit('error', { 
-        message: `Failed to terminate session: ${error.message}`,
-        type: 'session-termination' 
-      });
+  socket.on(
+    'process:terminate-session',
+    async (data: { sessionId: string }) => {
+      try {
+        await processManager.terminateSession(data.sessionId);
+        socket.emit('process:session-terminated', {
+          sessionId: data.sessionId,
+        });
+      } catch (error) {
+        socket.emit('error', {
+          message: `Failed to terminate session: ${error.message}`,
+          type: 'session-termination',
+        });
+      }
     }
-  });
+  );
 }

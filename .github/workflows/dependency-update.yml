@@ -29,13 +29,13 @@ jobs:
         run: |
           # Update all dependencies
           bun update
-          
+
           # Update workspace dependencies
           cd packages/backend && bun update
           cd ../frontend && bun update
           cd ../adapter-sdk && bun update
           cd ../shared && bun update
-          
+
           # Update adapter dependencies
           cd ../../adapters/claude-code && bun update
           cd ../custom-script && bun update
@@ -58,19 +58,19 @@ jobs:
           title: 'Automated Dependency Updates'
           body: |
             ## Automated Dependency Updates
-            
+
             This PR contains automated dependency updates for the Vibe Code project.
-            
+
             ### Changes
             - Updated all npm/bun dependencies to their latest versions
             - Ran security audit to check for vulnerabilities
             - Verified tests still pass with updated dependencies
-            
+
             ### Testing
             - [ ] All tests pass
             - [ ] Security audit clean
             - [ ] Manual testing of critical functionality
-            
+
             Please review the changes and test thoroughly before merging.
           branch: dependency-updates
           delete-branch: true
@@ -163,23 +163,23 @@ jobs:
         run: |
           echo "Checking license compliance..."
           license-checker --json > licenses.json
-          
+
           # Check for prohibited licenses
           PROHIBITED_LICENSES=("GPL-2.0" "GPL-3.0" "AGPL-1.0" "AGPL-3.0")
-          
+
           for license in "${PROHIBITED_LICENSES[@]}"; do
             if grep -q "$license" licenses.json; then
               echo "❌ Prohibited license found: $license"
               exit 1
             fi
           done
-          
+
           echo "✅ License compliance check passed"
 
       - name: Generate license report
         run: |
           license-checker --csv > license-report.csv
-          
+
       - name: Upload license report
         uses: actions/upload-artifact@v3
         with:

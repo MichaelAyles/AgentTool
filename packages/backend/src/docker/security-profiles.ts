@@ -35,14 +35,42 @@ export const SECURITY_PROFILES: Record<string, SecurityProfile> = {
       readOnly: true,
       timeout: 30000, // 30 seconds
       allowedCommands: [
-        'echo', 'cat', 'ls', 'pwd', 'head', 'tail', 'wc', 'grep',
-        'python3', 'node', 'npm', 'yarn',
+        'echo',
+        'cat',
+        'ls',
+        'pwd',
+        'head',
+        'tail',
+        'wc',
+        'grep',
+        'python3',
+        'node',
+        'npm',
+        'yarn',
       ],
       blockedCommands: [
-        'curl', 'wget', 'nc', 'netcat', 'ssh', 'scp', 'rsync',
-        'mount', 'umount', 'sudo', 'su', 'chmod', 'chown',
-        'iptables', 'systemctl', 'service', 'crontab',
-        'rm', 'mv', 'cp', 'touch', 'mkdir', // No file modifications
+        'curl',
+        'wget',
+        'nc',
+        'netcat',
+        'ssh',
+        'scp',
+        'rsync',
+        'mount',
+        'umount',
+        'sudo',
+        'su',
+        'chmod',
+        'chown',
+        'iptables',
+        'systemctl',
+        'service',
+        'crontab',
+        'rm',
+        'mv',
+        'cp',
+        'touch',
+        'mkdir', // No file modifications
       ],
       environmentVariables: {
         PATH: '/usr/local/bin:/usr/bin:/bin',
@@ -76,17 +104,65 @@ export const SECURITY_PROFILES: Record<string, SecurityProfile> = {
       readOnly: false,
       timeout: 300000, // 5 minutes
       allowedCommands: [
-        'ls', 'cat', 'echo', 'pwd', 'cd', 'mkdir', 'touch', 'rm', 'mv', 'cp',
-        'grep', 'find', 'head', 'tail', 'wc', 'sort', 'uniq', 'awk', 'sed',
-        'python3', 'python', 'pip', 'pip3', 'node', 'npm', 'yarn', 'npx',
-        'git', 'curl', 'wget', 'tar', 'gzip', 'unzip',
-        'vim', 'nano', 'emacs', 'code',
+        'ls',
+        'cat',
+        'echo',
+        'pwd',
+        'cd',
+        'mkdir',
+        'touch',
+        'rm',
+        'mv',
+        'cp',
+        'grep',
+        'find',
+        'head',
+        'tail',
+        'wc',
+        'sort',
+        'uniq',
+        'awk',
+        'sed',
+        'python3',
+        'python',
+        'pip',
+        'pip3',
+        'node',
+        'npm',
+        'yarn',
+        'npx',
+        'git',
+        'curl',
+        'wget',
+        'tar',
+        'gzip',
+        'unzip',
+        'vim',
+        'nano',
+        'emacs',
+        'code',
       ],
       blockedCommands: [
-        'sudo', 'su', 'passwd', 'chown', 'mount', 'umount',
-        'systemctl', 'service', 'crontab', 'at',
-        'iptables', 'ufw', 'firewall', 'reboot', 'shutdown', 'halt',
-        'dd', 'fdisk', 'mkfs', 'fsck',
+        'sudo',
+        'su',
+        'passwd',
+        'chown',
+        'mount',
+        'umount',
+        'systemctl',
+        'service',
+        'crontab',
+        'at',
+        'iptables',
+        'ufw',
+        'firewall',
+        'reboot',
+        'shutdown',
+        'halt',
+        'dd',
+        'fdisk',
+        'mkfs',
+        'fsck',
       ],
       environmentVariables: {
         PATH: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
@@ -123,18 +199,69 @@ export const SECURITY_PROFILES: Record<string, SecurityProfile> = {
       readOnly: false,
       timeout: 600000, // 10 minutes
       allowedCommands: [
-        'ls', 'cat', 'echo', 'pwd', 'cd', 'mkdir', 'touch', 'rm', 'mv', 'cp',
-        'grep', 'find', 'head', 'tail', 'wc', 'sort', 'uniq', 'awk', 'sed',
-        'python3', 'python', 'pip', 'pip3', 'node', 'npm', 'yarn', 'npx',
-        'git', 'curl', 'wget', 'tar', 'gzip', 'unzip',
-        'docker', 'docker-compose',
-        'pytest', 'jest', 'mocha', 'karma', 'cypress',
-        'make', 'cmake', 'gcc', 'g++', 'clang',
+        'ls',
+        'cat',
+        'echo',
+        'pwd',
+        'cd',
+        'mkdir',
+        'touch',
+        'rm',
+        'mv',
+        'cp',
+        'grep',
+        'find',
+        'head',
+        'tail',
+        'wc',
+        'sort',
+        'uniq',
+        'awk',
+        'sed',
+        'python3',
+        'python',
+        'pip',
+        'pip3',
+        'node',
+        'npm',
+        'yarn',
+        'npx',
+        'git',
+        'curl',
+        'wget',
+        'tar',
+        'gzip',
+        'unzip',
+        'docker',
+        'docker-compose',
+        'pytest',
+        'jest',
+        'mocha',
+        'karma',
+        'cypress',
+        'make',
+        'cmake',
+        'gcc',
+        'g++',
+        'clang',
       ],
       blockedCommands: [
-        'sudo', 'su', 'passwd', 'chown', 'mount', 'umount',
-        'systemctl', 'service', 'crontab', 'at',
-        'iptables', 'ufw', 'firewall', 'reboot', 'shutdown', 'halt',
+        'sudo',
+        'su',
+        'passwd',
+        'chown',
+        'mount',
+        'umount',
+        'systemctl',
+        'service',
+        'crontab',
+        'at',
+        'iptables',
+        'ufw',
+        'firewall',
+        'reboot',
+        'shutdown',
+        'halt',
       ],
       environmentVariables: {
         PATH: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
@@ -147,7 +274,11 @@ export const SECURITY_PROFILES: Record<string, SecurityProfile> = {
       },
       volumes: [
         { host: '/tmp/vibe-test', container: '/workspace', mode: 'rw' },
-        { host: '/var/run/docker.sock', container: '/var/run/docker.sock', mode: 'ro' },
+        {
+          host: '/var/run/docker.sock',
+          container: '/var/run/docker.sock',
+          mode: 'ro',
+        },
       ],
     },
     additionalRestrictions: {
@@ -174,8 +305,14 @@ export const SECURITY_PROFILES: Record<string, SecurityProfile> = {
       timeout: 1800000, // 30 minutes
       allowedCommands: [], // No command restrictions
       blockedCommands: [
-        'rm -rf /', 'mkfs', 'fdisk', 'dd if=/dev/zero',
-        'reboot', 'shutdown', 'halt', 'poweroff',
+        'rm -rf /',
+        'mkfs',
+        'fdisk',
+        'dd if=/dev/zero',
+        'reboot',
+        'shutdown',
+        'halt',
+        'poweroff',
       ],
       environmentVariables: {
         PATH: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
@@ -211,17 +348,58 @@ export const SECURITY_PROFILES: Record<string, SecurityProfile> = {
       readOnly: false,
       timeout: 180000, // 3 minutes
       allowedCommands: [
-        'ls', 'cat', 'echo', 'pwd', 'cd', 'mkdir', 'touch', 'rm', 'mv', 'cp',
-        'grep', 'find', 'head', 'tail', 'wc', 'sort', 'uniq',
-        'python3', 'python', 'node', 'gcc', 'g++', 'javac', 'java',
-        'git', 'vim', 'nano', 'less', 'more',
-        'curl', 'wget', 'ping',
+        'ls',
+        'cat',
+        'echo',
+        'pwd',
+        'cd',
+        'mkdir',
+        'touch',
+        'rm',
+        'mv',
+        'cp',
+        'grep',
+        'find',
+        'head',
+        'tail',
+        'wc',
+        'sort',
+        'uniq',
+        'python3',
+        'python',
+        'node',
+        'gcc',
+        'g++',
+        'javac',
+        'java',
+        'git',
+        'vim',
+        'nano',
+        'less',
+        'more',
+        'curl',
+        'wget',
+        'ping',
       ],
       blockedCommands: [
-        'sudo', 'su', 'passwd', 'chown', 'chmod',
-        'mount', 'umount', 'systemctl', 'service',
-        'iptables', 'nc', 'netcat', 'ssh', 'scp',
-        'dd', 'fdisk', 'mkfs', 'crontab',
+        'sudo',
+        'su',
+        'passwd',
+        'chown',
+        'chmod',
+        'mount',
+        'umount',
+        'systemctl',
+        'service',
+        'iptables',
+        'nc',
+        'netcat',
+        'ssh',
+        'scp',
+        'dd',
+        'fdisk',
+        'mkfs',
+        'crontab',
       ],
       environmentVariables: {
         PATH: '/usr/local/bin:/usr/bin:/bin',
@@ -257,7 +435,7 @@ export function createCustomProfile(
   overrides: Partial<SecurityProfile>
 ): SecurityProfile {
   const base = SECURITY_PROFILES[baseProfile];
-  
+
   return {
     name,
     description,
@@ -277,11 +455,13 @@ export function createCustomProfile(
  * Security policy enforcement
  */
 export class SecurityPolicyEnforcer {
-  
   /**
    * Validate command against security profile
    */
-  static validateCommand(command: string, profile: SecurityProfile): {
+  static validateCommand(
+    command: string,
+    profile: SecurityProfile
+  ): {
     allowed: boolean;
     violations: string[];
     riskLevel: 'low' | 'medium' | 'high' | 'critical';
@@ -298,11 +478,14 @@ export class SecurityPolicyEnforcer {
     }
 
     // Check allowed commands (if specified)
-    if (profile.config.allowedCommands && profile.config.allowedCommands.length > 0) {
-      const isAllowed = profile.config.allowedCommands.some(allowed => 
+    if (
+      profile.config.allowedCommands &&
+      profile.config.allowedCommands.length > 0
+    ) {
+      const isAllowed = profile.config.allowedCommands.some(allowed =>
         command.toLowerCase().includes(allowed.toLowerCase())
       );
-      
+
       if (!isAllowed) {
         violations.push('Command not in allowed list');
         riskLevel = 'high';
@@ -311,22 +494,54 @@ export class SecurityPolicyEnforcer {
 
     // Check for dangerous patterns
     const dangerousPatterns = [
-      { pattern: /rm\s+-rf\s+\//, risk: 'critical', description: 'Root filesystem deletion' },
-      { pattern: />\s*\/dev\//, risk: 'high', description: 'Device file access' },
-      { pattern: /\/proc\//, risk: 'medium', description: 'Process filesystem access' },
-      { pattern: /\/sys\//, risk: 'medium', description: 'System filesystem access' },
-      { pattern: /sudo|su\s/, risk: 'critical', description: 'Privilege escalation' },
-      { pattern: /\$\(.*\)/, risk: 'medium', description: 'Command substitution' },
+      {
+        pattern: /rm\s+-rf\s+\//,
+        risk: 'critical',
+        description: 'Root filesystem deletion',
+      },
+      {
+        pattern: />\s*\/dev\//,
+        risk: 'high',
+        description: 'Device file access',
+      },
+      {
+        pattern: /\/proc\//,
+        risk: 'medium',
+        description: 'Process filesystem access',
+      },
+      {
+        pattern: /\/sys\//,
+        risk: 'medium',
+        description: 'System filesystem access',
+      },
+      {
+        pattern: /sudo|su\s/,
+        risk: 'critical',
+        description: 'Privilege escalation',
+      },
+      {
+        pattern: /\$\(.*\)/,
+        risk: 'medium',
+        description: 'Command substitution',
+      },
       { pattern: /`.*`/, risk: 'medium', description: 'Command substitution' },
       { pattern: /\|\s*sh/, risk: 'high', description: 'Shell pipe execution' },
-      { pattern: /curl.*\|\s*bash/, risk: 'critical', description: 'Remote script execution' },
-      { pattern: /wget.*\|\s*bash/, risk: 'critical', description: 'Remote script execution' },
+      {
+        pattern: /curl.*\|\s*bash/,
+        risk: 'critical',
+        description: 'Remote script execution',
+      },
+      {
+        pattern: /wget.*\|\s*bash/,
+        risk: 'critical',
+        description: 'Remote script execution',
+      },
     ];
 
     for (const { pattern, risk, description } of dangerousPatterns) {
       if (pattern.test(command)) {
         violations.push(`Dangerous pattern: ${description}`);
-        if (riskLevel === 'low' || (risk === 'critical' || risk === 'high')) {
+        if (riskLevel === 'low' || risk === 'critical' || risk === 'high') {
           riskLevel = risk as any;
         }
       }
@@ -334,7 +549,15 @@ export class SecurityPolicyEnforcer {
 
     // Check file system operations
     if (profile.additionalRestrictions.allowFileSystemWrite === false) {
-      const writePatterns = [/\s*>\s*/, /\s*>>\s*/, /touch\s+/, /mkdir\s+/, /rm\s+/, /mv\s+/, /cp\s+/];
+      const writePatterns = [
+        /\s*>\s*/,
+        /\s*>>\s*/,
+        /touch\s+/,
+        /mkdir\s+/,
+        /rm\s+/,
+        /mv\s+/,
+        /cp\s+/,
+      ];
       for (const pattern of writePatterns) {
         if (pattern.test(command)) {
           violations.push('File system write operation not allowed');
@@ -345,7 +568,14 @@ export class SecurityPolicyEnforcer {
 
     // Check network operations
     if (profile.additionalRestrictions.allowNetworkAccess === false) {
-      const networkPatterns = [/curl\s+/, /wget\s+/, /nc\s+/, /netcat\s+/, /ssh\s+/, /scp\s+/];
+      const networkPatterns = [
+        /curl\s+/,
+        /wget\s+/,
+        /nc\s+/,
+        /netcat\s+/,
+        /ssh\s+/,
+        /scp\s+/,
+      ];
       for (const pattern of networkPatterns) {
         if (pattern.test(command)) {
           violations.push('Network access not allowed');
@@ -364,7 +594,10 @@ export class SecurityPolicyEnforcer {
   /**
    * Validate environment variables
    */
-  static validateEnvironment(envVars: Record<string, string>, profile: SecurityProfile): {
+  static validateEnvironment(
+    envVars: Record<string, string>,
+    profile: SecurityProfile
+  ): {
     allowed: boolean;
     violations: string[];
   } {
@@ -372,7 +605,7 @@ export class SecurityPolicyEnforcer {
 
     // Check for dangerous environment variables
     const dangerousVars = ['LD_PRELOAD', 'LD_LIBRARY_PATH', 'PATH'];
-    
+
     for (const [key, value] of Object.entries(envVars)) {
       // Check for path injection
       if (key === 'PATH' && value.includes('..')) {
@@ -403,14 +636,18 @@ export class SecurityPolicyEnforcer {
     const recommendations: string[] = [];
 
     if (profile.riskLevel === 'dangerous') {
-      recommendations.push('Consider using a less privileged profile for this operation');
+      recommendations.push(
+        'Consider using a less privileged profile for this operation'
+      );
       recommendations.push('Enable comprehensive audit logging');
       recommendations.push('Limit session duration');
       recommendations.push('Monitor resource usage closely');
     }
 
     if (profile.config.networkMode === 'host') {
-      recommendations.push('Host networking exposes all ports - consider bridge mode');
+      recommendations.push(
+        'Host networking exposes all ports - consider bridge mode'
+      );
     }
 
     if (profile.config.readOnly === false) {
@@ -421,7 +658,10 @@ export class SecurityPolicyEnforcer {
       recommendations.push('Long execution times increase security risk');
     }
 
-    if (profile.config.memoryLimit && profile.config.memoryLimit > 1024 * 1024 * 1024) {
+    if (
+      profile.config.memoryLimit &&
+      profile.config.memoryLimit > 1024 * 1024 * 1024
+    ) {
       recommendations.push('High memory limits may impact system stability');
     }
 
@@ -446,9 +686,13 @@ export class ProfileManager {
    * List all available profiles
    */
   listProfiles(): { name: string; profile: SecurityProfile }[] {
-    const builtIn = Object.entries(SECURITY_PROFILES).map(([name, profile]) => ({ name, profile }));
-    const custom = Array.from(this.customProfiles.entries()).map(([name, profile]) => ({ name, profile }));
-    
+    const builtIn = Object.entries(SECURITY_PROFILES).map(
+      ([name, profile]) => ({ name, profile })
+    );
+    const custom = Array.from(this.customProfiles.entries()).map(
+      ([name, profile]) => ({ name, profile })
+    );
+
     return [...builtIn, ...custom];
   }
 
@@ -469,7 +713,14 @@ export class ProfileManager {
   /**
    * Get profile recommendations based on use case
    */
-  getRecommendedProfile(useCase: 'untrusted_code' | 'development' | 'testing' | 'education' | 'admin'): string {
+  getRecommendedProfile(
+    useCase:
+      | 'untrusted_code'
+      | 'development'
+      | 'testing'
+      | 'education'
+      | 'admin'
+  ): string {
     switch (useCase) {
       case 'untrusted_code':
         return 'SAFE_MODE';

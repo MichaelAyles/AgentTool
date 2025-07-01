@@ -46,7 +46,7 @@ export function securityTrackingMiddleware() {
 
     // Track the request
     const allowed = securityTracker.trackRequest(user.sessionId, req);
-    
+
     if (!allowed) {
       // Request was blocked due to security policy
       return res.status(429).json({
@@ -80,12 +80,12 @@ export function securityAuditMiddleware() {
     const originalJson = res.json;
 
     // Intercept response to log successful operations
-    res.send = function(body) {
+    res.send = function (body) {
       logApiResponse(req, res, body);
       return originalSend.call(this, body);
     };
 
-    res.json = function(body) {
+    res.json = function (body) {
       logApiResponse(req, res, body);
       return originalJson.call(this, body);
     };
@@ -100,7 +100,7 @@ export function securityAuditMiddleware() {
 export function requireDangerousMode() {
   return (req: Request, res: Response, next: NextFunction) => {
     const securityContext = req.securityContext;
-    
+
     if (!securityContext) {
       return res.status(401).json({
         error: 'Security context required',
@@ -144,7 +144,7 @@ export function requireDangerousMode() {
 export function blockHighRiskUsers(threshold: number = 75) {
   return (req: Request, res: Response, next: NextFunction) => {
     const securityContext = req.securityContext;
-    
+
     if (!securityContext) {
       return next();
     }
@@ -185,13 +185,13 @@ export function securityRateLimit() {
   return (req: Request, res: Response, next: NextFunction) => {
     const securityContext = req.securityContext;
     const securityTracker = req.securityTracker;
-    
+
     if (!securityContext || !securityTracker) {
       return next();
     }
 
     // Adjust rate limits based on risk score
-    const riskMultiplier = Math.max(0.1, 1 - (securityContext.riskScore / 100));
+    const riskMultiplier = Math.max(0.1, 1 - securityContext.riskScore / 100);
     const allowedRequests = Math.floor(60 * riskMultiplier); // Base 60 requests per minute
 
     // This would integrate with the actual rate limiting logic
@@ -223,7 +223,10 @@ export function securityRateLimit() {
 /**
  * Track resource access for security monitoring
  */
-export function trackResourceAccess(resourceType: string, actionType: string = 'access') {
+export function trackResourceAccess(
+  resourceType: string,
+  actionType: string = 'access'
+) {
   return (req: Request, res: Response, next: NextFunction) => {
     const securityTracker = req.securityTracker;
     const user = req.user;
@@ -243,12 +246,12 @@ export function trackResourceAccess(resourceType: string, actionType: string = '
         );
       };
 
-      res.send = function(body) {
+      res.send = function (body) {
         trackResponse(this.statusCode);
         return originalSend.call(this, body);
       };
 
-      res.json = function(body) {
+      res.json = function (body) {
         trackResponse(this.statusCode);
         return originalJson.call(this, body);
       };
@@ -264,12 +267,15 @@ export function trackResourceAccess(resourceType: string, actionType: string = '
 export function securityHeaders() {
   return (req: Request, res: Response, next: NextFunction) => {
     // Add security headers
-    res.setHeader('X-Security-Context', req.securityContext ? 'active' : 'inactive');
-    
+    res.setHeader(
+      'X-Security-Context',
+      req.securityContext ? 'active' : 'inactive'
+    );
+
     if (req.securityContext) {
       res.setHeader('X-Risk-Score', req.securityContext.riskScore.toString());
       res.setHeader('X-Security-Level', req.securityContext.securityLevel);
-      
+
       if (req.securityContext.dangerousModeEnabled) {
         res.setHeader('X-Dangerous-Mode', 'enabled');
       }
@@ -294,16 +300,34 @@ export function validateCommand() {
 
     // List of dangerous commands that require special handling
     const dangerousCommands = [
-      'rm', 'del', 'rmdir', 'format', 'fdisk',
-      'dd', 'mkfs', 'mount', 'umount',
-      'chmod', 'chown', 'sudo', 'su',
-      'passwd', 'useradd', 'userdel',
-      'systemctl', 'service', 'init',
-      'iptables', 'ufw', 'firewall-cmd',
-      'reboot', 'shutdown', 'halt',
+      'rm',
+      'del',
+      'rmdir',
+      'format',
+      'fdisk',
+      'dd',
+      'mkfs',
+      'mount',
+      'umount',
+      'chmod',
+      'chown',
+      'sudo',
+      'su',
+      'passwd',
+      'useradd',
+      'userdel',
+      'systemctl',
+      'service',
+      'init',
+      'iptables',
+      'ufw',
+      'firewall-cmd',
+      'reboot',
+      'shutdown',
+      'halt',
     ];
 
-    const isDangerous = dangerousCommands.some(dangerous => 
+    const isDangerous = dangerousCommands.some(dangerous =>
       command.toLowerCase().includes(dangerous)
     );
 
@@ -334,7 +358,7 @@ export function validateCommand() {
 
 function logApiResponse(req: Request, res: Response, body: any) {
   const user = req.user;
-  
+
   if (!user) return;
 
   const isSuccess = res.statusCode >= 200 && res.statusCode < 300;
@@ -343,7 +367,9 @@ function logApiResponse(req: Request, res: Response, body: any) {
   if (isError || (isSuccess && shouldLogSuccessfulOperation(req))) {
     securityEventLogger.logEvent({
       id: `api_${Date.now()}`,
-      type: isSuccess ? SecurityEventType.RESOURCE_ACCESS : SecurityEventType.ACCESS_DENIED,
+      type: isSuccess
+        ? SecurityEventType.RESOURCE_ACCESS
+        : SecurityEventType.ACCESS_DENIED,
       severity: isError ? SecurityLevel.MODERATE : SecurityLevel.SAFE,
       timestamp: new Date(),
       userId: user.id,
@@ -355,7 +381,8 @@ function logApiResponse(req: Request, res: Response, body: any) {
       metadata: {
         statusCode: res.statusCode,
         userAgent: req.headers['user-agent'],
-        responseSize: typeof body === 'string' ? body.length : JSON.stringify(body).length,
+        responseSize:
+          typeof body === 'string' ? body.length : JSON.stringify(body).length,
       },
     });
   }
@@ -375,9 +402,11 @@ function shouldLogSuccessfulOperation(req: Request): boolean {
 }
 
 function getClientIP(req: Request): string {
-  return (req.headers['x-forwarded-for'] as string)?.split(',')[0] || 
-         (req.headers['x-real-ip'] as string) ||
-         req.connection.remoteAddress ||
-         req.socket.remoteAddress ||
-         'unknown';
+  return (
+    (req.headers['x-forwarded-for'] as string)?.split(',')[0] ||
+    (req.headers['x-real-ip'] as string) ||
+    req.connection.remoteAddress ||
+    req.socket.remoteAddress ||
+    'unknown'
+  );
 }

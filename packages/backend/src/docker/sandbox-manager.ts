@@ -63,7 +63,7 @@ export class DockerSandboxManager extends EventEmitter {
 
   constructor() {
     super();
-    
+
     this.docker = new Docker({
       socketPath: process.env.DOCKER_SOCKET_PATH || '/var/run/docker.sock',
     });
@@ -78,14 +78,51 @@ export class DockerSandboxManager extends EventEmitter {
       readOnly: false,
       timeout: 300000, // 5 minutes
       allowedCommands: [
-        'ls', 'cat', 'echo', 'pwd', 'cd', 'mkdir', 'touch', 'rm', 'mv', 'cp',
-        'grep', 'find', 'head', 'tail', 'wc', 'sort', 'uniq',
-        'python3', 'node', 'npm', 'yarn', 'git', 'curl', 'wget',
+        'ls',
+        'cat',
+        'echo',
+        'pwd',
+        'cd',
+        'mkdir',
+        'touch',
+        'rm',
+        'mv',
+        'cp',
+        'grep',
+        'find',
+        'head',
+        'tail',
+        'wc',
+        'sort',
+        'uniq',
+        'python3',
+        'node',
+        'npm',
+        'yarn',
+        'git',
+        'curl',
+        'wget',
       ],
       blockedCommands: [
-        'sudo', 'su', 'passwd', 'chown', 'chmod', 'mount', 'umount',
-        'systemctl', 'service', 'crontab', 'at', 'nc', 'netcat',
-        'iptables', 'ufw', 'firewall', 'reboot', 'shutdown', 'halt',
+        'sudo',
+        'su',
+        'passwd',
+        'chown',
+        'chmod',
+        'mount',
+        'umount',
+        'systemctl',
+        'service',
+        'crontab',
+        'at',
+        'nc',
+        'netcat',
+        'iptables',
+        'ufw',
+        'firewall',
+        'reboot',
+        'shutdown',
+        'halt',
       ],
       environmentVariables: {
         PATH: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
@@ -112,7 +149,10 @@ export class DockerSandboxManager extends EventEmitter {
     const fullConfig = { ...this.defaultConfig, ...config };
 
     try {
-      structuredLogger.info('Creating sandbox', { sandboxId, config: fullConfig });
+      structuredLogger.info('Creating sandbox', {
+        sandboxId,
+        config: fullConfig,
+      });
 
       // Create container
       const container = await this.docker.createContainer({
@@ -130,7 +170,9 @@ export class DockerSandboxManager extends EventEmitter {
           CpuQuota: Math.floor(fullConfig.cpuLimit * 100000), // Docker uses microseconds
           CpuPeriod: 100000,
           ReadonlyRootfs: fullConfig.readOnly,
-          Binds: fullConfig.volumes.map(v => `${v.host}:${v.container}:${v.mode}`),
+          Binds: fullConfig.volumes.map(
+            v => `${v.host}:${v.container}:${v.mode}`
+          ),
           SecurityOpt: [
             'no-new-privileges:true',
             'seccomp:unconfined', // Could be more restrictive
@@ -142,7 +184,9 @@ export class DockerSandboxManager extends EventEmitter {
             { Name: 'nproc', Soft: 64, Hard: 64 },
           ],
         },
-        Env: Object.entries(fullConfig.environmentVariables).map(([k, v]) => `${k}=${v}`),
+        Env: Object.entries(fullConfig.environmentVariables).map(
+          ([k, v]) => `${k}=${v}`
+        ),
         User: 'sandbox:sandbox',
         Labels: {
           'vibe.sandbox.id': sandboxId,
@@ -173,11 +217,16 @@ export class DockerSandboxManager extends EventEmitter {
       this.startResourceMonitoring(sandboxId);
 
       this.emit('sandboxCreated', sandbox);
-      structuredLogger.info('Sandbox created successfully', { sandboxId, containerId: container.id });
+      structuredLogger.info('Sandbox created successfully', {
+        sandboxId,
+        containerId: container.id,
+      });
 
       return sandboxId;
     } catch (error) {
-      structuredLogger.error('Failed to create sandbox', error as Error, { sandboxId });
+      structuredLogger.error('Failed to create sandbox', error as Error, {
+        sandboxId,
+      });
       throw new Error(`Failed to create sandbox: ${(error as Error).message}`);
     }
   }
@@ -204,16 +253,28 @@ export class DockerSandboxManager extends EventEmitter {
     try {
       // Security checks
       const command = options.command.toLowerCase();
-      
+
       // Check if command is allowed
-      if (!sandbox.config.allowedCommands.some(allowed => command.includes(allowed))) {
-        securityViolations.push(`Command not in allowed list: ${options.command}`);
+      if (
+        !sandbox.config.allowedCommands.some(allowed =>
+          command.includes(allowed)
+        )
+      ) {
+        securityViolations.push(
+          `Command not in allowed list: ${options.command}`
+        );
       }
 
       // Check if command is blocked
-      if (sandbox.config.blockedCommands.some(blocked => command.includes(blocked))) {
+      if (
+        sandbox.config.blockedCommands.some(blocked =>
+          command.includes(blocked)
+        )
+      ) {
         securityViolations.push(`Command is blocked: ${options.command}`);
-        throw new Error(`Command blocked for security reasons: ${options.command}`);
+        throw new Error(
+          `Command blocked for security reasons: ${options.command}`
+        );
       }
 
       // Check for dangerous patterns
@@ -228,7 +289,9 @@ export class DockerSandboxManager extends EventEmitter {
 
       for (const pattern of dangerousPatterns) {
         if (pattern.test(options.command)) {
-          securityViolations.push(`Dangerous pattern detected: ${pattern.source}`);
+          securityViolations.push(
+            `Dangerous pattern detected: ${pattern.source}`
+          );
         }
       }
 
@@ -244,7 +307,7 @@ export class DockerSandboxManager extends EventEmitter {
 
       // Prepare execution command
       const fullCommand = [options.command, ...options.args].join(' ');
-      
+
       // Create exec instance
       const exec = await container.exec({
         Cmd: ['/bin/bash', '-c', fullCommand],
@@ -253,16 +316,20 @@ export class DockerSandboxManager extends EventEmitter {
         AttachStdin: true,
         Tty: false,
         WorkingDir: options.workingDirectory || sandbox.config.workingDir,
-        Env: options.environment ? 
-          Object.entries(options.environment).map(([k, v]) => `${k}=${v}`) : 
-          undefined,
+        Env: options.environment
+          ? Object.entries(options.environment).map(([k, v]) => `${k}=${v}`)
+          : undefined,
         User: options.user || 'sandbox:sandbox',
       });
 
       // Start execution with timeout
       const timeout = options.timeout || sandbox.config.timeout;
-      const executionPromise = this.executeWithTimeout(exec, options.stdin, timeout);
-      
+      const executionPromise = this.executeWithTimeout(
+        exec,
+        options.stdin,
+        timeout
+      );
+
       const result = await executionPromise;
       const executionTime = Date.now() - startTime;
 
@@ -299,7 +366,7 @@ export class DockerSandboxManager extends EventEmitter {
       return executionResult;
     } catch (error) {
       const executionTime = Date.now() - startTime;
-      
+
       structuredLogger.error('Command execution failed', error as Error, {
         sandboxId,
         command: options.command,
@@ -342,22 +409,24 @@ export class DockerSandboxManager extends EventEmitter {
 
     try {
       const container = this.docker.getContainer(sandbox.containerId);
-      
+
       // Stop container
       await container.stop({ t: 10 }); // 10 second grace period
-      
+
       // Remove container
       await container.remove({ force: true });
-      
+
       // Remove from tracking
       this.sandboxes.delete(sandboxId);
-      
+
       this.emit('sandboxDestroyed', { sandboxId });
       structuredLogger.info('Sandbox destroyed', { sandboxId });
-      
+
       return true;
     } catch (error) {
-      structuredLogger.error('Failed to destroy sandbox', error as Error, { sandboxId });
+      structuredLogger.error('Failed to destroy sandbox', error as Error, {
+        sandboxId,
+      });
       return false;
     }
   }
@@ -376,7 +445,9 @@ export class DockerSandboxManager extends EventEmitter {
       const stats = await container.stats({ stream: false });
       return this.parseContainerStats(stats);
     } catch (error) {
-      structuredLogger.error('Failed to get sandbox stats', error as Error, { sandboxId });
+      structuredLogger.error('Failed to get sandbox stats', error as Error, {
+        sandboxId,
+      });
       throw error;
     }
   }
@@ -387,12 +458,15 @@ export class DockerSandboxManager extends EventEmitter {
   private async cleanupInactiveSandboxes(): Promise<void> {
     const now = Date.now();
     const maxIdleTime = 30 * 60 * 1000; // 30 minutes
-    
+
     for (const [sandboxId, sandbox] of this.sandboxes.entries()) {
       const idleTime = now - sandbox.lastActivity.getTime();
-      
+
       if (idleTime > maxIdleTime) {
-        structuredLogger.info('Cleaning up inactive sandbox', { sandboxId, idleTime });
+        structuredLogger.info('Cleaning up inactive sandbox', {
+          sandboxId,
+          idleTime,
+        });
         await this.destroySandbox(sandboxId);
       }
     }
@@ -406,10 +480,10 @@ export class DockerSandboxManager extends EventEmitter {
       try {
         const stats = await this.getSandboxStats(sandboxId);
         const sandbox = this.sandboxes.get(sandboxId);
-        
+
         if (sandbox) {
           sandbox.resourceUsage = stats;
-          
+
           // Check for resource violations
           if (stats.memory > sandbox.config.memoryLimit * 0.9) {
             this.emit('resourceWarning', {
@@ -419,7 +493,7 @@ export class DockerSandboxManager extends EventEmitter {
               limit: sandbox.config.memoryLimit,
             });
           }
-          
+
           if (stats.cpu > sandbox.config.cpuLimit * 0.9) {
             this.emit('resourceWarning', {
               sandboxId,
@@ -436,9 +510,12 @@ export class DockerSandboxManager extends EventEmitter {
     }, 10000); // Every 10 seconds
 
     // Store interval reference to clean up later
-    setTimeout(() => {
-      clearInterval(monitoringInterval);
-    }, 24 * 60 * 60 * 1000); // Stop monitoring after 24 hours
+    setTimeout(
+      () => {
+        clearInterval(monitoringInterval);
+      },
+      24 * 60 * 60 * 1000
+    ); // Stop monitoring after 24 hours
   }
 
   /**
@@ -456,7 +533,7 @@ export class DockerSandboxManager extends EventEmitter {
 
       try {
         const stream = await exec.start({ hijack: true, stdin: !!stdin });
-        
+
         if (stdin) {
           stream.write(stdin);
           stream.end();
@@ -506,12 +583,14 @@ export class DockerSandboxManager extends EventEmitter {
    */
   private parseContainerStats(stats: any): { memory: number; cpu: number } {
     const memoryUsage = stats.memory_stats?.usage || 0;
-    
+
     // Calculate CPU percentage
-    const cpuDelta = stats.cpu_stats?.cpu_usage?.total_usage - 
-                    (stats.precpu_stats?.cpu_usage?.total_usage || 0);
-    const systemDelta = stats.cpu_stats?.system_cpu_usage - 
-                       (stats.precpu_stats?.system_cpu_usage || 0);
+    const cpuDelta =
+      stats.cpu_stats?.cpu_usage?.total_usage -
+      (stats.precpu_stats?.cpu_usage?.total_usage || 0);
+    const systemDelta =
+      stats.cpu_stats?.system_cpu_usage -
+      (stats.precpu_stats?.system_cpu_usage || 0);
     const cpuPercent = systemDelta > 0 ? (cpuDelta / systemDelta) * 100 : 0;
 
     return {
@@ -525,14 +604,14 @@ export class DockerSandboxManager extends EventEmitter {
    */
   async close(): Promise<void> {
     clearInterval(this.cleanupInterval);
-    
+
     // Destroy all active sandboxes
-    const destroyPromises = Array.from(this.sandboxes.keys()).map(id => 
+    const destroyPromises = Array.from(this.sandboxes.keys()).map(id =>
       this.destroySandbox(id)
     );
-    
+
     await Promise.allSettled(destroyPromises);
-    
+
     this.removeAllListeners();
     structuredLogger.info('Docker sandbox manager closed');
   }

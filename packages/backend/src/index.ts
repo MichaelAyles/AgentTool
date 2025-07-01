@@ -24,24 +24,33 @@ const app = express();
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173'],
+    origin: process.env.ALLOWED_ORIGINS?.split(',') || [
+      'http://localhost:5173',
+    ],
     credentials: true,
   },
 });
 
 // Security middleware
 app.use(helmet());
-app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173'],
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: process.env.ALLOWED_ORIGINS?.split(',') || [
+      'http://localhost:5173',
+    ],
+    credentials: true,
+  })
+);
 
 // Rate limiting
-app.use('/api/', rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === 'production' ? 100 : 1000, // Requests per window
-  message: 'Too many requests from this IP',
-}));
+app.use(
+  '/api/',
+  rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: process.env.NODE_ENV === 'production' ? 100 : 1000, // Requests per window
+    message: 'Too many requests from this IP',
+  })
+);
 
 // Body parsing and sanitization
 app.use(express.json({ limit: '10mb' }));
@@ -61,7 +70,9 @@ const processManager = new ProcessManager(adapterRegistry);
 async function initializeAdapters() {
   try {
     // Load Claude Code adapter
-    const { ClaudeCodeAdapter } = await import('../../../adapters/claude-code/src/index.js');
+    const { ClaudeCodeAdapter } = await import(
+      '../../../adapters/claude-code/src/index.js'
+    );
     const claudeAdapter = new ClaudeCodeAdapter();
     await adapterRegistry.register(claudeAdapter);
     console.log('✅ Registered Claude Code adapter');
@@ -71,7 +82,9 @@ async function initializeAdapters() {
 
   try {
     // Load Gemini CLI adapter
-    const { GeminiCLIAdapter } = await import('../../../adapters/gemini-cli/src/index.js');
+    const { GeminiCLIAdapter } = await import(
+      '../../../adapters/gemini-cli/src/index.js'
+    );
     const geminiAdapter = new GeminiCLIAdapter();
     await adapterRegistry.register(geminiAdapter);
     console.log('✅ Registered Gemini CLI adapter');
@@ -94,22 +107,27 @@ function ensureTempUser() {
         email: 'dev@example.com',
         displayName: 'Development User',
         role: 'admin' as any,
-        providers: [{
-          provider: 'local' as any,
-          providerId: 'dev-user',
-          email: 'dev@example.com',
-          connected: new Date(),
-        }],
+        providers: [
+          {
+            provider: 'local' as any,
+            providerId: 'dev-user',
+            email: 'dev@example.com',
+            connected: new Date(),
+          },
+        ],
         settings: {
           dangerousModeEnabled: true,
         },
         created: new Date(),
         active: true,
       });
-      
+
       // Set a default password for development
-      db.updateUserPassword('dev-user', '$2a$10$dummy.hash.for.development.only');
-      
+      db.updateUserPassword(
+        'dev-user',
+        '$2a$10$dummy.hash.for.development.only'
+      );
+
       console.log('✅ Created development user (dev@example.com)');
     }
   } catch (error) {
@@ -139,7 +157,10 @@ console.log('✅ Dangerous mode integration initialized');
 // Initialize process queue system
 import { processQueueManager } from './queue/index.js';
 processQueueManager.initialize().catch(error => {
-  console.warn('⚠️ Queue system initialization failed (Redis may not be available):', error.message);
+  console.warn(
+    '⚠️ Queue system initialization failed (Redis may not be available):',
+    error.message
+  );
   console.log('📝 Queue system will work with in-memory fallback');
 });
 
@@ -155,18 +176,25 @@ console.log('✅ Process cleanup handler initialized');
 
 // Initialize adapter lifecycle manager
 import { createAdapterLifecycleManager } from './adapters/lifecycle-manager.js';
-const adapterLifecycleManagerInstance = createAdapterLifecycleManager(adapterRegistry);
+const adapterLifecycleManagerInstance =
+  createAdapterLifecycleManager(adapterRegistry);
 adapterLifecycleManagerInstance.initialize();
 console.log('✅ Adapter lifecycle manager initialized');
 
 // Initialize adapter configuration manager
 import { adapterConfigManager } from './services/adapter-config-manager.js';
 import { registerDefaultSchemas } from './services/adapter-schemas.js';
-adapterConfigManager.initialize().then(async () => {
-  await registerDefaultSchemas(adapterConfigManager);
-}).catch(error => {
-  console.warn('⚠️ Adapter configuration manager initialization failed:', error.message);
-});
+adapterConfigManager
+  .initialize()
+  .then(async () => {
+    await registerDefaultSchemas(adapterConfigManager);
+  })
+  .catch(error => {
+    console.warn(
+      '⚠️ Adapter configuration manager initialization failed:',
+      error.message
+    );
+  });
 console.log('✅ Adapter configuration manager initialized');
 
 // Initialize MCP bridge service
@@ -198,7 +226,10 @@ console.log('✅ MCP connection manager ready');
 // Initialize MCP discovery service
 import { mcpDiscoveryService } from './services/mcp-discovery-service.js';
 mcpDiscoveryService.initialize().catch(error => {
-  console.warn('⚠️ MCP discovery service initialization failed:', error.message);
+  console.warn(
+    '⚠️ MCP discovery service initialization failed:',
+    error.message
+  );
 });
 console.log('✅ MCP discovery service initialized');
 
@@ -257,7 +288,7 @@ process.on('unhandledRejection', (reason, promise) => {
   process.exit(1);
 });
 
-process.on('uncaughtException', (error) => {
+process.on('uncaughtException', error => {
   structuredLogger.error('Uncaught exception', error);
   process.exit(1);
 });

@@ -75,17 +75,17 @@ const GitDiffViewer: React.FC<GitDiffProps> = ({
   const getFileStatusIcon = (status: GitDiffFile['status']) => {
     switch (status) {
       case 'added':
-        return <Plus className="w-4 h-4 text-green-500" />;
+        return <Plus className='w-4 h-4 text-green-500' />;
       case 'deleted':
-        return <Minus className="w-4 h-4 text-red-500" />;
+        return <Minus className='w-4 h-4 text-red-500' />;
       case 'modified':
-        return <FileText className="w-4 h-4 text-blue-500" />;
+        return <FileText className='w-4 h-4 text-blue-500' />;
       case 'renamed':
-        return <RotateCcw className="w-4 h-4 text-purple-500" />;
+        return <RotateCcw className='w-4 h-4 text-purple-500' />;
       case 'copied':
-        return <Copy className="w-4 h-4 text-orange-500" />;
+        return <Copy className='w-4 h-4 text-orange-500' />;
       default:
-        return <FileText className="w-4 h-4 text-gray-500" />;
+        return <FileText className='w-4 h-4 text-gray-500' />;
     }
   };
 
@@ -149,68 +149,76 @@ const GitDiffViewer: React.FC<GitDiffProps> = ({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <RefreshCw className="w-6 h-6 animate-spin text-blue-500" />
-        <span className="ml-2 text-gray-600 dark:text-gray-400">Loading diff...</span>
+      <div className='flex items-center justify-center p-8'>
+        <RefreshCw className='w-6 h-6 animate-spin text-blue-500' />
+        <span className='ml-2 text-gray-600 dark:text-gray-400'>
+          Loading diff...
+        </span>
       </div>
     );
   }
 
   return (
-    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+    <div className='bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden'>
       {/* Header */}
-      <div className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h3>
-            <div className="flex items-center space-x-2 text-sm">
-              <span className="text-green-600 dark:text-green-400">+{totalAdditions}</span>
-              <span className="text-red-600 dark:text-red-400">-{totalDeletions}</span>
-              <span className="text-gray-500 dark:text-gray-400">
+      <div className='bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3'>
+        <div className='flex items-center justify-between'>
+          <div className='flex items-center space-x-3'>
+            <h3 className='text-lg font-semibold text-gray-900 dark:text-white'>
+              {title}
+            </h3>
+            <div className='flex items-center space-x-2 text-sm'>
+              <span className='text-green-600 dark:text-green-400'>
+                +{totalAdditions}
+              </span>
+              <span className='text-red-600 dark:text-red-400'>
+                -{totalDeletions}
+              </span>
+              <span className='text-gray-500 dark:text-gray-400'>
                 {files.length} file{files.length !== 1 ? 's' : ''}
               </span>
             </div>
           </div>
-          
-          <div className="flex items-center space-x-2">
+
+          <div className='flex items-center space-x-2'>
             {onRefresh && (
               <button
                 onClick={onRefresh}
-                className="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                title="Refresh"
+                className='p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                title='Refresh'
               >
-                <RefreshCw className="w-4 h-4" />
+                <RefreshCw className='w-4 h-4' />
               </button>
             )}
           </div>
         </div>
 
         {/* Controls */}
-        <div className="flex items-center space-x-4 mt-3 text-sm">
-          <label className="flex items-center">
+        <div className='flex items-center space-x-4 mt-3 text-sm'>
+          <label className='flex items-center'>
             <input
-              type="checkbox"
+              type='checkbox'
               checked={showLineNumbers}
-              onChange={(e) => setShowLineNumbers(e.target.checked)}
-              className="mr-2"
+              onChange={e => setShowLineNumbers(e.target.checked)}
+              className='mr-2'
             />
             Line Numbers
           </label>
-          <label className="flex items-center">
+          <label className='flex items-center'>
             <input
-              type="checkbox"
+              type='checkbox'
               checked={wordWrap}
-              onChange={(e) => setWordWrap(e.target.checked)}
-              className="mr-2"
+              onChange={e => setWordWrap(e.target.checked)}
+              className='mr-2'
             />
             Word Wrap
           </label>
-          <label className="flex items-center">
+          <label className='flex items-center'>
             <input
-              type="checkbox"
+              type='checkbox'
               checked={onlyChanges}
-              onChange={(e) => setOnlyChanges(e.target.checked)}
-              className="mr-2"
+              onChange={e => setOnlyChanges(e.target.checked)}
+              className='mr-2'
             />
             Only Changes
           </label>
@@ -218,18 +226,23 @@ const GitDiffViewer: React.FC<GitDiffProps> = ({
       </div>
 
       {/* File List */}
-      <div className="max-h-96 overflow-y-auto">
+      <div className='max-h-96 overflow-y-auto'>
         {files.length === 0 ? (
-          <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+          <div className='p-8 text-center text-gray-500 dark:text-gray-400'>
             No changes to display
           </div>
         ) : (
-          files.map((file) => (
-            <div key={file.path} className="border-b border-gray-200 dark:border-gray-700 last:border-b-0">
+          files.map(file => (
+            <div
+              key={file.path}
+              className='border-b border-gray-200 dark:border-gray-700 last:border-b-0'
+            >
               {/* File Header */}
               <div
                 className={`flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-750 ${
-                  selectedFile === file.path ? 'bg-blue-50 dark:bg-blue-900/20' : ''
+                  selectedFile === file.path
+                    ? 'bg-blue-50 dark:bg-blue-900/20'
+                    : ''
                 }`}
                 onClick={() => {
                   if (collapsible) {
@@ -238,44 +251,52 @@ const GitDiffViewer: React.FC<GitDiffProps> = ({
                   onFileSelect?.(file);
                 }}
               >
-                <div className="flex items-center space-x-3 flex-1 min-w-0">
+                <div className='flex items-center space-x-3 flex-1 min-w-0'>
                   {collapsible && (
-                    <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                    <button className='text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'>
                       {expandedFiles.has(file.path) ? (
-                        <ChevronDown className="w-4 h-4" />
+                        <ChevronDown className='w-4 h-4' />
                       ) : (
-                        <ChevronRight className="w-4 h-4" />
+                        <ChevronRight className='w-4 h-4' />
                       )}
                     </button>
                   )}
-                  
+
                   {getFileStatusIcon(file.status)}
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center space-x-2">
-                      <span className="font-mono text-sm text-gray-900 dark:text-white truncate">
+
+                  <div className='flex-1 min-w-0'>
+                    <div className='flex items-center space-x-2'>
+                      <span className='font-mono text-sm text-gray-900 dark:text-white truncate'>
                         {file.path}
                       </span>
                       {file.oldPath && file.oldPath !== file.path && (
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                        <span className='text-xs text-gray-500 dark:text-gray-400'>
                           ← {file.oldPath}
                         </span>
                       )}
                     </div>
-                    
-                    <div className="flex items-center space-x-2 mt-1">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getFileStatusColor(file.status)}`}>
+
+                    <div className='flex items-center space-x-2 mt-1'>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${getFileStatusColor(file.status)}`}
+                      >
                         {file.status}
                       </span>
                       {file.binary ? (
-                        <span className="text-xs text-gray-500 dark:text-gray-400">Binary file</span>
+                        <span className='text-xs text-gray-500 dark:text-gray-400'>
+                          Binary file
+                        </span>
                       ) : (
-                        <div className="flex items-center space-x-2 text-xs">
+                        <div className='flex items-center space-x-2 text-xs'>
                           {file.additions > 0 && (
-                            <span className="text-green-600 dark:text-green-400">+{file.additions}</span>
+                            <span className='text-green-600 dark:text-green-400'>
+                              +{file.additions}
+                            </span>
                           )}
                           {file.deletions > 0 && (
-                            <span className="text-red-600 dark:text-red-400">-{file.deletions}</span>
+                            <span className='text-red-600 dark:text-red-400'>
+                              -{file.deletions}
+                            </span>
                           )}
                         </div>
                       )}
@@ -283,79 +304,83 @@ const GitDiffViewer: React.FC<GitDiffProps> = ({
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-1 ml-2">
+                <div className='flex items-center space-x-1 ml-2'>
                   <button
-                    onClick={(e) => {
+                    onClick={e => {
                       e.stopPropagation();
                       copyFileContent(file);
                     }}
-                    className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-                    title="Copy"
+                    className='p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'
+                    title='Copy'
                   >
-                    <Copy className="w-3 h-3" />
+                    <Copy className='w-3 h-3' />
                   </button>
                   <button
-                    onClick={(e) => {
+                    onClick={e => {
                       e.stopPropagation();
                       downloadFile(file);
                     }}
-                    className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-                    title="Download"
+                    className='p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'
+                    title='Download'
                   >
-                    <Download className="w-3 h-3" />
+                    <Download className='w-3 h-3' />
                   </button>
                 </div>
               </div>
 
               {/* File Content */}
-              {(!collapsible || expandedFiles.has(file.path)) && !file.binary && (
-                <div className="bg-white dark:bg-gray-900">
-                  <div className="font-mono text-sm">
-                    {filteredLines(file.lines).map((line, lineIndex) => (
-                      <div
-                        key={lineIndex}
-                        className={`flex ${getLineTypeClass(line)} ${
-                          line.isHunk ? 'sticky top-0 z-10' : ''
-                        }`}
-                      >
-                        {showLineNumbers && (
-                          <div className="flex bg-gray-100 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
-                            <div className="w-12 px-2 py-1 text-right text-xs text-gray-500 dark:text-gray-400 select-none">
-                              {line.oldLineNumber || ''}
+              {(!collapsible || expandedFiles.has(file.path)) &&
+                !file.binary && (
+                  <div className='bg-white dark:bg-gray-900'>
+                    <div className='font-mono text-sm'>
+                      {filteredLines(file.lines).map((line, lineIndex) => (
+                        <div
+                          key={lineIndex}
+                          className={`flex ${getLineTypeClass(line)} ${
+                            line.isHunk ? 'sticky top-0 z-10' : ''
+                          }`}
+                        >
+                          {showLineNumbers && (
+                            <div className='flex bg-gray-100 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700'>
+                              <div className='w-12 px-2 py-1 text-right text-xs text-gray-500 dark:text-gray-400 select-none'>
+                                {line.oldLineNumber || ''}
+                              </div>
+                              <div className='w-12 px-2 py-1 text-right text-xs text-gray-500 dark:text-gray-400 select-none border-l border-gray-200 dark:border-gray-700'>
+                                {line.newLineNumber || ''}
+                              </div>
                             </div>
-                            <div className="w-12 px-2 py-1 text-right text-xs text-gray-500 dark:text-gray-400 select-none border-l border-gray-200 dark:border-gray-700">
-                              {line.newLineNumber || ''}
-                            </div>
-                          </div>
-                        )}
-                        <div className={`flex-1 px-3 py-1 ${wordWrap ? 'whitespace-pre-wrap' : 'whitespace-pre overflow-x-auto'}`}>
-                          <span
-                            className={
-                              line.type === 'addition'
-                                ? 'text-green-800 dark:text-green-300'
-                                : line.type === 'deletion'
-                                ? 'text-red-800 dark:text-red-300'
-                                : line.type === 'header'
-                                ? 'text-gray-700 dark:text-gray-300 font-semibold'
-                                : 'text-gray-900 dark:text-gray-100'
-                            }
+                          )}
+                          <div
+                            className={`flex-1 px-3 py-1 ${wordWrap ? 'whitespace-pre-wrap' : 'whitespace-pre overflow-x-auto'}`}
                           >
-                            {line.content}
-                          </span>
+                            <span
+                              className={
+                                line.type === 'addition'
+                                  ? 'text-green-800 dark:text-green-300'
+                                  : line.type === 'deletion'
+                                    ? 'text-red-800 dark:text-red-300'
+                                    : line.type === 'header'
+                                      ? 'text-gray-700 dark:text-gray-300 font-semibold'
+                                      : 'text-gray-900 dark:text-gray-100'
+                              }
+                            >
+                              {line.content}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
               {/* Binary File Message */}
-              {(!collapsible || expandedFiles.has(file.path)) && file.binary && (
-                <div className="p-4 text-center text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800">
-                  <FileText className="w-6 h-6 mx-auto mb-2" />
-                  <p>Binary file - cannot display diff</p>
-                </div>
-              )}
+              {(!collapsible || expandedFiles.has(file.path)) &&
+                file.binary && (
+                  <div className='p-4 text-center text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800'>
+                    <FileText className='w-6 h-6 mx-auto mb-2' />
+                    <p>Binary file - cannot display diff</p>
+                  </div>
+                )}
             </div>
           ))
         )}

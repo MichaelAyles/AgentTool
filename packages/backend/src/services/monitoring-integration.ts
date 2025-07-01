@@ -16,7 +16,9 @@ export class MonitoringIntegration {
     enableSystemMonitoring: true,
   };
 
-  constructor(config: Partial<typeof MonitoringIntegration.prototype.config> = {}) {
+  constructor(
+    config: Partial<typeof MonitoringIntegration.prototype.config> = {}
+  ) {
     Object.assign(this.config, config);
     this.setupEventListeners();
   }
@@ -61,7 +63,10 @@ export class MonitoringIntegration {
         this.collectBusinessMetrics(),
       ]);
     } catch (error) {
-      structuredLogger.error('Error collecting integrated metrics', error as Error);
+      structuredLogger.error(
+        'Error collecting integrated metrics',
+        error as Error
+      );
     }
   }
 
@@ -76,31 +81,76 @@ export class MonitoringIntegration {
       const health = await cacheManager.getHealth();
 
       // Record cache performance metrics
-      performanceMonitor.recordMetric('cache.hit_ratio', stats.hitRatio, 'ratio');
-      performanceMonitor.recordMetric('cache.miss_ratio', 1 - stats.hitRatio, 'ratio');
-      performanceMonitor.recordMetric('cache.avg_response_time', stats.avgResponseTime, 'ms');
+      performanceMonitor.recordMetric(
+        'cache.hit_ratio',
+        stats.hitRatio,
+        'ratio'
+      );
+      performanceMonitor.recordMetric(
+        'cache.miss_ratio',
+        1 - stats.hitRatio,
+        'ratio'
+      );
+      performanceMonitor.recordMetric(
+        'cache.avg_response_time',
+        stats.avgResponseTime,
+        'ms'
+      );
       performanceMonitor.recordMetric('cache.total_hits', stats.hits, 'count');
-      performanceMonitor.recordMetric('cache.total_misses', stats.misses, 'count');
-      performanceMonitor.recordMetric('cache.error_count', stats.errors, 'count');
+      performanceMonitor.recordMetric(
+        'cache.total_misses',
+        stats.misses,
+        'count'
+      );
+      performanceMonitor.recordMetric(
+        'cache.error_count',
+        stats.errors,
+        'count'
+      );
 
       // Record Redis-specific metrics
       if (health.redis.connected) {
-        performanceMonitor.recordMetric('redis.memory_usage', health.redis.memory, 'bytes');
-        performanceMonitor.recordMetric('redis.connected_clients', health.redis.clients, 'count');
-        performanceMonitor.recordMetric('redis.uptime', health.redis.uptime, 'seconds');
-        performanceMonitor.recordMetric('redis.connection_status', 1, 'boolean', {
-          status: 'connected',
-        });
+        performanceMonitor.recordMetric(
+          'redis.memory_usage',
+          health.redis.memory,
+          'bytes'
+        );
+        performanceMonitor.recordMetric(
+          'redis.connected_clients',
+          health.redis.clients,
+          'count'
+        );
+        performanceMonitor.recordMetric(
+          'redis.uptime',
+          health.redis.uptime,
+          'seconds'
+        );
+        performanceMonitor.recordMetric(
+          'redis.connection_status',
+          1,
+          'boolean',
+          {
+            status: 'connected',
+          }
+        );
       } else {
-        performanceMonitor.recordMetric('redis.connection_status', 0, 'boolean', {
-          status: 'disconnected',
-        });
+        performanceMonitor.recordMetric(
+          'redis.connection_status',
+          0,
+          'boolean',
+          {
+            status: 'disconnected',
+          }
+        );
       }
 
       // Cache efficiency metrics
       const efficiency = this.calculateCacheEfficiency(stats);
-      performanceMonitor.recordMetric('cache.efficiency_score', efficiency, 'score');
-
+      performanceMonitor.recordMetric(
+        'cache.efficiency_score',
+        efficiency,
+        'score'
+      );
     } catch (error) {
       structuredLogger.error('Error collecting cache metrics', error as Error);
     }
@@ -117,31 +167,77 @@ export class MonitoringIntegration {
       const queryMetrics = optimizedDb.getQueryMetrics();
 
       // Record database metrics
-      performanceMonitor.recordMetric('database.query_count', queryMetrics.queryCount, 'count');
-      performanceMonitor.recordMetric('database.avg_query_time', queryMetrics.averageTime, 'ms');
-      performanceMonitor.recordMetric('database.total_query_time', queryMetrics.totalTime, 'ms');
-      performanceMonitor.recordMetric('database.slow_queries', queryMetrics.slowQueries.length, 'count');
-      performanceMonitor.recordMetric('database.cache_hits', queryMetrics.cacheHits, 'count');
-      performanceMonitor.recordMetric('database.cache_misses', queryMetrics.cacheMisses, 'count');
+      performanceMonitor.recordMetric(
+        'database.query_count',
+        queryMetrics.queryCount,
+        'count'
+      );
+      performanceMonitor.recordMetric(
+        'database.avg_query_time',
+        queryMetrics.averageTime,
+        'ms'
+      );
+      performanceMonitor.recordMetric(
+        'database.total_query_time',
+        queryMetrics.totalTime,
+        'ms'
+      );
+      performanceMonitor.recordMetric(
+        'database.slow_queries',
+        queryMetrics.slowQueries.length,
+        'count'
+      );
+      performanceMonitor.recordMetric(
+        'database.cache_hits',
+        queryMetrics.cacheHits,
+        'count'
+      );
+      performanceMonitor.recordMetric(
+        'database.cache_misses',
+        queryMetrics.cacheMisses,
+        'count'
+      );
 
       // Database size metrics
-      const totalRows = Object.values(dbInfo.tableSizes).reduce((sum: number, count: number) => sum + count, 0);
-      performanceMonitor.recordMetric('database.total_rows', totalRows, 'count');
-      performanceMonitor.recordMetric('database.table_count', Object.keys(dbInfo.tableSizes).length, 'count');
+      const totalRows = Object.values(dbInfo.tableSizes).reduce(
+        (sum: number, count: number) => sum + count,
+        0
+      );
+      performanceMonitor.recordMetric(
+        'database.total_rows',
+        totalRows,
+        'count'
+      );
+      performanceMonitor.recordMetric(
+        'database.table_count',
+        Object.keys(dbInfo.tableSizes).length,
+        'count'
+      );
 
       // Database performance score
       const dbPerformance = this.calculateDatabasePerformance(queryMetrics);
-      performanceMonitor.recordMetric('database.performance_score', dbPerformance, 'score');
+      performanceMonitor.recordMetric(
+        'database.performance_score',
+        dbPerformance,
+        'score'
+      );
 
       // Table-specific metrics
       for (const [tableName, rowCount] of Object.entries(dbInfo.tableSizes)) {
-        performanceMonitor.recordMetric('database.table_size', rowCount as number, 'count', {
-          table: tableName,
-        });
+        performanceMonitor.recordMetric(
+          'database.table_size',
+          rowCount as number,
+          'count',
+          {
+            table: tableName,
+          }
+        );
       }
-
     } catch (error) {
-      structuredLogger.error('Error collecting database metrics', error as Error);
+      structuredLogger.error(
+        'Error collecting database metrics',
+        error as Error
+      );
     }
   }
 
@@ -166,21 +262,59 @@ export class MonitoringIntegration {
         averageCommandTime: 2500,
       };
 
-      performanceMonitor.recordMetric('processes.active', processMetrics.activeProcesses, 'count');
-      performanceMonitor.recordMetric('processes.total', processMetrics.totalProcesses, 'count');
-      performanceMonitor.recordMetric('processes.avg_memory', processMetrics.averageMemoryUsage, 'bytes');
-      performanceMonitor.recordMetric('processes.avg_cpu', processMetrics.averageCpuUsage, 'percent');
-      performanceMonitor.recordMetric('sessions.created', processMetrics.sessionsCreated, 'count');
-      performanceMonitor.recordMetric('sessions.terminated', processMetrics.sessionsTerminated, 'count');
-      performanceMonitor.recordMetric('commands.executed', processMetrics.commandsExecuted, 'count');
-      performanceMonitor.recordMetric('commands.avg_time', processMetrics.averageCommandTime, 'ms');
+      performanceMonitor.recordMetric(
+        'processes.active',
+        processMetrics.activeProcesses,
+        'count'
+      );
+      performanceMonitor.recordMetric(
+        'processes.total',
+        processMetrics.totalProcesses,
+        'count'
+      );
+      performanceMonitor.recordMetric(
+        'processes.avg_memory',
+        processMetrics.averageMemoryUsage,
+        'bytes'
+      );
+      performanceMonitor.recordMetric(
+        'processes.avg_cpu',
+        processMetrics.averageCpuUsage,
+        'percent'
+      );
+      performanceMonitor.recordMetric(
+        'sessions.created',
+        processMetrics.sessionsCreated,
+        'count'
+      );
+      performanceMonitor.recordMetric(
+        'sessions.terminated',
+        processMetrics.sessionsTerminated,
+        'count'
+      );
+      performanceMonitor.recordMetric(
+        'commands.executed',
+        processMetrics.commandsExecuted,
+        'count'
+      );
+      performanceMonitor.recordMetric(
+        'commands.avg_time',
+        processMetrics.averageCommandTime,
+        'ms'
+      );
 
       // Process efficiency
       const processEfficiency = this.calculateProcessEfficiency(processMetrics);
-      performanceMonitor.recordMetric('processes.efficiency_score', processEfficiency, 'score');
-
+      performanceMonitor.recordMetric(
+        'processes.efficiency_score',
+        processEfficiency,
+        'score'
+      );
     } catch (error) {
-      structuredLogger.error('Error collecting process metrics', error as Error);
+      structuredLogger.error(
+        'Error collecting process metrics',
+        error as Error
+      );
     }
   }
 
@@ -200,20 +334,49 @@ export class MonitoringIntegration {
         dataProcessed: 2.5 * 1024 * 1024 * 1024, // 2.5GB
       };
 
-      performanceMonitor.recordMetric('business.active_users', businessMetrics.activeUsers, 'count');
-      performanceMonitor.recordMetric('business.total_projects', businessMetrics.totalProjects, 'count');
-      performanceMonitor.recordMetric('business.adapters_in_use', businessMetrics.adaptersInUse, 'count');
-      performanceMonitor.recordMetric('business.api_calls', businessMetrics.totalApiCalls, 'count');
-      performanceMonitor.recordMetric('business.success_rate', 
-        businessMetrics.successfulOperations / businessMetrics.totalApiCalls, 'ratio');
-      performanceMonitor.recordMetric('business.data_processed', businessMetrics.dataProcessed, 'bytes');
+      performanceMonitor.recordMetric(
+        'business.active_users',
+        businessMetrics.activeUsers,
+        'count'
+      );
+      performanceMonitor.recordMetric(
+        'business.total_projects',
+        businessMetrics.totalProjects,
+        'count'
+      );
+      performanceMonitor.recordMetric(
+        'business.adapters_in_use',
+        businessMetrics.adaptersInUse,
+        'count'
+      );
+      performanceMonitor.recordMetric(
+        'business.api_calls',
+        businessMetrics.totalApiCalls,
+        'count'
+      );
+      performanceMonitor.recordMetric(
+        'business.success_rate',
+        businessMetrics.successfulOperations / businessMetrics.totalApiCalls,
+        'ratio'
+      );
+      performanceMonitor.recordMetric(
+        'business.data_processed',
+        businessMetrics.dataProcessed,
+        'bytes'
+      );
 
       // Business health score
       const businessHealth = this.calculateBusinessHealth(businessMetrics);
-      performanceMonitor.recordMetric('business.health_score', businessHealth, 'score');
-
+      performanceMonitor.recordMetric(
+        'business.health_score',
+        businessHealth,
+        'score'
+      );
     } catch (error) {
-      structuredLogger.error('Error collecting business metrics', error as Error);
+      structuredLogger.error(
+        'Error collecting business metrics',
+        error as Error
+      );
     }
   }
 
@@ -222,13 +385,13 @@ export class MonitoringIntegration {
    */
   private setupEventListeners(): void {
     // Cache event listeners
-    cacheManager.on('hit', (data) => {
+    cacheManager.on('hit', data => {
       performanceMonitor.recordMetric('cache.hit', 1, 'count', {
         strategy: data.strategy || 'unknown',
       });
     });
 
-    cacheManager.on('miss', (data) => {
+    cacheManager.on('miss', data => {
       performanceMonitor.recordMetric('cache.miss', 1, 'count', {
         strategy: data.strategy || 'unknown',
       });
@@ -239,7 +402,7 @@ export class MonitoringIntegration {
     });
 
     // Performance monitor event listeners
-    performanceMonitor.on('alert', (alert) => {
+    performanceMonitor.on('alert', alert => {
       structuredLogger.warn('Performance alert triggered', {
         alertId: alert.id,
         level: alert.level,
@@ -255,7 +418,7 @@ export class MonitoringIntegration {
       });
     });
 
-    performanceMonitor.on('metric', (metric) => {
+    performanceMonitor.on('metric', metric => {
       // Could forward metrics to external systems here
       if (metric.name.includes('error') || metric.name.includes('failure')) {
         structuredLogger.debug('Error metric recorded', {
@@ -286,12 +449,12 @@ export class MonitoringIntegration {
     const processHealth = await this.assessProcessHealth();
     const businessHealth = await this.assessBusinessHealth();
 
-    const overallScore = (
-      cacheHealth.score + 
-      databaseHealth.score + 
-      processHealth.score + 
-      businessHealth.score
-    ) / 4;
+    const overallScore =
+      (cacheHealth.score +
+        databaseHealth.score +
+        processHealth.score +
+        businessHealth.score) /
+      4;
 
     const overall = this.scoreToStatus(overallScore);
 
@@ -319,62 +482,68 @@ export class MonitoringIntegration {
 
   private calculateCacheEfficiency(stats: any): number {
     let score = 100;
-    
+
     if (stats.hitRatio < 0.5) score -= 40;
     else if (stats.hitRatio < 0.7) score -= 20;
-    
+
     if (stats.avgResponseTime > 50) score -= 20;
     else if (stats.avgResponseTime > 25) score -= 10;
-    
-    const errorRate = stats.errors / (stats.hits + stats.misses + stats.sets + stats.deletes || 1);
+
+    const errorRate =
+      stats.errors /
+      (stats.hits + stats.misses + stats.sets + stats.deletes || 1);
     if (errorRate > 0.05) score -= 25;
     else if (errorRate > 0.01) score -= 10;
-    
+
     return Math.max(0, score);
   }
 
   private calculateDatabasePerformance(metrics: any): number {
     let score = 100;
-    
+
     if (metrics.averageTime > 500) score -= 40;
     else if (metrics.averageTime > 200) score -= 20;
     else if (metrics.averageTime > 100) score -= 10;
-    
-    const slowQueryRatio = metrics.slowQueries.length / (metrics.queryCount || 1);
+
+    const slowQueryRatio =
+      metrics.slowQueries.length / (metrics.queryCount || 1);
     if (slowQueryRatio > 0.1) score -= 30;
     else if (slowQueryRatio > 0.05) score -= 15;
-    
-    const cacheHitRatio = metrics.cacheHits / (metrics.cacheHits + metrics.cacheMisses || 1);
+
+    const cacheHitRatio =
+      metrics.cacheHits / (metrics.cacheHits + metrics.cacheMisses || 1);
     if (cacheHitRatio < 0.7) score -= 15;
-    
+
     return Math.max(0, score);
   }
 
   private calculateProcessEfficiency(metrics: any): number {
     let score = 100;
-    
-    const memoryPerProcess = metrics.averageMemoryUsage / (metrics.activeProcesses || 1);
+
+    const memoryPerProcess =
+      metrics.averageMemoryUsage / (metrics.activeProcesses || 1);
     if (memoryPerProcess > 256 * 1024 * 1024) score -= 25; // 256MB per process
-    
+
     if (metrics.averageCpuUsage > 80) score -= 30;
     else if (metrics.averageCpuUsage > 60) score -= 15;
-    
+
     if (metrics.averageCommandTime > 5000) score -= 20;
     else if (metrics.averageCommandTime > 2000) score -= 10;
-    
+
     return Math.max(0, score);
   }
 
   private calculateBusinessHealth(metrics: any): number {
     let score = 100;
-    
-    const successRate = metrics.successfulOperations / (metrics.totalApiCalls || 1);
+
+    const successRate =
+      metrics.successfulOperations / (metrics.totalApiCalls || 1);
     if (successRate < 0.95) score -= 30;
     else if (successRate < 0.98) score -= 15;
-    
+
     if (metrics.activeUsers === 0) score -= 50;
     else if (metrics.activeUsers < 5) score -= 20;
-    
+
     return Math.max(0, score);
   }
 
@@ -387,25 +556,25 @@ export class MonitoringIntegration {
     const stats = cacheManager.getStats();
     const health = await cacheManager.getHealth();
     const score = this.calculateCacheEfficiency(stats);
-    
+
     const issues: string[] = [];
     const recommendations: string[] = [];
-    
+
     if (!health.redis.connected) {
       issues.push('Redis connection lost');
       recommendations.push('Check Redis server status and connectivity');
     }
-    
+
     if (stats.hitRatio < 0.7) {
       issues.push('Low cache hit ratio');
       recommendations.push('Review cache TTL settings and strategies');
     }
-    
+
     if (stats.avgResponseTime > 25) {
       issues.push('High cache response time');
       recommendations.push('Check Redis performance and network latency');
     }
-    
+
     return {
       status: this.scoreToStatus(score),
       score,
@@ -422,20 +591,20 @@ export class MonitoringIntegration {
   }> {
     const queryMetrics = optimizedDb.getQueryMetrics();
     const score = this.calculateDatabasePerformance(queryMetrics);
-    
+
     const issues: string[] = [];
     const recommendations: string[] = [];
-    
+
     if (queryMetrics.averageTime > 200) {
       issues.push('High average query time');
       recommendations.push('Review slow queries and add missing indexes');
     }
-    
+
     if (queryMetrics.slowQueries.length > queryMetrics.queryCount * 0.05) {
       issues.push('High percentage of slow queries');
       recommendations.push('Optimize slow queries and database schema');
     }
-    
+
     return {
       status: this.scoreToStatus(score),
       score,
@@ -454,7 +623,7 @@ export class MonitoringIntegration {
     const score = 85;
     const issues: string[] = [];
     const recommendations: string[] = [];
-    
+
     return {
       status: this.scoreToStatus(score),
       score,
@@ -473,7 +642,7 @@ export class MonitoringIntegration {
     const score = 90;
     const issues: string[] = [];
     const recommendations: string[] = [];
-    
+
     return {
       status: this.scoreToStatus(score),
       score,

@@ -10,12 +10,7 @@
       "email": "team@vibecode.dev"
     },
     "license": "MIT",
-    "tags": [
-      "filesystem",
-      "files",
-      "directories",
-      "built-in"
-    ],
+    "tags": ["filesystem", "files", "directories", "built-in"],
     "category": "system",
     "transport": {
       "type": "stdio",
@@ -31,13 +26,9 @@
         "list_directory",
         "create_directory"
       ],
-      "resources": [
-        "file://*"
-      ],
+      "resources": ["file://*"],
       "prompts": [],
-      "features": [
-        "file_operations"
-      ]
+      "features": ["file_operations"]
     },
     "configuration": {
       "schema": {
@@ -66,9 +57,7 @@
         "basePath": "/Users/tribune/Desktop/AgentTool/packages/backend",
         "readOnly": false
       },
-      "required": [
-        "basePath"
-      ],
+      "required": ["basePath"],
       "sensitive": []
     },
     "documentation": {

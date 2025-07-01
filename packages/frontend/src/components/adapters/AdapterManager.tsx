@@ -42,7 +42,13 @@ export interface AdapterInfo {
   repository?: string;
   license?: string;
   tags: string[];
-  category: 'ai' | 'utility' | 'development' | 'productivity' | 'system' | 'custom';
+  category:
+    | 'ai'
+    | 'utility'
+    | 'development'
+    | 'productivity'
+    | 'system'
+    | 'custom';
   status: 'installed' | 'available' | 'updating' | 'error';
   installed?: {
     version: string;
@@ -102,9 +108,21 @@ const AdapterManager: React.FC<AdapterManagerProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [showExperimental, setShowExperimental] = useState(false);
-  const [sortBy, setSortBy] = useState<'name' | 'downloads' | 'rating' | 'updated'>('name');
+  const [sortBy, setSortBy] = useState<
+    'name' | 'downloads' | 'rating' | 'updated'
+  >('name');
   const [expandedAdapter, setExpandedAdapter] = useState<string | null>(null);
-  const [operationStates, setOperationStates] = useState<Record<string, 'idle' | 'installing' | 'uninstalling' | 'updating' | 'starting' | 'stopping'>>({});
+  const [operationStates, setOperationStates] = useState<
+    Record<
+      string,
+      | 'idle'
+      | 'installing'
+      | 'uninstalling'
+      | 'updating'
+      | 'starting'
+      | 'stopping'
+    >
+  >({});
 
   const categories = [
     { value: 'all', label: 'All Categories' },
@@ -124,7 +142,10 @@ const AdapterManager: React.FC<AdapterManagerProps> = ({
     { value: 'error', label: 'Error' },
   ];
 
-  const setOperationState = (adapterId: string, state: typeof operationStates[string]) => {
+  const setOperationState = (
+    adapterId: string,
+    state: (typeof operationStates)[string]
+  ) => {
     setOperationStates(prev => ({ ...prev, [adapterId]: state }));
   };
 
@@ -138,7 +159,9 @@ const AdapterManager: React.FC<AdapterManagerProps> = ({
   };
 
   const handleUninstall = async (adapter: AdapterInfo) => {
-    if (confirm(`Are you sure you want to uninstall "${adapter.displayName}"?`)) {
+    if (
+      confirm(`Are you sure you want to uninstall "${adapter.displayName}"?`)
+    ) {
       setOperationState(adapter.id, 'uninstalling');
       try {
         await onUninstall(adapter.id);
@@ -179,8 +202,10 @@ const AdapterManager: React.FC<AdapterManagerProps> = ({
   const filteredAdapters = adapters
     .filter(adapter => {
       if (!showExperimental && adapter.experimental) return false;
-      if (selectedCategory !== 'all' && adapter.category !== selectedCategory) return false;
-      if (selectedStatus !== 'all' && adapter.status !== selectedStatus) return false;
+      if (selectedCategory !== 'all' && adapter.category !== selectedCategory)
+        return false;
+      if (selectedStatus !== 'all' && adapter.status !== selectedStatus)
+        return false;
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         return (
@@ -200,8 +225,10 @@ const AdapterManager: React.FC<AdapterManagerProps> = ({
         case 'rating':
           return (b.stats?.rating || 0) - (a.stats?.rating || 0);
         case 'updated':
-          const aDate = a.installed?.installedAt || a.installed?.configuredAt || '';
-          const bDate = b.installed?.installedAt || b.installed?.configuredAt || '';
+          const aDate =
+            a.installed?.installedAt || a.installed?.configuredAt || '';
+          const bDate =
+            b.installed?.installedAt || b.installed?.configuredAt || '';
           return new Date(bDate).getTime() - new Date(aDate).getTime();
         case 'name':
         default:
@@ -212,14 +239,14 @@ const AdapterManager: React.FC<AdapterManagerProps> = ({
   const getStatusIcon = (status: AdapterInfo['status']) => {
     switch (status) {
       case 'installed':
-        return <CheckCircle className="w-4 h-4 text-green-500" />;
+        return <CheckCircle className='w-4 h-4 text-green-500' />;
       case 'updating':
-        return <RefreshCw className="w-4 h-4 text-blue-500 animate-spin" />;
+        return <RefreshCw className='w-4 h-4 text-blue-500 animate-spin' />;
       case 'error':
-        return <XCircle className="w-4 h-4 text-red-500" />;
+        return <XCircle className='w-4 h-4 text-red-500' />;
       case 'available':
       default:
-        return <Package className="w-4 h-4 text-gray-500" />;
+        return <Package className='w-4 h-4 text-gray-500' />;
     }
   };
 
@@ -270,87 +297,95 @@ const AdapterManager: React.FC<AdapterManagerProps> = ({
   const availableCount = adapters.filter(a => a.status === 'available').length;
 
   return (
-    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+    <div className='bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden'>
       {/* Header */}
-      <div className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-3">
-            <Package className="w-6 h-6 text-gray-600 dark:text-gray-400" />
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Adapter Manager</h2>
-            <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
+      <div className='bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4'>
+        <div className='flex items-center justify-between mb-4'>
+          <div className='flex items-center space-x-3'>
+            <Package className='w-6 h-6 text-gray-600 dark:text-gray-400' />
+            <h2 className='text-xl font-semibold text-gray-900 dark:text-white'>
+              Adapter Manager
+            </h2>
+            <div className='flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400'>
               <span>{installedCount} installed</span>
               <span>•</span>
               <span>{availableCount} available</span>
             </div>
           </div>
-          
-          <div className="flex items-center space-x-2">
+
+          <div className='flex items-center space-x-2'>
             <button
               onClick={onBrowseMarketplace}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              className='flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700'
             >
-              <Globe className="w-4 h-4" />
+              <Globe className='w-4 h-4' />
               <span>Browse Marketplace</span>
             </button>
-            
+
             <button
               onClick={onRefresh}
               disabled={loading}
-              className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg disabled:opacity-50"
-              title="Refresh"
+              className='p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg disabled:opacity-50'
+              title='Refresh'
             >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`}
+              />
             </button>
           </div>
         </div>
 
         {/* Search and Filters */}
-        <div className="flex flex-col lg:flex-row gap-4">
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <div className='flex flex-col lg:flex-row gap-4'>
+          <div className='flex-1'>
+            <div className='relative'>
+              <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400' />
               <input
-                type="text"
-                placeholder="Search adapters by name, description, tags, or author..."
+                type='text'
+                placeholder='Search adapters by name, description, tags, or author...'
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                onChange={e => setSearchQuery(e.target.value)}
+                className='w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
               />
             </div>
           </div>
-          
-          <div className="flex items-center space-x-3">
+
+          <div className='flex items-center space-x-3'>
             <select
               value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              onChange={e => setSelectedCategory(e.target.value)}
+              className='px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent'
             >
               {categories.map(category => (
-                <option key={category.value} value={category.value}>{category.label}</option>
+                <option key={category.value} value={category.value}>
+                  {category.label}
+                </option>
               ))}
             </select>
-            
+
             <select
               value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              onChange={e => setSelectedStatus(e.target.value)}
+              className='px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent'
             >
               {statuses.map(status => (
-                <option key={status.value} value={status.value}>{status.label}</option>
+                <option key={status.value} value={status.value}>
+                  {status.label}
+                </option>
               ))}
             </select>
-            
+
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              onChange={e => setSortBy(e.target.value as any)}
+              className='px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent'
             >
-              <option value="name">Sort by Name</option>
-              <option value="downloads">Sort by Downloads</option>
-              <option value="rating">Sort by Rating</option>
-              <option value="updated">Sort by Updated</option>
+              <option value='name'>Sort by Name</option>
+              <option value='downloads'>Sort by Downloads</option>
+              <option value='rating'>Sort by Rating</option>
+              <option value='updated'>Sort by Updated</option>
             </select>
-            
+
             <button
               onClick={() => setShowExperimental(!showExperimental)}
               className={`flex items-center space-x-1 px-3 py-2 rounded-lg text-sm ${
@@ -358,9 +393,17 @@ const AdapterManager: React.FC<AdapterManagerProps> = ({
                   ? 'bg-orange-100 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400'
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
-              title={showExperimental ? 'Hide experimental adapters' : 'Show experimental adapters'}
+              title={
+                showExperimental
+                  ? 'Hide experimental adapters'
+                  : 'Show experimental adapters'
+              }
             >
-              {showExperimental ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+              {showExperimental ? (
+                <Eye className='w-4 h-4' />
+              ) : (
+                <EyeOff className='w-4 h-4' />
+              )}
               <span>Experimental</span>
             </button>
           </div>
@@ -368,91 +411,113 @@ const AdapterManager: React.FC<AdapterManagerProps> = ({
       </div>
 
       {/* Adapters List */}
-      <div className="max-h-96 overflow-y-auto">
+      <div className='max-h-96 overflow-y-auto'>
         {loading && adapters.length === 0 ? (
-          <div className="flex items-center justify-center p-8">
-            <RefreshCw className="w-6 h-6 animate-spin text-blue-500" />
-            <span className="ml-2 text-gray-600 dark:text-gray-400">Loading adapters...</span>
+          <div className='flex items-center justify-center p-8'>
+            <RefreshCw className='w-6 h-6 animate-spin text-blue-500' />
+            <span className='ml-2 text-gray-600 dark:text-gray-400'>
+              Loading adapters...
+            </span>
           </div>
         ) : filteredAdapters.length === 0 ? (
-          <div className="p-8 text-center text-gray-500 dark:text-gray-400">
-            {adapters.length === 0 ? 'No adapters found' : 'No adapters match your filters'}
+          <div className='p-8 text-center text-gray-500 dark:text-gray-400'>
+            {adapters.length === 0
+              ? 'No adapters found'
+              : 'No adapters match your filters'}
             {adapters.length === 0 && (
-              <div className="mt-4">
+              <div className='mt-4'>
                 <button
                   onClick={onBrowseMarketplace}
-                  className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className='inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700'
                 >
-                  <Globe className="w-4 h-4" />
+                  <Globe className='w-4 h-4' />
                   <span>Browse Marketplace</span>
                 </button>
               </div>
             )}
           </div>
         ) : (
-          <div className="divide-y divide-gray-200 dark:divide-gray-700">
-            {filteredAdapters.map((adapter) => {
+          <div className='divide-y divide-gray-200 dark:divide-gray-700'>
+            {filteredAdapters.map(adapter => {
               const isExpanded = expandedAdapter === adapter.id;
               const operationState = operationStates[adapter.id] || 'idle';
               const isOperating = operationState !== 'idle';
-              
+
               return (
-                <div key={adapter.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                  <div className="flex items-center p-6">
-                    <div className="flex-1 min-w-0">
+                <div
+                  key={adapter.id}
+                  className='hover:bg-gray-50 dark:hover:bg-gray-800'
+                >
+                  <div className='flex items-center p-6'>
+                    <div className='flex-1 min-w-0'>
                       {/* Main Info */}
-                      <div className="flex items-center space-x-3 mb-2">
-                        <span className="text-2xl">{getCategoryIcon(adapter.category)}</span>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center space-x-2">
-                            <h3 className="text-lg font-medium text-gray-900 dark:text-white truncate">
+                      <div className='flex items-center space-x-3 mb-2'>
+                        <span className='text-2xl'>
+                          {getCategoryIcon(adapter.category)}
+                        </span>
+                        <div className='flex-1 min-w-0'>
+                          <div className='flex items-center space-x-2'>
+                            <h3 className='text-lg font-medium text-gray-900 dark:text-white truncate'>
                               {adapter.displayName}
                             </h3>
                             {adapter.official && (
-                              <Shield className="w-4 h-4 text-blue-500" title="Official adapter" />
+                              <Shield
+                                className='w-4 h-4 text-blue-500'
+                                title='Official adapter'
+                              />
                             )}
                             {adapter.verified && (
-                              <CheckCircle className="w-4 h-4 text-green-500" title="Verified adapter" />
+                              <CheckCircle
+                                className='w-4 h-4 text-green-500'
+                                title='Verified adapter'
+                              />
                             )}
                             {adapter.experimental && (
-                              <AlertTriangle className="w-4 h-4 text-orange-500" title="Experimental" />
+                              <AlertTriangle
+                                className='w-4 h-4 text-orange-500'
+                                title='Experimental'
+                              />
                             )}
                           </div>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
+                          <p className='text-sm text-gray-600 dark:text-gray-400 truncate'>
                             {adapter.description}
                           </p>
                         </div>
                       </div>
 
                       {/* Metadata */}
-                      <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400 mb-2">
-                        <div className="flex items-center space-x-1">
+                      <div className='flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400 mb-2'>
+                        <div className='flex items-center space-x-1'>
                           {getStatusIcon(adapter.status)}
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(adapter.status)}`}>
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(adapter.status)}`}
+                          >
                             {adapter.status}
                           </span>
                         </div>
-                        
-                        <div className="flex items-center space-x-1">
-                          <Tag className="w-3 h-3" />
+
+                        <div className='flex items-center space-x-1'>
+                          <Tag className='w-3 h-3' />
                           <span>v{adapter.version}</span>
                         </div>
-                        
-                        <div className="flex items-center space-x-1">
-                          <User className="w-3 h-3" />
+
+                        <div className='flex items-center space-x-1'>
+                          <User className='w-3 h-3' />
                           <span>{adapter.author.name}</span>
                         </div>
 
                         {adapter.stats && (
                           <>
-                            <div className="flex items-center space-x-1">
-                              <Download className="w-3 h-3" />
-                              <span>{formatNumber(adapter.stats.downloads)}</span>
+                            <div className='flex items-center space-x-1'>
+                              <Download className='w-3 h-3' />
+                              <span>
+                                {formatNumber(adapter.stats.downloads)}
+                              </span>
                             </div>
-                            
+
                             {adapter.stats.rating > 0 && (
-                              <div className="flex items-center space-x-1">
-                                <Star className="w-3 h-3 text-yellow-500" />
+                              <div className='flex items-center space-x-1'>
+                                <Star className='w-3 h-3 text-yellow-500' />
                                 <span>{adapter.stats.rating.toFixed(1)}</span>
                               </div>
                             )}
@@ -461,17 +526,17 @@ const AdapterManager: React.FC<AdapterManagerProps> = ({
                       </div>
 
                       {/* Tags */}
-                      <div className="flex items-center space-x-2 mb-2">
+                      <div className='flex items-center space-x-2 mb-2'>
                         {adapter.tags.slice(0, 3).map(tag => (
                           <span
                             key={tag}
-                            className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-xs rounded-full"
+                            className='px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-xs rounded-full'
                           >
                             {tag}
                           </span>
                         ))}
                         {adapter.tags.length > 3 && (
-                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                          <span className='text-xs text-gray-500 dark:text-gray-400'>
                             +{adapter.tags.length - 3} more
                           </span>
                         )}
@@ -479,60 +544,67 @@ const AdapterManager: React.FC<AdapterManagerProps> = ({
 
                       {/* Installation Info */}
                       {adapter.installed && (
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                        <div className='text-xs text-gray-500 dark:text-gray-400'>
                           Installed: {formatDate(adapter.installed.installedAt)}
                           {adapter.installed.lastUsed && (
-                            <span className="ml-2">• Last used: {formatDate(adapter.installed.lastUsed)}</span>
+                            <span className='ml-2'>
+                              • Last used:{' '}
+                              {formatDate(adapter.installed.lastUsed)}
+                            </span>
                           )}
                         </div>
                       )}
                     </div>
 
                     {/* Actions */}
-                    <div className="flex items-center space-x-2 ml-4">
+                    <div className='flex items-center space-x-2 ml-4'>
                       {adapter.status === 'installed' ? (
                         <>
                           <button
                             onClick={() => onConfigure(adapter.id)}
-                            className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                            title="Configure"
+                            className='p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg'
+                            title='Configure'
                           >
-                            <Settings className="w-4 h-4" />
+                            <Settings className='w-4 h-4' />
                           </button>
-                          
+
                           <button
                             onClick={() => handleUpdate(adapter)}
                             disabled={isOperating}
-                            className="px-3 py-1 text-xs bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded hover:bg-blue-200 dark:hover:bg-blue-900/40 disabled:opacity-50"
+                            className='px-3 py-1 text-xs bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded hover:bg-blue-200 dark:hover:bg-blue-900/40 disabled:opacity-50'
                           >
-                            {operationState === 'updating' ? 'Updating...' : 'Update'}
+                            {operationState === 'updating'
+                              ? 'Updating...'
+                              : 'Update'}
                           </button>
-                          
+
                           <button
                             onClick={() => handleUninstall(adapter)}
                             disabled={isOperating}
-                            className="p-2 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg disabled:opacity-50"
-                            title="Uninstall"
+                            className='p-2 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg disabled:opacity-50'
+                            title='Uninstall'
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className='w-4 h-4' />
                           </button>
                         </>
                       ) : (
                         <button
                           onClick={() => handleInstall(adapter)}
                           disabled={isOperating}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm"
+                          className='px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm'
                         >
-                          {operationState === 'installing' ? 'Installing...' : 'Install'}
+                          {operationState === 'installing'
+                            ? 'Installing...'
+                            : 'Install'}
                         </button>
                       )}
-                      
+
                       <button
                         onClick={() => onViewDetails(adapter)}
-                        className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                        title="View Details"
+                        className='p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg'
+                        title='View Details'
                       >
-                        <ExternalLink className="w-4 h-4" />
+                        <ExternalLink className='w-4 h-4' />
                       </button>
                     </div>
                   </div>
