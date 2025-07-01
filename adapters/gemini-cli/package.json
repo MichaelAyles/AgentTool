@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@vibecode/adapter-sdk": "workspace:*",
-    "@vibecode/shared": "workspace:*",
+    "@vibecode/shared": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.3.0",

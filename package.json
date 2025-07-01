@@ -13,6 +13,9 @@
     "dev": "bun run --filter '*' dev",
     "build": "bun run --filter '*' build",
     "test": "bun run --filter '*' test",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
     "lint": "eslint . --ext .ts,.tsx --fix",
     "lint:check": "eslint . --ext .ts,.tsx",
     "format": "prettier --write .",
@@ -24,16 +27,18 @@
     "pre-commit": "lint-staged"
   },
   "devDependencies": {
+    "@playwright/test": "^1.53.2",
     "@types/node": "^20.10.0",
-    "typescript": "^5.3.0",
-    "eslint": "^8.56.0",
     "@typescript-eslint/eslint-plugin": "^6.18.0",
     "@typescript-eslint/parser": "^6.18.0",
+    "eslint": "^8.56.0",
     "eslint-plugin-react": "^7.33.0",
     "eslint-plugin-react-hooks": "^4.6.0",
-    "prettier": "^3.1.0",
     "husky": "^8.0.3",
-    "lint-staged": "^15.2.0"
+    "lint-staged": "^15.2.0",
+    "playwright": "^1.53.2",
+    "prettier": "^3.1.0",
+    "typescript": "^5.3.0"
   },
   "engines": {
     "node": ">=18.0.0",

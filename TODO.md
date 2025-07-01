@@ -124,7 +124,7 @@
 ## Testing
 
 - [x] **test-1**: Write comprehensive unit tests for all components - ✅ Complete
-- [ ] **test-2**: Add integration tests for API endpoints
+- [x] **test-2**: Add integration tests for API endpoints - ✅ Complete
 - [ ] **test-3**: Create E2E test suite with Playwright
 - [ ] **test-4**: Write adapter development guide and examples
 - [ ] **test-5**: Create comprehensive user documentation
@@ -136,6 +136,77 @@
 - [ ] **deploy-3**: Implement backup and recovery procedures
 - [ ] **deploy-4**: Create release automation and CI/CD
 - [ ] **deploy-5**: Prepare for public release and documentation
+
+## Future - Not for Implementation Yet
+
+This section details features that are planned but not yet in active development. They represent the next major evolution of the platform's capabilities.
+
+### 1. Middle Manager Automated Review Workflow
+
+**Goal:** Automate the validation of work completed by Sub-Agents (AI Models) to ensure it meets quality and correctness standards before being presented to the user.
+
+**Implementation Steps:**
+
+1.  **Extend API for Success Metrics:**
+    - Modify the backend API to accept a `success_criteria` object along with a task prompt.
+    - This object will define what constitutes a successful completion. Examples:
+      - `{ "tests": { "status": "pass" } }`
+      - `{ "lint": { "errors": 0 }, "type_check": { "status": "pass" } }`
+
+2.  **Create a `ValidationService` in the Backend:**
+    - This service will be responsible for orchestrating the review pipeline.
+    - It will receive the file changes from the Sub-Agent and the `success_criteria`.
+
+3.  **Implement the Automated Review Pipeline:**
+    - When a task is complete, the `lifecycle-manager` will trigger the `ValidationService`.
+    - **Step 1: Create Temporary Workspace:** Apply the AI-generated changes to a temporary, isolated copy of the relevant files.
+    - **Step 2: Run Static Analysis:** Execute commands like `npm run lint` and `npm run type-check` within the temporary workspace. Capture and parse the output.
+    - **Step 3: Run Tests:** Execute the project's test suite (e.g., `npm test`). Capture and parse the results.
+    - **Step 4: Analyze and Report:** Compare the results against the `success_criteria`. The final status (pass/fail, with details) is stored and reported to the UI.
+
+4.  **Advanced - Self-Correction Loop:**
+    - If validation fails, the `ValidationService` can be configured to automatically create a new prompt for the Sub-Agent.
+    - This new prompt would include the original request, the failed code, and the error messages from the linter/tests, asking the AI to fix its own mistake.
+
+### 2. Seamless Local Agent Pairing
+
+**Goal:** Create a user-friendly, secure, one-line command to connect the hosted web application to a locally running agent, enabling terminal interaction.
+
+**Implementation Steps:**
+
+1.  **Create the Rendezvous API Endpoints:**
+    - In the `packages/backend`, add a new, simple service (e.g., `ConnectionPairingService`) that uses an in-memory cache or Redis.
+    - **`POST /api/v1/connection/register`**: This endpoint will be called by the local agent. It accepts a `{ sessionId, tunnelUrl }` payload and stores it in the cache with a 5-minute TTL.
+    - **`GET /api/v1/connection/status?sessionId=<uuid>`**: This endpoint will be polled by the frontend. It checks the cache for the `sessionId` and returns either `{ status: 'pending' }` or `{ status: 'connected', url: '<tunnelUrl>' }`.
+
+2.  **Develop the Frontend Connection UI:**
+    - Create a "Connect Local Terminal" page or modal in the `packages/frontend`.
+    - When a user visits this page, the frontend will:
+      - Generate a new UUID (the `sessionId`).
+      - Dynamically construct the one-line installation command.
+      - Display a user-friendly message: `Welcome! To connect your local machine, paste this command into your terminal:`
+      - Display the command: `curl -sSL https://your-app.vercel.app/install.sh | bash -s -- <generated-uuid>`
+      - Begin polling the `/api/v1/connection/status` endpoint every 2-3 seconds.
+      - Once it receives a `connected` status, it will store the `tunnelUrl` in its state and establish the WebSocket connection for the terminal.
+
+3.  **Create the `install.sh` Script:**
+    - This script will be hosted at the root of the public-facing server.
+    - It will be a bash script that:
+      - Accepts the `sessionId` as its first argument.
+      - Checks for dependencies (`node`, `bun`, `git`).
+      - Clones the agent repository to a local directory (e.g., `~/.gemini-agent`) if it doesn't exist.
+      - Runs `bun install`.
+      - Starts the local agent process, passing the `sessionId` to it.
+
+4.  **Modify the Local Agent Logic:**
+    - The local agent (a lightweight version of the backend) will need to be launchable from the command line.
+    - On startup, it will:
+      - Start the local server.
+      - Start a secure tunnel service (e.g., `ngrok`) programmatically.
+      - Retrieve the public URL from the tunnel.
+      - Make the `POST` request to `/api/v1/connection/register`, sending its `sessionId` and the new `tunnelUrl`.
+
+---
 
 ## Progress Summary
 
