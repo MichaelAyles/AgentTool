@@ -32,6 +32,7 @@ import streamingOptimizationRouter from './streaming-optimization.js';
 import connectionOptimizationRouter from './connection-optimization.js';
 import databaseOptimizationRouter from './database-optimization.js';
 import cacheManagementRouter from './cache-management.js';
+import performanceMonitoringRouter from './performance-monitoring.js';
 
 interface Services {
   adapterRegistry: AdapterRegistry;
@@ -118,6 +119,9 @@ export function setupRoutes(app: Express, services: Services): void {
 
   // Cache management
   app.use('/api/cache', cacheManagementRouter);
+
+  // Performance monitoring
+  app.use('/api/performance', performanceMonitoringRouter);
 
   // Adapters
   app.get('/api/adapters', (req, res) => {
