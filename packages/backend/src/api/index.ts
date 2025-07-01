@@ -33,6 +33,7 @@ import connectionOptimizationRouter from './connection-optimization.js';
 import databaseOptimizationRouter from './database-optimization.js';
 import cacheManagementRouter from './cache-management.js';
 import performanceMonitoringRouter from './performance-monitoring.js';
+import dockerSandboxingRouter from './docker-sandboxing.js';
 
 interface Services {
   adapterRegistry: AdapterRegistry;
@@ -122,6 +123,9 @@ export function setupRoutes(app: Express, services: Services): void {
 
   // Performance monitoring
   app.use('/api/performance', performanceMonitoringRouter);
+
+  // Docker sandboxing
+  app.use('/api/docker', dockerSandboxingRouter);
 
   // Adapters
   app.get('/api/adapters', (req, res) => {
