@@ -11,7 +11,7 @@
 - [x] **backend-1**: Implement Express.js API server with basic routing - ✅ Complete (commit: 70fc0e2)
 - [x] **backend-2**: Set up WebSocket communication with Socket.io - ✅ Complete (commit: 70fc0e2)
 - [x] **backend-3**: Create basic process management system - ✅ Complete (commit: 70fc0e2)
-- [ ] **backend-4**: Implement SQLite database schema and models
+- [x] **backend-4**: Implement SQLite database schema and models - ✅ Complete (commit: e09bcde)
 - [ ] **backend-5**: Add logging and error handling middleware
 
 ## Adapter System
@@ -22,8 +22,8 @@
 - [ ] **adapter-5**: Implement adapter lifecycle management
 
 ## Frontend Core
-- [ ] **frontend-1**: Set up React with Vite and TypeScript
-- [ ] **frontend-2**: Create basic component structure and routing
+- [x] **frontend-1**: Set up React with Vite and TypeScript - ✅ Complete (commit: e09bcde)
+- [x] **frontend-2**: Create basic component structure and routing - ✅ Complete (commit: e09bcde)
 - [ ] **frontend-3**: Implement project management UI components
 - [ ] **frontend-4**: Add basic terminal component with xterm.js
 - [ ] **frontend-5**: Set up state management with Zustand
@@ -113,8 +113,8 @@
 - [ ] **deploy-5**: Prepare for public release and documentation
 
 ## Progress Summary
-**Completed**: 8/70 tasks  
+**Completed**: 10/70 tasks  
 **In Progress**: 0/70 tasks  
-**Remaining**: 62/70 tasks  
+**Remaining**: 60/70 tasks  
 
-**Current Milestone**: Core foundation complete - moving to database, frontend setup, and concrete adapter implementations
+**Current Milestone**: Database and frontend foundation complete - moving to concrete adapter implementations and real-time features

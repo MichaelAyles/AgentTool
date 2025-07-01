@@ -55,8 +55,11 @@ export function ProjectList() {
                 <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
                   {project.activeAdapter}
                 </span>
-                <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
-                  Open
+                <button 
+                  onClick={() => window.open(`/terminal/new?projectId=${project.id}&adapter=${project.activeAdapter}`, '_blank')}
+                  className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                >
+                  Open Terminal
                 </button>
               </div>
             </div>

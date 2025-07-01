@@ -29,6 +29,22 @@ app.use(express.json());
 const adapterRegistry = new AdapterRegistry();
 const processManager = new ProcessManager(adapterRegistry);
 
+// Initialize adapters
+async function initializeAdapters() {
+  try {
+    // Load Claude Code adapter
+    const { ClaudeCodeAdapter } = await import('../../../adapters/claude-code/src/index.js');
+    const claudeAdapter = new ClaudeCodeAdapter();
+    await adapterRegistry.register(claudeAdapter);
+    console.log('✅ Registered Claude Code adapter');
+  } catch (error) {
+    console.warn('⚠️ Could not load Claude Code adapter:', error.message);
+  }
+}
+
+// Initialize adapters on startup
+initializeAdapters().catch(console.error);
+
 // Routes
 setupRoutes(app, { adapterRegistry, processManager });
 
