@@ -27,14 +27,11 @@
       "@vibecode/frontend": ["./packages/frontend/src"]
     }
   },
-  "include": [
-    "packages/*/src/**/*.ts",
-    "packages/*/src/**/*.tsx"
-  ],
+  "include": ["packages/*/src/**/*.ts", "packages/*/src/**/*.tsx"],
   "exclude": [
-    "node_modules", 
-    "**/dist/**", 
-    "**/build/**", 
+    "node_modules",
+    "**/dist/**",
+    "**/build/**",
     "**/coverage/**",
     "**/*.d.ts",
     ".next"
