@@ -82,6 +82,76 @@ export function setupRoutes(app: Express, services: Services): void {
     res.status(201).json({ id: 'temp-session-id' });
   });
 
+  // Process monitoring endpoints
+  app.get('/api/processes/metrics', (req, res) => {
+    try {
+      const metrics = services.processManager.getAllMetrics();
+      res.json(metrics);
+    } catch (error) {
+      console.error('Error fetching process metrics:', error);
+      res.status(500).json({ error: 'Failed to fetch process metrics' });
+    }
+  });
+
+  app.get('/api/processes/metrics/:sessionId', (req, res) => {
+    try {
+      const { sessionId } = req.params;
+      const metrics = services.processManager.getSessionMetrics(sessionId);
+      
+      if (!metrics) {
+        return res.status(404).json({ error: 'Session not found' });
+      }
+      
+      res.json(metrics);
+    } catch (error) {
+      console.error('Error fetching session metrics:', error);
+      res.status(500).json({ error: 'Failed to fetch session metrics' });
+    }
+  });
+
+  app.get('/api/processes/health', (req, res) => {
+    try {
+      const health = services.processManager.getHealthStatus();
+      res.json(health);
+    } catch (error) {
+      console.error('Error fetching health status:', error);
+      res.status(500).json({ error: 'Failed to fetch health status' });
+    }
+  });
+
+  app.get('/api/processes/limits', (req, res) => {
+    try {
+      const limits = services.processManager.getResourceLimits();
+      res.json(limits);
+    } catch (error) {
+      console.error('Error fetching resource limits:', error);
+      res.status(500).json({ error: 'Failed to fetch resource limits' });
+    }
+  });
+
+  app.put('/api/processes/limits', (req, res) => {
+    try {
+      const updates = req.body;
+      services.processManager.updateResourceLimits(updates);
+      const newLimits = services.processManager.getResourceLimits();
+      res.json(newLimits);
+    } catch (error) {
+      console.error('Error updating resource limits:', error);
+      res.status(500).json({ error: 'Failed to update resource limits' });
+    }
+  });
+
+  app.delete('/api/processes/:sessionId', (req, res) => {
+    try {
+      const { sessionId } = req.params;
+      services.processManager.terminateSession(sessionId);
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error terminating session:', error);
+      res.status(500).json({ error: 'Failed to terminate session' });
+    }
+  });
+
   // Error handling
   app.use((err: Error, req: any, res: any, next: any) => {
     console.error(err.stack);

@@ -3,6 +3,7 @@ import { Layout } from './components/Layout';
 import { ProjectList } from './components/ProjectList';
 import { Terminal } from './components/Terminal';
 import { Settings } from './components/Settings';
+import { ProcessMonitor } from './components/ProcessMonitor';
 import { NotificationCenter } from './components/NotificationCenter';
 
 function App() {
@@ -12,6 +13,7 @@ function App() {
         <Routes>
           <Route path="/" element={<ProjectList />} />
           <Route path="/terminal/:sessionId" element={<Terminal />} />
+          <Route path="/monitor" element={<ProcessMonitor />} />
           <Route path="/settings" element={<Settings />} />
         </Routes>
       </Layout>
