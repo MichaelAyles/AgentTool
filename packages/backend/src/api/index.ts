@@ -22,6 +22,12 @@ import websocketPoolRouter from './websocket-pool.js';
 import customScriptsRouter from './custom-scripts.js';
 import adapterConfigRouter from './adapter-config.js';
 import mcpRouter from './mcp.js';
+import marketplaceRouter from './marketplace.js';
+import cliHealthRouter from './cli-health.js';
+import mcpConnectionsRouter from './mcp-connections.js';
+import mcpDiscoveryRouter from './mcp-discovery.js';
+import mcpMessagesRouter from './mcp-messages.js';
+import mcpRegistryRouter from './mcp-registry.js';
 
 interface Services {
   adapterRegistry: AdapterRegistry;
@@ -78,6 +84,24 @@ export function setupRoutes(app: Express, services: Services): void {
 
   // MCP bridge service
   app.use('/api/mcp', mcpRouter);
+
+  // Adapter marketplace
+  app.use('/api/marketplace', marketplaceRouter);
+
+  // CLI health monitoring
+  app.use('/api/cli-health', cliHealthRouter);
+
+  // MCP server connections
+  app.use('/api/mcp-connections', mcpConnectionsRouter);
+
+  // MCP tool and resource discovery
+  app.use('/api/mcp-discovery', mcpDiscoveryRouter);
+
+  // MCP message handling
+  app.use('/api/mcp-messages', mcpMessagesRouter);
+
+  // MCP server registry
+  app.use('/api/mcp-registry', mcpRegistryRouter);
 
   // Adapters
   app.get('/api/adapters', (req, res) => {
@@ -253,7 +277,27 @@ export function setupRoutes(app: Express, services: Services): void {
   app.get('/api/cli/status', requirePermission('cli', 'read'), async (req, res) => {
     try {
       const status = await cliInstaller.getAllCLIStatus();
-      res.json(status);
+      
+      // Enhance with health monitoring data
+      const { cliHealthMonitor } = await import('../services/cli-health-monitor.js');
+      const healthStatuses = cliHealthMonitor.getAllHealthStatuses();
+      
+      const enhancedStatus = status.map(cliStatus => {
+        const healthStatus = healthStatuses.find(h => h.name === cliStatus.name);
+        return {
+          ...cliStatus,
+          health: healthStatus ? {
+            status: healthStatus.status,
+            availability: healthStatus.availability,
+            lastChecked: healthStatus.lastChecked,
+            responseTime: healthStatus.responseTime,
+            errorCount: healthStatus.errors.length,
+            warningCount: healthStatus.warnings.length,
+          } : null,
+        };
+      });
+      
+      res.json(enhancedStatus);
     } catch (error) {
       console.error('Error getting CLI status:', error);
       res.status(500).json({ error: 'Failed to get CLI status' });

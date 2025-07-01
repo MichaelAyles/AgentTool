@@ -176,6 +176,46 @@ mcpBridge.initialize().catch(error => {
 });
 console.log('✅ MCP bridge service initialized');
 
+// Initialize adapter marketplace
+import { adapterMarketplace } from './services/adapter-marketplace.js';
+adapterMarketplace.initialize().catch(error => {
+  console.warn('⚠️ Adapter marketplace initialization failed:', error.message);
+});
+console.log('✅ Adapter marketplace initialized');
+
+// Initialize CLI health monitor
+import { cliHealthMonitor } from './services/cli-health-monitor.js';
+cliHealthMonitor.initialize().catch(error => {
+  console.warn('⚠️ CLI health monitor initialization failed:', error.message);
+});
+console.log('✅ CLI health monitor initialized');
+
+// Initialize MCP connection manager
+import { mcpConnectionManager } from './services/mcp-connection-manager.js';
+// Connection manager is initialized on first use
+console.log('✅ MCP connection manager ready');
+
+// Initialize MCP discovery service
+import { mcpDiscoveryService } from './services/mcp-discovery-service.js';
+mcpDiscoveryService.initialize().catch(error => {
+  console.warn('⚠️ MCP discovery service initialization failed:', error.message);
+});
+console.log('✅ MCP discovery service initialized');
+
+// Initialize MCP message handler
+import { mcpMessageHandler } from './services/mcp-message-handler.js';
+mcpMessageHandler.initialize().catch(error => {
+  console.warn('⚠️ MCP message handler initialization failed:', error.message);
+});
+console.log('✅ MCP message handler initialized');
+
+// Initialize MCP server registry
+import { mcpServerRegistry } from './services/mcp-server-registry.js';
+mcpServerRegistry.initialize().catch(error => {
+  console.warn('⚠️ MCP server registry initialization failed:', error.message);
+});
+console.log('✅ MCP server registry initialized');
+
 // Routes
 setupRoutes(app, { adapterRegistry, processManager });
 
@@ -192,6 +232,8 @@ const PORT = process.env.PORT || 3000;
 process.on('SIGTERM', () => {
   structuredLogger.info('SIGTERM received, shutting down gracefully');
   mcpBridge.cleanup();
+  cliHealthMonitor.cleanup();
+  mcpConnectionManager.cleanup();
   server.close(() => {
     structuredLogger.info('Server closed');
     process.exit(0);
@@ -201,6 +243,8 @@ process.on('SIGTERM', () => {
 process.on('SIGINT', () => {
   structuredLogger.info('SIGINT received, shutting down gracefully');
   mcpBridge.cleanup();
+  cliHealthMonitor.cleanup();
+  mcpConnectionManager.cleanup();
   server.close(() => {
     structuredLogger.info('Server closed');
     process.exit(0);

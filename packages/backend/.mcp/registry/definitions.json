@@ -1,0 +1,90 @@
+[
+  {
+    "id": "filesystem-server",
+    "name": "filesystem",
+    "displayName": "File System Server",
+    "description": "MCP server for file system operations",
+    "version": "1.0.0",
+    "author": {
+      "name": "Vibe Code Team",
+      "email": "team@vibecode.dev"
+    },
+    "license": "MIT",
+    "tags": [
+      "filesystem",
+      "files",
+      "directories",
+      "built-in"
+    ],
+    "category": "system",
+    "transport": {
+      "type": "stdio",
+      "config": {
+        "executable": "mcp-filesystem-server",
+        "args": []
+      }
+    },
+    "capabilities": {
+      "tools": [
+        "read_file",
+        "write_file",
+        "list_directory",
+        "create_directory"
+      ],
+      "resources": [
+        "file://*"
+      ],
+      "prompts": [],
+      "features": [
+        "file_operations"
+      ]
+    },
+    "configuration": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "basePath": {
+            "type": "string",
+            "description": "Base path for file operations",
+            "default": "/Users/tribune/Desktop/AgentTool/packages/backend"
+          },
+          "allowedPaths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Allowed paths for file operations"
+          },
+          "readOnly": {
+            "type": "boolean",
+            "description": "Restrict to read-only operations",
+            "default": false
+          }
+        }
+      },
+      "defaults": {
+        "basePath": "/Users/tribune/Desktop/AgentTool/packages/backend",
+        "readOnly": false
+      },
+      "required": [
+        "basePath"
+      ],
+      "sensitive": []
+    },
+    "documentation": {
+      "readme": "Built-in file system server for basic file operations"
+    },
+    "metadata": {
+      "official": true,
+      "verified": true,
+      "experimental": false,
+      "deprecated": false,
+      "featured": true,
+      "downloadCount": 0,
+      "rating": 5,
+      "lastUpdated": "2025-07-01T19:57:51.905Z",
+      "createdAt": "2025-07-01T19:57:51.905Z"
+    },
+    "status": "active"
+  }
+]

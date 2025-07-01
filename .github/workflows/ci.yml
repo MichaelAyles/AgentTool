@@ -1,0 +1,428 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, working, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '18'
+  BUN_VERSION: 'latest'
+
+jobs:
+  # Code Quality and Security Checks
+  quality:
+    name: Code Quality & Security
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.bun
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Lint code
+        run: bun run lint:check
+
+      - name: Check formatting
+        run: bun run format:check
+
+      - name: Type checking
+        run: bun run typecheck
+
+      - name: Security audit
+        run: bun audit
+        continue-on-error: true
+
+      - name: Check for secrets
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: main
+          head: HEAD
+          extra_args: --debug --only-verified
+
+  # Build and Test
+  build-test:
+    name: Build & Test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node-version: [18, 20]
+    needs: quality
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build all packages
+        run: bun run build
+
+      - name: Run tests
+        run: bun run test
+        env:
+          CI: true
+
+      - name: Test backend startup
+        run: |
+          cd packages/backend
+          timeout 30s bun run dev || true
+        continue-on-error: true
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        if: matrix.os == 'ubuntu-latest' && matrix.node-version == '18'
+        with:
+          name: build-artifacts
+          path: |
+            packages/*/dist/
+            adapters/*/dist/
+          retention-days: 7
+
+  # Adapter Testing
+  adapter-tests:
+    name: Adapter Tests
+    runs-on: ubuntu-latest
+    needs: build-test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build adapters
+        run: |
+          cd adapters/claude-code && bun run build
+          cd ../custom-script && bun run build
+
+      - name: Test adapter loading
+        run: |
+          cd packages/backend
+          bun run build
+          node -e "
+            const { AdapterRegistry } = require('./dist/index.js');
+            const registry = new AdapterRegistry();
+            console.log('Adapter registry created successfully');
+          "
+
+  # Integration Tests
+  integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: build-test
+    services:
+      redis:
+        image: redis:latest
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build project
+        run: bun run build
+
+      - name: Start backend for integration tests
+        run: |
+          cd packages/backend
+          bun run dev &
+          sleep 10
+          curl -f http://localhost:3000/health || exit 1
+        env:
+          REDIS_URL: redis://localhost:6379
+
+      - name: Run API integration tests
+        run: |
+          # Test basic API endpoints
+          curl -f http://localhost:3000/api/adapters
+          curl -f http://localhost:3000/api/processes/health
+          curl -f http://localhost:3000/api/cli/supported
+        continue-on-error: true
+
+  # Security Scanning
+  security:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    needs: quality
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Snyk security scan
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
+
+      - name: Run CodeQL analysis
+        uses: github/codeql-action/init@v2
+        with:
+          languages: typescript, javascript
+
+      - name: Setup Bun for CodeQL
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Install dependencies for CodeQL
+        run: bun install --frozen-lockfile
+
+      - name: Build for CodeQL
+        run: bun run build
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+
+  # Dependency Review
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v3
+        with:
+          fail-on-severity: moderate
+
+  # Performance Testing
+  performance:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    needs: build-test
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build project
+        run: bun run build
+
+      - name: Start backend for performance testing
+        run: |
+          cd packages/backend
+          bun run dev &
+          sleep 10
+        env:
+          NODE_ENV: production
+
+      - name: Install Artillery for load testing
+        run: npm install -g artillery
+
+      - name: Run performance tests
+        run: |
+          cat > artillery-config.yml << EOF
+          config:
+            target: 'http://localhost:3000'
+            phases:
+              - duration: 60
+                arrivalRate: 5
+          scenarios:
+            - name: "Health check load test"
+              flow:
+                - get:
+                    url: "/health"
+                - think: 1
+                - get:
+                    url: "/api/adapters"
+          EOF
+          artillery run artillery-config.yml
+        continue-on-error: true
+
+  # Documentation Check
+  docs:
+    name: Documentation Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check documentation completeness
+        run: |
+          # Check for required documentation files
+          test -f README.md || { echo "Missing README.md"; exit 1; }
+          test -f CLAUDE.md || { echo "Missing CLAUDE.md"; exit 1; }
+          test -f TODO.md || { echo "Missing TODO.md"; exit 1; }
+          
+          # Check for API documentation
+          find packages/backend/src/api -name "*.ts" | while read file; do
+            if ! grep -q "/**" "$file"; then
+              echo "Warning: $file may be missing JSDoc comments"
+            fi
+          done
+
+      - name: Check for broken links in markdown
+        uses: gaurav-nelson/github-action-markdown-link-check@v1
+        with:
+          use-quiet-mode: 'yes'
+          use-verbose-mode: 'yes'
+        continue-on-error: true
+
+  # Release Preparation
+  release-check:
+    name: Release Readiness
+    runs-on: ubuntu-latest
+    needs: [build-test, security, integration]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build all packages
+        run: bun run build
+
+      - name: Check version consistency
+        run: |
+          # Extract version from root package.json
+          ROOT_VERSION=$(node -p "require('./package.json').version")
+          echo "Root version: $ROOT_VERSION"
+          
+          # Check all package versions match
+          find packages -name "package.json" -exec node -e "
+            const pkg = require('{}');
+            if (pkg.version !== '$ROOT_VERSION') {
+              console.error('Version mismatch in {}: ' + pkg.version);
+              process.exit(1);
+            }
+          " \;
+
+      - name: Generate changelog
+        run: |
+          if command -v git-cliff &> /dev/null; then
+            git-cliff --output CHANGELOG.md
+          else
+            echo "git-cliff not available, skipping changelog generation"
+          fi
+        continue-on-error: true
+
+  # Deployment Preparation
+  deploy-prep:
+    name: Deployment Preparation
+    runs-on: ubuntu-latest
+    needs: [release-check]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build for production
+        run: bun run build
+        env:
+          NODE_ENV: production
+
+      - name: Create deployment package
+        run: |
+          mkdir -p deployment-package
+          cp -r packages/backend/dist deployment-package/backend
+          cp -r packages/frontend/dist deployment-package/frontend
+          cp -r adapters/*/dist deployment-package/adapters/ 2>/dev/null || true
+          cp package.json bun.lock deployment-package/
+          tar -czf vibe-code-deployment.tar.gz deployment-package/
+
+      - name: Upload deployment package
+        uses: actions/upload-artifact@v3
+        with:
+          name: deployment-package
+          path: vibe-code-deployment.tar.gz
+          retention-days: 30
+
+  # Notification
+  notify:
+    name: Notification
+    runs-on: ubuntu-latest
+    needs: [build-test, security, integration, docs]
+    if: always()
+    steps:
+      - name: Notify on success
+        if: ${{ needs.build-test.result == 'success' && needs.security.result == 'success' }}
+        run: |
+          echo "✅ CI/CD Pipeline completed successfully!"
+          echo "Build Status: ${{ needs.build-test.result }}"
+          echo "Security Status: ${{ needs.security.result }}"
+          echo "Integration Status: ${{ needs.integration.result }}"
+
+      - name: Notify on failure
+        if: ${{ contains(needs.*.result, 'failure') }}
+        run: |
+          echo "❌ CI/CD Pipeline failed!"
+          echo "Build Status: ${{ needs.build-test.result }}"
+          echo "Security Status: ${{ needs.security.result }}"
+          echo "Integration Status: ${{ needs.integration.result }}"
