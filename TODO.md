@@ -100,7 +100,7 @@
 ## Advanced UI
 
 - [x] **ui-1**: Implement advanced terminal features (tabs, splits) - ✅ Complete
-- [ ] **ui-2**: Add git visualization components (diff, history)
+- [x] **ui-2**: Add git visualization components (diff, history) - ✅ Complete
 - [ ] **ui-3**: Create settings and configuration UI
 - [ ] **ui-4**: Implement adapter management interface
 - [ ] **ui-5**: Add dashboard and monitoring views
