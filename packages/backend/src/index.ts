@@ -7,6 +7,8 @@ import { setupRoutes } from './api/index.js';
 import { setupWebSocket } from './websocket/index.js';
 import { ProcessManager } from './processes/index.js';
 import { AdapterRegistry } from '@vibecode/adapter-sdk';
+import { db } from './database/index.js';
+import { v4 as uuidv4 } from 'uuid';
 
 const app = express();
 const server = createServer(app);
@@ -44,6 +46,28 @@ async function initializeAdapters() {
 
 // Initialize adapters on startup
 initializeAdapters().catch(console.error);
+
+// Ensure we have a temporary user for development
+function ensureTempUser() {
+  try {
+    const tempUser = db.getUserById('temp-user');
+    if (!tempUser) {
+      db.createUser({
+        id: 'temp-user',
+        username: 'temp',
+        email: 'temp@example.com',
+        passwordHash: 'temp',
+        roles: ['user'],
+        settings: {},
+      });
+      console.log('✅ Created temporary user for development');
+    }
+  } catch (error) {
+    console.warn('⚠️ Could not create temporary user:', error.message);
+  }
+}
+
+ensureTempUser();
 
 // Routes
 setupRoutes(app, { adapterRegistry, processManager });

@@ -1,6 +1,8 @@
 import { Express } from 'express';
 import { AdapterRegistry } from '@vibecode/adapter-sdk';
 import type { ProcessManager } from '../processes/index.js';
+import { db } from '../database/index.js';
+import { v4 as uuidv4 } from 'uuid';
 
 interface Services {
   adapterRegistry: AdapterRegistry;
@@ -26,13 +28,52 @@ export function setupRoutes(app: Express, services: Services): void {
 
   // Projects
   app.get('/api/projects', (req, res) => {
-    // TODO: Implement project listing
-    res.json([]);
+    try {
+      // For now, use a temporary user ID - this will be replaced with proper auth
+      const userId = 'temp-user';
+      const projects = db.getProjectsByUserId(userId);
+      res.json(projects);
+    } catch (error) {
+      console.error('Error fetching projects:', error);
+      res.status(500).json({ error: 'Failed to fetch projects' });
+    }
   });
 
   app.post('/api/projects', (req, res) => {
-    // TODO: Implement project creation
-    res.status(201).json({ id: 'temp-id', name: req.body.name });
+    try {
+      const { name, path, activeAdapter } = req.body;
+      
+      if (!name || !path || !activeAdapter) {
+        return res.status(400).json({ error: 'Name, path, and activeAdapter are required' });
+      }
+
+      // For now, use a temporary user ID - this will be replaced with proper auth
+      const userId = 'temp-user';
+      const projectId = uuidv4();
+      
+      const project = {
+        id: projectId,
+        name,
+        path,
+        activeAdapter,
+        settings: {},
+        gitRemote: undefined,
+      };
+      
+      db.createProject(project, userId);
+      
+      // Return the created project with timestamps
+      const createdProject = {
+        ...project,
+        created: new Date(),
+        lastAccessed: new Date(),
+      };
+      
+      res.status(201).json(createdProject);
+    } catch (error) {
+      console.error('Error creating project:', error);
+      res.status(500).json({ error: 'Failed to create project' });
+    }
   });
 
   // Sessions

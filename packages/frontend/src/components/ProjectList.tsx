@@ -1,13 +1,31 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
 
 export function ProjectList() {
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const queryClient = useQueryClient();
 
   const { data: projects, isLoading } = useQuery({
     queryKey: ['projects'],
     queryFn: api.getProjects,
+  });
+
+  const { data: adapters } = useQuery({
+    queryKey: ['adapters'],
+    queryFn: api.getAdapters,
+  });
+
+  const createProjectMutation = useMutation({
+    mutationFn: api.createProject,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      setShowCreateForm(false);
+    },
+    onError: (error) => {
+      console.error('Failed to create project:', error);
+      alert('Failed to create project. Please try again.');
+    },
   });
 
   if (isLoading) {
@@ -68,21 +86,39 @@ export function ProjectList() {
       )}
 
       {showCreateForm && (
-        <CreateProjectModal onClose={() => setShowCreateForm(false)} />
+        <CreateProjectModal 
+          onClose={() => setShowCreateForm(false)} 
+          onSubmit={createProjectMutation.mutate}
+          adapters={adapters}
+          isLoading={createProjectMutation.isPending}
+        />
       )}
     </div>
   );
 }
 
-function CreateProjectModal({ onClose }: { onClose: () => void }) {
+function CreateProjectModal({ 
+  onClose, 
+  onSubmit, 
+  adapters, 
+  isLoading 
+}: { 
+  onClose: () => void;
+  onSubmit: (data: { name: string; path: string; activeAdapter: string }) => void;
+  adapters?: Array<{ name: string; description: string; }>;
+  isLoading: boolean;
+}) {
   const [name, setName] = useState('');
   const [path, setPath] = useState('');
+  const [activeAdapter, setActiveAdapter] = useState('claude-code');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement project creation
-    console.log('Creating project:', { name, path });
-    onClose();
+    if (!name.trim() || !path.trim() || !activeAdapter) {
+      alert('Please fill in all fields');
+      return;
+    }
+    onSubmit({ name: name.trim(), path: path.trim(), activeAdapter });
   };
 
   return (
@@ -100,15 +136,33 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
               required
             />
           </div>
-          <div className="mb-6">
+          <div className="mb-4">
             <label className="block text-sm font-medium mb-2">Path</label>
             <input
               type="text"
               value={path}
               onChange={(e) => setPath(e.target.value)}
               className="input w-full"
+              placeholder="/path/to/your/project"
               required
             />
+          </div>
+          <div className="mb-6">
+            <label className="block text-sm font-medium mb-2">AI Adapter</label>
+            <select
+              value={activeAdapter}
+              onChange={(e) => setActiveAdapter(e.target.value)}
+              className="input w-full"
+              required
+            >
+              {adapters?.map((adapter) => (
+                <option key={adapter.name} value={adapter.name}>
+                  {adapter.name} - {adapter.description}
+                </option>
+              )) || (
+                <option value="claude-code">Claude Code</option>
+              )}
+            </select>
           </div>
           <div className="flex justify-end space-x-3">
             <button
@@ -118,8 +172,12 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
             >
               Cancel
             </button>
-            <button type="submit" className="btn-primary">
-              Create
+            <button 
+              type="submit" 
+              className="btn-primary"
+              disabled={isLoading}
+            >
+              {isLoading ? 'Creating...' : 'Create'}
             </button>
           </div>
         </form>

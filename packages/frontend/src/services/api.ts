@@ -23,7 +23,7 @@ class ApiService {
     return this.request<Project[]>('/projects');
   }
 
-  async createProject(data: { name: string; path: string }): Promise<Project> {
+  async createProject(data: { name: string; path: string; activeAdapter: string }): Promise<Project> {
     return this.request<Project>('/projects', {
       method: 'POST',
       body: JSON.stringify(data),
