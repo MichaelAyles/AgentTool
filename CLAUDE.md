@@ -117,7 +117,7 @@ docker compose build    # Build containers
 - `CRYSTAL_COMPARISON.md` - Competitive analysis and differentiation
 
 ## Current Status
-**Phase 2: Core Features - 46% Complete**
+**Phase 2: Core Features - 47% Complete**
 
 ✅ **Completed:**
 - Monorepo structure with Bun workspaces
@@ -130,17 +130,18 @@ docker compose build    # Build containers
 - Universal cross-platform setup script
 - Comprehensive git operations API
 - Multi-provider authentication system
-- **Role-based access control (RBAC) system**
+- Role-based access control (RBAC) system
+- **Security context management with risk scoring and monitoring**
 
 🚧 **In Progress:**
 - Real node-pty integration (currently using mock)
 
 📋 **Next Priority:**
-- Security context management
 - Command validation and filtering
 - Comprehensive audit logging
+- Dangerous mode implementation
 
-**Progress: 37/81 tasks completed (45.7%)**
+**Progress: 38/81 tasks completed (46.9%)**
 
 ## How to Run
 ```bash
