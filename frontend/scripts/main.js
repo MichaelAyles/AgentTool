@@ -59,6 +59,8 @@ class VibeApp {
     
     updateSetupCommand() {
         this.setupUuidSpan.textContent = this.setupUuid;
+        // Also populate the connection input with the same UUID
+        this.uuidInput.value = this.setupUuid;
     }
     
     async copySetupCommand() {
@@ -154,6 +156,11 @@ class VibeApp {
         this.statusPanel.classList.remove('hidden');
         this.terminalPanel.classList.remove('hidden');
         
+        // Update connection panel to show success
+        this.connectionError.textContent = '';
+        this.connectionError.style.color = 'var(--success-color, #00aa00)';
+        this.connectionError.textContent = '✅ Connected successfully!';
+        
         // Start connection timer
         this.startConnectionTimer();
         
@@ -201,6 +208,20 @@ class VibeApp {
     updateStatus(status, text) {
         this.statusIcon.className = `status-icon ${status}`;
         this.statusText.textContent = text;
+        
+        // Update connect button state based on connection status
+        if (status === 'connected') {
+            this.connectBtn.textContent = 'Connected';
+            this.connectBtn.disabled = true;
+            this.connectBtn.style.backgroundColor = 'var(--success-color, #00aa00)';
+        } else if (status === 'connecting') {
+            this.connectBtn.textContent = 'Connecting...';
+            this.connectBtn.disabled = true;
+        } else {
+            this.connectBtn.textContent = 'Connect';
+            this.connectBtn.disabled = false;
+            this.connectBtn.style.backgroundColor = '';
+        }
     }
     
     startConnectionTimer() {
@@ -355,11 +376,15 @@ class VibeApp {
         }
     }
     
-    // Check for stored UUID on load
+    // Check for stored UUID on load and attempt auto-connection
     checkStoredConnection() {
         const storedUuid = localStorage.getItem('lastConnectedUUID');
         if (storedUuid) {
             this.uuidInput.value = storedUuid;
+            // Attempt automatic connection after a short delay
+            setTimeout(() => {
+                this.connect(storedUuid);
+            }, 1000);
         }
     }
 }
