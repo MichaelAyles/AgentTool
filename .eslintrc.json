@@ -12,8 +12,8 @@
   },
   "rules": {},
   "ignorePatterns": [
-    "dist/", 
-    "node_modules/", 
+    "dist/",
+    "node_modules/",
     "*.js",
     "*.ts",
     "*.tsx",
