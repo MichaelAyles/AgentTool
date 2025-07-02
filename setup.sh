@@ -321,7 +321,10 @@ main() {
     echo -e "  Backend:   ${GREEN}http://localhost:3000${NC}"
     echo -e "  WebSocket: ${GREEN}ws://localhost:3000${NC}"
     echo ""
-    echo -e "${BLUE}🚀 Starting Vibe Code...${NC}"
+    echo -e "${GREEN}🚀 Starting Vibe Code servers...${NC}"
+    echo -e "${YELLOW}⏳ This may take a moment for the first startup...${NC}"
+    echo -e "${BLUE}💡 Watch for the ready message with clickable links!${NC}"
+    echo ""
     
     # Start the application
     if command -v bun >/dev/null 2>&1; then

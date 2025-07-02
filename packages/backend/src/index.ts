@@ -330,6 +330,16 @@ server.listen(PORT, () => {
     environment: process.env.NODE_ENV || 'development',
     port: PORT,
   });
+
+  // User-friendly console output with clickable links
+  console.log('\n🎉 Vibe Code is ready!');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('🌐 Web Application:  http://localhost:5173');
+  console.log('🔗 Backend API:      http://localhost:' + PORT);
+  console.log('⚡ WebSocket:        ws://localhost:' + PORT);
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('💡 Click the links above or copy them to your browser');
+  console.log('🛑 Press Ctrl+C to stop the servers\n');
 });
 
 export { app, server, io };
