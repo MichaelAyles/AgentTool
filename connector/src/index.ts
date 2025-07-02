@@ -1,0 +1,238 @@
+import express from 'express';
+import cors from 'cors';
+import { v4 as uuidv4 } from 'uuid';
+import { TerminalManager } from './terminal';
+import { WebSocketManager } from './websocket';
+import { SessionDatabase } from './database';
+
+export class VibeConnector {
+  private app: express.Application;
+  private terminalManager: TerminalManager;
+  private websocketManager: WebSocketManager;
+  private database: SessionDatabase;
+  private httpPort: number;
+  private wsPort: number;
+  private uuid: string;
+
+  constructor(httpPort: number = 3001, wsPort: number = 3002) {
+    this.httpPort = httpPort;
+    this.wsPort = wsPort;
+    this.uuid = uuidv4();
+
+    // Initialize components
+    this.database = new SessionDatabase();
+    this.terminalManager = new TerminalManager();
+    this.websocketManager = new WebSocketManager(this.wsPort, this.terminalManager, this.database);
+
+    // Setup Express app
+    this.app = express();
+    this.setupMiddleware();
+    this.setupRoutes();
+  }
+
+  private setupMiddleware(): void {
+    // CORS configuration
+    this.app.use(cors({
+      origin: [
+        'http://localhost:3000',
+        'http://localhost:8000',
+        'https://frontend-three-delta-48.vercel.app',
+        'https://vibe.theduck.chat',
+        /\.vercel\.app$/
+      ],
+      credentials: true
+    }));
+
+    this.app.use(express.json());
+    this.app.use(express.static('public'));
+
+    // Request logging
+    this.app.use((req, res, next) => {
+      console.log(`${new Date().toISOString()} ${req.method} ${req.path}`);
+      next();
+    });
+  }
+
+  private setupRoutes(): void {
+    // Health check endpoint
+    this.app.get('/health', (req, res) => {
+      res.json({
+        status: 'healthy',
+        uuid: this.uuid,
+        timestamp: new Date().toISOString(),
+        sessions: {
+          active: this.terminalManager.getActiveSessions().length,
+          total: this.terminalManager.getAllSessions().length
+        },
+        websocket: {
+          port: this.wsPort,
+          clients: this.websocketManager.getConnectedClients().length
+        }
+      });
+    });
+
+    // Get connector info
+    this.app.get('/info', (req, res) => {
+      res.json({
+        name: 'Vibe Coding Connector',
+        version: '0.1.0',
+        uuid: this.uuid,
+        platform: process.platform,
+        node_version: process.version,
+        uptime: process.uptime(),
+        memory: process.memoryUsage(),
+        websocket_url: `ws://localhost:${this.wsPort}`,
+        http_url: `http://localhost:${this.httpPort}`
+      });
+    });
+
+    // Generate new UUID
+    this.app.post('/generate-uuid', (req, res) => {
+      const newUuid = uuidv4();
+      res.json({ 
+        uuid: newUuid,
+        websocket_url: `ws://localhost:${this.wsPort}`,
+        instructions: [
+          `Use this UUID to connect from the web interface`,
+          `WebSocket endpoint: ws://localhost:${this.wsPort}`,
+          `Or connect directly at: https://frontend-three-delta-48.vercel.app`
+        ]
+      });
+    });
+
+    // List active sessions
+    this.app.get('/sessions', (req, res) => {
+      const dbSessions = this.database.getActiveSessions();
+      const terminalSessions = this.terminalManager.getActiveSessions();
+      
+      res.json({
+        database_sessions: dbSessions,
+        terminal_sessions: terminalSessions.map(ts => ({
+          id: ts.id,
+          uuid: ts.uuid,
+          isActive: ts.isActive,
+          createdAt: ts.createdAt,
+          lastActivity: ts.lastActivity
+        })),
+        websocket_clients: this.websocketManager.getConnectedClients().map(client => ({
+          uuid: client.uuid,
+          authenticated: client.authenticated,
+          lastPing: new Date(client.lastPing)
+        }))
+      });
+    });
+
+    // Terminate session
+    this.app.delete('/sessions/:uuid', (req, res) => {
+      const { uuid } = req.params;
+      
+      // Terminate terminal session
+      const terminated = this.terminalManager.terminateSession(uuid);
+      
+      // Update database
+      this.database.updateSessionStatus(uuid, 'terminated');
+      
+      res.json({
+        success: terminated,
+        message: terminated ? 'Session terminated' : 'Session not found'
+      });
+    });
+
+    // 404 handler
+    this.app.use((req, res) => {
+      res.status(404).json({
+        error: 'Not found',
+        available_endpoints: [
+          'GET /health',
+          'GET /info', 
+          'POST /generate-uuid',
+          'GET /sessions',
+          'DELETE /sessions/:uuid'
+        ]
+      });
+    });
+
+    // Error handler
+    this.app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+      console.error('API Error:', error);
+      res.status(500).json({
+        error: 'Internal server error',
+        message: error.message
+      });
+    });
+  }
+
+  async start(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      try {
+        // Start HTTP server
+        const server = this.app.listen(this.httpPort, () => {
+          console.log('🚀 Vibe Coding Connector Started');
+          console.log('================================');
+          console.log(`📡 HTTP API: http://localhost:${this.httpPort}`);
+          console.log(`🔌 WebSocket: ws://localhost:${this.wsPort}`);
+          console.log(`🆔 Connector UUID: ${this.uuid}`);
+          console.log('📱 Frontend: https://frontend-three-delta-48.vercel.app');
+          console.log('================================');
+          console.log('');
+          console.log('💡 Quick Start:');
+          console.log(`   1. Visit https://frontend-three-delta-48.vercel.app`);
+          console.log(`   2. Enter UUID: ${this.uuid}`);
+          console.log('   3. Start coding!');
+          console.log('');
+          
+          resolve();
+        });
+
+        server.on('error', (error) => {
+          console.error('Failed to start HTTP server:', error);
+          reject(error);
+        });
+
+        // Graceful shutdown handlers
+        process.on('SIGINT', () => this.shutdown('SIGINT'));
+        process.on('SIGTERM', () => this.shutdown('SIGTERM'));
+        process.on('uncaughtException', (error) => {
+          console.error('Uncaught Exception:', error);
+          this.shutdown('uncaughtException');
+        });
+        process.on('unhandledRejection', (reason, promise) => {
+          console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+        });
+
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  private shutdown(signal: string): void {
+    console.log(`\n🛑 Shutting down Vibe Connector (${signal})...`);
+    
+    // Cleanup resources
+    this.websocketManager.destroy();
+    this.terminalManager.destroy();
+    this.database.close();
+    
+    console.log('✅ Cleanup completed');
+    process.exit(0);
+  }
+
+  // Getters for testing/external access
+  get connector_uuid(): string { return this.uuid; }
+  get http_port(): number { return this.httpPort; }
+  get websocket_port(): number { return this.wsPort; }
+}
+
+// Export for programmatic use
+export default VibeConnector;
+
+// CLI execution
+if (require.main === module) {
+  const connector = new VibeConnector();
+  
+  connector.start().catch((error) => {
+    console.error('Failed to start Vibe Connector:', error);
+    process.exit(1);
+  });
+}
