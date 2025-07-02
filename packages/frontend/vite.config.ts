@@ -26,6 +26,13 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true,
+    sourcemap: false,
+    minify: process.env.NODE_ENV === 'production' ? 'esbuild' : false,
+    chunkSizeWarningLimit: 2000,
+    assetsDir: 'assets',
+  },
+  define: {
+    // Ensure compatibility with production builds
+    global: 'globalThis',
   },
 });

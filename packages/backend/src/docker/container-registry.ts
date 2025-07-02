@@ -1,5 +1,5 @@
 import { EventEmitter } from 'events';
-import { Docker } from 'dockerode';
+import Docker from 'dockerode';
 import { structuredLogger } from '../middleware/logging.js';
 
 export interface ContainerImage {

@@ -275,7 +275,60 @@ curl -sSL https://vibecode.com/install.sh | bash -s -- <session-id>
 
 **Current Status**: ✅ PROJECT COMPLETE - All 98 tasks implemented including Middle Manager workflow, production deployment, and seamless local agent pairing
 
-**Recent Completions**:
+## Desktop Connector Architecture (Phase 3)
+
+### 🎯 **Goal**: Unified desktop application that combines frontend, backend, and CLI tools into a single process
+
+**Architecture Overview:**
+
+- Frontend serves as web UI (deployable to Vercel)
+- Desktop connector combines backend API + CLI adapters in one process
+- Installer script downloads and sets up desktop connector locally
+- Frontend can connect to either local desktop connector or cloud backend
+
+**Tasks:**
+
+- [x] **desktop-1**: Analyze current architecture for unified desktop connector - ✅ Complete
+- [x] **desktop-2**: Create unified desktop connector entry point - ✅ Complete
+- [x] **desktop-3**: Consolidate backend and CLI adapters into single process - ✅ Complete
+- [x] **desktop-4**: Update frontend to support desktop connector setup - ✅ Complete
+- [x] **desktop-5**: Create installer script for desktop connector - ✅ Complete
+- [x] **desktop-6**: Test unified architecture end-to-end - ✅ Complete
+
+**Completed Implementation:**
+
+✅ **Desktop Connector Package** (`packages/desktop-connector/`):
+
+- Unified entry point combining backend API and CLI adapters
+- Express server with WebSocket support for real-time communication
+- CLI adapter manager for Claude Code, Gemini CLI, and custom tools
+- Process manager for running and monitoring commands
+- Project manager for local project management
+- Terminal manager with PTY support (mock fallback when node-pty unavailable)
+- Professional CLI with commands: start, stop, status, install
+
+✅ **Frontend Updates**:
+
+- Enhanced API service with automatic backend detection (local vs cloud)
+- New Setup component for desktop connector installation and configuration
+- Backend selection UI (cloud only, desktop only, auto-detect)
+- Real-time status monitoring of desktop connector
+
+✅ **Universal Installer Script** (`install-desktop.sh`):
+
+- Cross-platform support (macOS, Linux, WSL2)
+- Automatic dependency installation (Node.js, Bun, Git)
+- Repository cloning and building
+- System integration (command line tools, desktop entries)
+- Comprehensive error handling and user guidance
+
+✅ **Architecture Integration**:
+
+- Monorepo workspace configuration updated
+- Backend detection with graceful fallback
+- Unified API endpoints for both cloud and desktop modes
+
+**Recent Completions:**
 
 - Complete Bun conversion with fixed dependencies
 - Universal setup script for all platforms

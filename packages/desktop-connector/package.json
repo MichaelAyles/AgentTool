@@ -1,0 +1,41 @@
+{
+  "name": "@vibecode/desktop-connector",
+  "version": "1.0.0",
+  "description": "Unified desktop connector combining backend API and CLI adapters",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run src/index.ts",
+    "build": "bun build src/index.ts --target node --outdir dist --external node-pty --external sqlite3 --external dockerode",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "winston": "^3.13.0",
+    "simple-git": "^3.24.0",
+    "sqlite3": "^5.1.6",
+    "uuid": "^9.0.1",
+    "chokidar": "^3.6.0",
+    "dockerode": "^4.0.2",
+    "bull": "^4.12.2",
+    "ioredis": "^5.3.2",
+    "yargs": "^17.7.2",
+    "chalk": "^5.3.0",
+    "ora": "^8.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.7",
+    "@types/express": "^4.17.21",
+    "@types/cors": "^2.8.17",
+    "@types/uuid": "^9.0.8",
+    "@types/yargs": "^17.0.32",
+    "typescript": "^5.4.5"
+  },
+  "optionalDependencies": {
+    "node-pty": "^1.0.0"
+  }
+}

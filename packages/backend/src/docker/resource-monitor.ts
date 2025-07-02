@@ -1,5 +1,5 @@
 import { EventEmitter } from 'events';
-import { Docker } from 'dockerode';
+import Docker from 'dockerode';
 import { structuredLogger } from '../middleware/logging.js';
 import { sandboxManager } from './sandbox-manager.js';
 import { orchestrationManager } from './orchestration-manager.js';
