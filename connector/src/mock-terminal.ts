@@ -19,11 +19,21 @@ export class MockPtyProcess extends EventEmitter implements MockPty {
   constructor(shell: string, args: string[], options: any) {
     super();
     
-    // Create interactive shell process
-    const shellArgs = platform() === 'win32' ? [] : ['-i'];
+    // Create interactive shell process with proper environment
+    const isWindows = platform() === 'win32';
+    const shellArgs = isWindows ? [] : ['-i', '-l'];
+    
     this.process = spawn(shell, shellArgs, {
       cwd: options.cwd,
-      env: { ...options.env, PS1: '$ ' },
+      env: { 
+        ...options.env, 
+        PS1: '\\u@\\h:\\w$ ',
+        TERM: 'xterm-256color',
+        PATH: process.env.PATH,
+        HOME: process.env.HOME,
+        USER: process.env.USER,
+        SHELL: shell
+      },
       stdio: ['pipe', 'pipe', 'pipe']
     });
 
@@ -58,10 +68,11 @@ export class MockPtyProcess extends EventEmitter implements MockPty {
       }
     });
 
-    // Send initial prompt after shell starts
+    // Wait for shell to be ready, then send initial setup
     setTimeout(() => {
-      this.sendPrompt();
-    }, 500);
+      // Send a simple command to initialize the shell
+      this.process.stdin?.write('echo "Terminal ready"\n');
+    }, 1000);
   }
 
   onData(callback: (data: string) => void): void {
@@ -75,24 +86,22 @@ export class MockPtyProcess extends EventEmitter implements MockPty {
   write(data: string): void {
     // Handle special terminal commands
     if (data === '\r' || data === '\n') {
-      // Enter key - execute command and send newline
+      // Enter key - send newline to process
       this.process.stdin?.write('\n');
     } else if (data === '\u007f' || data === '\b') {
-      // Backspace
-      if (this.dataCallback) {
-        this.dataCallback('\b \b');
-      }
+      // Backspace - send to process for proper handling
+      this.process.stdin?.write('\b');
     } else if (data === '\u0003') {
       // Ctrl+C
       this.process.kill('SIGINT');
     } else if (data === '\u0004') {
       // Ctrl+D (EOF)
       this.process.stdin?.end();
+    } else if (data === '\u001b') {
+      // Escape sequences - pass through
+      this.process.stdin?.write(data);
     } else {
-      // Regular input - echo back and send to process
-      if (this.dataCallback) {
-        this.dataCallback(data);
-      }
+      // Regular input - send directly to process
       this.process.stdin?.write(data);
     }
   }
@@ -119,22 +128,8 @@ export class MockPtyProcess extends EventEmitter implements MockPty {
   }
 
   private sendPrompt(): void {
-    const platform = process.platform;
-    const cwd = process.cwd();
-    const user = process.env.USER || process.env.USERNAME || 'user';
-    const hostname = process.env.HOSTNAME || 'localhost';
-    
-    let prompt = '';
-    
-    if (platform === 'win32') {
-      prompt = `${cwd}> `;
-    } else {
-      prompt = `${user}@${hostname}:${cwd}$ `;
-    }
-    
-    if (this.dataCallback) {
-      this.dataCallback(prompt);
-    }
+    // Let the shell handle its own prompt
+    // This method is kept for compatibility but doesn't send manual prompts
   }
 }
 
