@@ -6,7 +6,7 @@ export function SessionStatus() {
   const {
     sessionId,
     isConnected,
-    connectorUrl,
+    centralServiceUrl,
     lastConnectedAt,
     openSessionManager,
     setConnected,
@@ -21,7 +21,7 @@ export function SessionStatus() {
     const interval = setInterval(checkConnectionStatus, 30000); // Check every 30 seconds
 
     return () => clearInterval(interval);
-  }, [sessionId, connectorUrl]);
+  }, [sessionId, centralServiceUrl]);
 
   const checkConnectionStatus = async () => {
     if (!sessionId) {
@@ -32,31 +32,25 @@ export function SessionStatus() {
     setIsChecking(true);
 
     try {
-      // Check if desktop connector is running
-      const healthResponse = await fetch(`${connectorUrl}/api/v1/health`);
+      // Check if central service is reachable
+      const healthResponse = await fetch(`${centralServiceUrl}/api/v1/health`);
 
       if (healthResponse.ok) {
-        const healthData = await healthResponse.json();
+        // Try to verify the session exists
+        try {
+          const sessionResponse = await fetch(
+            `${centralServiceUrl}/api/v1/sessions/${sessionId}/status`
+          );
+          const sessionConnected = sessionResponse.ok;
 
-        if (healthData.type === 'desktop-connector') {
-          // Try to verify the session exists
-          try {
-            const sessionResponse = await fetch(
-              `${connectorUrl}/api/v1/sessions/${sessionId}/status`
-            );
-            const sessionConnected = sessionResponse.ok;
-
-            setConnected(sessionConnected);
-            if (sessionConnected) {
-              updateLastConnected();
-            }
-          } catch {
-            // If session endpoint doesn't exist, assume connected if health check passed
-            setConnected(true);
+          setConnected(sessionConnected);
+          if (sessionConnected) {
             updateLastConnected();
           }
-        } else {
-          setConnected(false);
+        } catch {
+          // If session endpoint doesn't exist, assume connected if health check passed
+          setConnected(true);
+          updateLastConnected();
         }
       } else {
         setConnected(false);

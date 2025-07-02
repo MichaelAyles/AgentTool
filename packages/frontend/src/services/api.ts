@@ -1,83 +1,59 @@
 import type { Project } from '../types';
 
-// Configuration for backend selection
+// Configuration for centralized backend
 interface BackendConfig {
-  type: 'cloud' | 'local' | 'auto';
-  localUrl?: string;
-  cloudUrl?: string;
+  centralUrl: string;
+  sessionEndpoint: string;
+  streamEndpoint: string;
 }
 
-// Default configuration
+// Default configuration - always use centralized service
 const DEFAULT_CONFIG: BackendConfig = {
-  type: 'auto',
-  localUrl: 'http://localhost:3000',
-  cloudUrl: window.location.origin,
+  centralUrl: 'https://vibe.theduck.chat',
+  sessionEndpoint: '/api/v1/sessions',
+  streamEndpoint: '/api/v1/stream',
 };
 
-class BackendDetector {
+class CentralizedBackend {
   private config: BackendConfig = DEFAULT_CONFIG;
-  private detectedBackend: 'cloud' | 'local' | null = null;
 
-  async detectBackend(): Promise<string> {
-    if (this.detectedBackend && this.config.type === 'auto') {
-      return this.detectedBackend === 'local'
-        ? this.config.localUrl!
-        : this.config.cloudUrl!;
-    }
+  getApiUrl(): string {
+    return this.config.centralUrl;
+  }
 
-    if (this.config.type === 'local') {
-      return this.config.localUrl!;
-    }
+  getSessionUrl(sessionId?: string): string {
+    const base = `${this.config.centralUrl}${this.config.sessionEndpoint}`;
+    return sessionId ? `${base}/${sessionId}` : base;
+  }
 
-    if (this.config.type === 'cloud') {
-      return this.config.cloudUrl!;
-    }
+  getStreamUrl(sessionId: string): string {
+    return `${this.config.centralUrl}${this.config.streamEndpoint}/${sessionId}`;
+  }
 
-    // Auto-detect: try local first, fallback to cloud
-    try {
-      const response = await fetch(`${this.config.localUrl}/api/v1/health`, {
-        method: 'GET',
-        timeout: 2000,
-      } as any);
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.type === 'desktop-connector') {
-          this.detectedBackend = 'local';
-          return this.config.localUrl!;
-        }
-      }
-    } catch (error) {
-      // Local backend not available
-    }
-
-    // Fallback to cloud
-    this.detectedBackend = 'cloud';
-    return this.config.cloudUrl!;
+  getWebSocketUrl(sessionId: string): string {
+    const wsUrl = this.config.centralUrl
+      .replace('https:', 'wss:')
+      .replace('http:', 'ws:');
+    return `${wsUrl}/ws/${sessionId}`;
   }
 
   setConfig(config: Partial<BackendConfig>) {
     this.config = { ...this.config, ...config };
-    this.detectedBackend = null; // Reset detection
   }
 
   getConfig(): BackendConfig {
     return { ...this.config };
   }
-
-  isLocal(): boolean {
-    return this.detectedBackend === 'local';
-  }
 }
 
-const backendDetector = new BackendDetector();
+const centralizedBackend = new CentralizedBackend();
 
 class ApiService {
   private async request<T>(
     endpoint: string,
     options?: RequestInit
   ): Promise<T> {
-    const baseUrl = await backendDetector.detectBackend();
+    const baseUrl = centralizedBackend.getApiUrl();
     const response = await fetch(`${baseUrl}/api/v1${endpoint}`, {
       headers: {
         'Content-Type': 'application/json',
@@ -162,17 +138,36 @@ class ApiService {
     });
   }
 
+  // Session-based API methods
+  async getSessionStatus(sessionId: string) {
+    return this.request(`/sessions/${sessionId}/status`);
+  }
+
+  async createSession(sessionId: string) {
+    return this.request('/sessions', {
+      method: 'POST',
+      body: JSON.stringify({ sessionId }),
+    });
+  }
+
+  async sendCommand(sessionId: string, command: string) {
+    return this.request(`/sessions/${sessionId}/commands`, {
+      method: 'POST',
+      body: JSON.stringify({ command }),
+    });
+  }
+
   // Backend configuration methods
-  setBackendConfig(config: Partial<BackendConfig>) {
-    backendDetector.setConfig(config);
+  setCentralBackendConfig(config: Partial<BackendConfig>) {
+    centralizedBackend.setConfig(config);
   }
 
-  getBackendConfig(): BackendConfig {
-    return backendDetector.getConfig();
+  getCentralBackendConfig(): BackendConfig {
+    return centralizedBackend.getConfig();
   }
 
-  isLocalBackend(): boolean {
-    return backendDetector.isLocal();
+  getWebSocketUrl(sessionId: string): string {
+    return centralizedBackend.getWebSocketUrl(sessionId);
   }
 
   async getSystemInfo() {

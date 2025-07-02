@@ -1,314 +1,297 @@
-import express from 'express';
-import { createServer } from 'http';
-import { Server } from 'socket.io';
-import cors from 'cors';
-import helmet from 'helmet';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { io as ioClient, Socket } from 'socket.io-client';
 import { logger } from './utils/logger.js';
 import { CLIAdapterManager } from './services/cli-adapter-manager.js';
 import { ProcessManager } from './services/process-manager.js';
 import { ProjectManager } from './services/project-manager.js';
 import { TerminalManager } from './services/terminal-manager.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 export interface DesktopConnectorOptions {
-  port: number;
-  host: string;
+  sessionId: string;
+  centralUrl?: string;
   dataDir: string;
-  openBrowser: boolean;
-  sessionId?: string;
+  autoReconnect?: boolean;
 }
 
 export class DesktopConnector {
-  private app: express.Application;
-  private server: any;
-  private io: Server;
+  private socket: Socket;
   private cliAdapterManager: CLIAdapterManager;
   private processManager: ProcessManager;
   private projectManager: ProjectManager;
   private terminalManager: TerminalManager;
   private options: DesktopConnectorOptions;
+  private reconnectInterval?: NodeJS.Timeout;
 
   constructor(options: DesktopConnectorOptions) {
-    this.options = options;
-    this.app = express();
-    this.server = createServer(this.app);
-    this.io = new Server(this.server, {
-      cors: {
-        origin: '*',
-        methods: ['GET', 'POST'],
-      },
-    });
+    this.options = {
+      centralUrl: 'https://vibe.theduck.chat',
+      autoReconnect: true,
+      ...options,
+    };
 
-    this.setupMiddleware();
     this.initializeServices();
-    this.setupRoutes();
-    this.setupWebSocket();
-  }
-
-  private setupMiddleware() {
-    // Security middleware
-    this.app.use(
-      helmet({
-        contentSecurityPolicy: false, // Disable for local development
-        crossOriginEmbedderPolicy: false,
-      })
-    );
-
-    // CORS
-    this.app.use(
-      cors({
-        origin: true,
-        credentials: true,
-      })
-    );
-
-    // Body parsing
-    this.app.use(express.json({ limit: '10mb' }));
-    this.app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-    // Logging
-    this.app.use((req, res, next) => {
-      logger.info(`${req.method} ${req.path}`, {
-        ip: req.ip,
-        userAgent: req.get('User-Agent'),
-      });
-      next();
-    });
+    this.initializeConnection();
   }
 
   private initializeServices() {
     this.cliAdapterManager = new CLIAdapterManager(this.options.dataDir);
     this.processManager = new ProcessManager();
     this.projectManager = new ProjectManager(this.options.dataDir);
-    this.terminalManager = new TerminalManager(this.io);
+    this.terminalManager = new TerminalManager();
   }
 
-  private setupRoutes() {
-    // Health check
-    this.app.get('/api/v1/health', (req, res) => {
-      res.json({
-        status: 'healthy',
-        timestamp: new Date().toISOString(),
-        uptime: process.uptime(),
-        version: '1.0.0',
-      });
+  private initializeConnection() {
+    const socketUrl = `${this.options.centralUrl}/desktop-connector`;
+
+    logger.info('Connecting to central service', {
+      url: socketUrl,
+      sessionId: this.options.sessionId,
     });
 
-    // System information
-    this.app.get('/api/v1/system/info', (req, res) => {
-      res.json({
-        success: true,
-        data: {
-          rootDirectory: process.cwd(),
+    this.socket = ioClient(socketUrl, {
+      auth: {
+        sessionId: this.options.sessionId,
+        type: 'desktop-connector',
+        version: '1.0.0',
+      },
+      autoConnect: true,
+      reconnection: this.options.autoReconnect,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 5,
+    });
+
+    this.setupSocketHandlers();
+  }
+
+  private setupSocketHandlers() {
+    // Connection events
+    this.socket.on('connect', () => {
+      logger.info('Connected to central service', {
+        sessionId: this.options.sessionId,
+        socketId: this.socket.id,
+      });
+
+      // Register this connector with the session
+      this.socket.emit('connector:register', {
+        sessionId: this.options.sessionId,
+        metadata: {
           version: '1.0.0',
           platform: process.platform,
           nodeVersion: process.version,
+          rootDirectory: process.cwd(),
           timestamp: new Date().toISOString(),
-          type: 'desktop-connector',
-          sessionId: this.options.sessionId,
         },
       });
     });
 
-    // Session management
-    this.app.get('/api/v1/sessions/:sessionId/status', (req, res) => {
-      const { sessionId } = req.params;
-      // For now, we'll assume all sessions are valid if we have the connector running
-      // In a real implementation, you'd check if the session actually exists
-      res.json({
-        success: true,
-        data: {
-          sessionId,
-          status: 'active',
-          connectedAt: new Date().toISOString(),
-          connector: 'desktop-connector',
-        },
+    this.socket.on('disconnect', reason => {
+      logger.warn('Disconnected from central service', {
+        reason,
+        sessionId: this.options.sessionId,
       });
-    });
 
-    this.app.post('/api/v1/sessions', (req, res) => {
-      const { sessionId } = req.body;
-      // Create or activate a session
-      res.json({
-        success: true,
-        data: {
-          sessionId: sessionId || require('uuid').v4(),
-          status: 'created',
-          createdAt: new Date().toISOString(),
-        },
-      });
-    });
-
-    // Graceful shutdown
-    this.app.post('/api/v1/shutdown', (req, res) => {
-      res.json({ success: true, message: 'Shutting down...' });
-      setTimeout(() => process.exit(0), 1000);
-    });
-
-    // CLI Adapters
-    this.app.get('/api/v1/cli/adapters', async (req, res) => {
-      try {
-        const adapters = await this.cliAdapterManager.getAvailableAdapters();
-        res.json({ success: true, data: adapters });
-      } catch (error) {
-        logger.error('Error getting CLI adapters:', error);
-        res
-          .status(500)
-          .json({ success: false, error: 'Failed to get CLI adapters' });
+      if (this.options.autoReconnect && reason === 'io server disconnect') {
+        // Server-initiated disconnect, try to reconnect
+        setTimeout(() => this.socket.connect(), 1000);
       }
     });
 
-    this.app.post('/api/v1/cli/adapters/:name/install', async (req, res) => {
+    this.socket.on('connect_error', error => {
+      logger.error('Connection error', { error: error.message });
+    });
+
+    // Command execution requests from frontend
+    this.socket.on('command:execute', async data => {
       try {
-        const { name } = req.params;
-        await this.cliAdapterManager.installAdapter(name);
-        res.json({ success: true, message: `Adapter ${name} installed` });
+        logger.info('Executing command', {
+          command: data.command,
+          sessionId: data.sessionId,
+        });
+
+        const result = await this.executeCommand(
+          data.command,
+          data.options || {}
+        );
+
+        this.socket.emit('command:result', {
+          sessionId: data.sessionId,
+          commandId: data.commandId,
+          success: true,
+          result,
+        });
       } catch (error) {
-        logger.error(`Error installing adapter ${req.params.name}:`, error);
-        res
-          .status(500)
-          .json({ success: false, error: 'Failed to install adapter' });
+        logger.error('Command execution failed', { error: error.message });
+
+        this.socket.emit('command:result', {
+          sessionId: data.sessionId,
+          commandId: data.commandId,
+          success: false,
+          error: error.message,
+        });
       }
     });
 
-    // Projects
-    this.app.get('/api/v1/projects', async (req, res) => {
+    // Terminal events
+    this.socket.on('terminal:create', async data => {
+      try {
+        const terminal = await this.terminalManager.createTerminal(data);
+
+        this.socket.emit('terminal:created', {
+          sessionId: data.sessionId,
+          terminalId: data.terminalId,
+          success: true,
+          terminal,
+        });
+      } catch (error) {
+        this.socket.emit('terminal:created', {
+          sessionId: data.sessionId,
+          terminalId: data.terminalId,
+          success: false,
+          error: error.message,
+        });
+      }
+    });
+
+    this.socket.on('terminal:input', data => {
+      this.terminalManager.handleInput(data.terminalId, data.input);
+    });
+
+    this.socket.on('terminal:resize', data => {
+      this.terminalManager.resize(data.terminalId, data.size);
+    });
+
+    // Process management
+    this.socket.on('process:start', async data => {
+      try {
+        const process = await this.processManager.startProcess(data);
+
+        this.socket.emit('process:started', {
+          sessionId: data.sessionId,
+          processId: data.processId,
+          success: true,
+          process,
+        });
+      } catch (error) {
+        this.socket.emit('process:started', {
+          sessionId: data.sessionId,
+          processId: data.processId,
+          success: false,
+          error: error.message,
+        });
+      }
+    });
+
+    // Project management
+    this.socket.on('project:list', async data => {
       try {
         const projects = await this.projectManager.getProjects();
-        res.json({ success: true, data: projects });
+
+        this.socket.emit('project:list:result', {
+          sessionId: data.sessionId,
+          success: true,
+          projects,
+        });
       } catch (error) {
-        logger.error('Error getting projects:', error);
-        res
-          .status(500)
-          .json({ success: false, error: 'Failed to get projects' });
+        this.socket.emit('project:list:result', {
+          sessionId: data.sessionId,
+          success: false,
+          error: error.message,
+        });
       }
     });
 
-    this.app.post('/api/v1/projects', async (req, res) => {
+    this.socket.on('project:create', async data => {
       try {
-        const project = await this.projectManager.createProject(req.body);
-        res.json({ success: true, data: project });
+        const project = await this.projectManager.createProject(data.project);
+
+        this.socket.emit('project:created', {
+          sessionId: data.sessionId,
+          success: true,
+          project,
+        });
       } catch (error) {
-        logger.error('Error creating project:', error);
-        res
-          .status(500)
-          .json({ success: false, error: 'Failed to create project' });
+        this.socket.emit('project:created', {
+          sessionId: data.sessionId,
+          success: false,
+          error: error.message,
+        });
       }
-    });
-
-    // Processes
-    this.app.get('/api/v1/processes', async (req, res) => {
-      try {
-        const processes = await this.processManager.getProcesses();
-        res.json({ success: true, data: processes });
-      } catch (error) {
-        logger.error('Error getting processes:', error);
-        res
-          .status(500)
-          .json({ success: false, error: 'Failed to get processes' });
-      }
-    });
-
-    this.app.post('/api/v1/processes', async (req, res) => {
-      try {
-        const process = await this.processManager.startProcess(req.body);
-        res.json({ success: true, data: process });
-      } catch (error) {
-        logger.error('Error starting process:', error);
-        res
-          .status(500)
-          .json({ success: false, error: 'Failed to start process' });
-      }
-    });
-
-    // Serve static files (for embedded frontend)
-    const frontendPath = path.join(__dirname, '../../frontend/dist');
-    this.app.use(express.static(frontendPath));
-
-    // SPA fallback
-    this.app.get('*', (req, res) => {
-      res.sendFile(path.join(frontendPath, 'index.html'));
     });
   }
 
-  private setupWebSocket() {
-    this.io.on('connection', socket => {
-      logger.info('Client connected', { socketId: socket.id });
+  private async executeCommand(
+    command: string,
+    options: any = {}
+  ): Promise<any> {
+    // This will be implemented based on the CLI adapter system
+    logger.info('Executing command', { command, options });
 
-      socket.on('disconnect', () => {
-        logger.info('Client disconnected', { socketId: socket.id });
-        this.terminalManager.cleanup(socket.id);
-      });
-
-      // Terminal events
-      socket.on('terminal:create', async data => {
-        try {
-          await this.terminalManager.createTerminal(socket, data);
-        } catch (error) {
-          socket.emit('terminal:created', {
-            success: false,
-            error:
-              error instanceof Error
-                ? error.message
-                : 'Failed to create terminal',
-          });
-        }
-      });
-
-      socket.on('terminal:input', data => {
-        this.terminalManager.handleInput(socket.id, data);
-      });
-
-      socket.on('terminal:resize', data => {
-        this.terminalManager.resize(socket.id, data);
-      });
-
-      // Process events
-      socket.on('process:start', async data => {
-        try {
-          const process = await this.processManager.startProcess(data);
-          socket.emit('process:started', { success: true, data: process });
-        } catch (error) {
-          socket.emit('process:started', {
-            success: false,
-            error: error.message,
-          });
-        }
-      });
-    });
+    // For now, just return a mock result
+    return {
+      command,
+      output: `Mock output for: ${command}`,
+      exitCode: 0,
+      timestamp: new Date().toISOString(),
+    };
   }
 
   async start(): Promise<void> {
     return new Promise((resolve, reject) => {
-      this.server.listen(
-        this.options.port,
-        this.options.host,
-        (error?: Error) => {
-          if (error) {
-            reject(error);
-          } else {
-            logger.info('Desktop connector started', {
-              host: this.options.host,
-              port: this.options.port,
-              dataDir: this.options.dataDir,
-            });
-            resolve();
-          }
+      // Connect to central service
+      this.socket.connect();
+
+      // Wait for successful connection
+      this.socket.once('connect', () => {
+        logger.info('Desktop connector started', {
+          sessionId: this.options.sessionId,
+          centralUrl: this.options.centralUrl,
+          dataDir: this.options.dataDir,
+        });
+        resolve();
+      });
+
+      this.socket.once('connect_error', error => {
+        logger.error('Failed to connect to central service', { error });
+        reject(error);
+      });
+
+      // Set a timeout for connection
+      setTimeout(() => {
+        if (!this.socket.connected) {
+          reject(
+            new Error(
+              'Connection timeout - could not connect to central service'
+            )
+          );
         }
-      );
+      }, 10000);
     });
   }
 
   async stop(): Promise<void> {
     return new Promise(resolve => {
-      this.server.close(() => {
-        logger.info('Desktop connector stopped');
-        resolve();
+      if (this.reconnectInterval) {
+        clearInterval(this.reconnectInterval);
+      }
+
+      this.socket.disconnect();
+
+      logger.info('Desktop connector stopped', {
+        sessionId: this.options.sessionId,
       });
+
+      resolve();
     });
+  }
+
+  isConnected(): boolean {
+    return this.socket?.connected || false;
+  }
+
+  getSessionId(): string {
+    return this.options.sessionId;
+  }
+
+  getCentralUrl(): string {
+    return this.options.centralUrl!;
   }
 }

@@ -22,34 +22,34 @@ async function main() {
   const argv = await yargs(hideBin(process.argv))
     .scriptName('vibe-code-desktop')
     .usage('$0 <command> [options]')
-    .command('start', 'Start the desktop connector server', yargs => {
-      return yargs.options({
-        port: {
-          type: 'number',
-          default: 3000,
-          description: 'Port to run the server on',
-        },
-        host: {
-          type: 'string',
-          default: 'localhost',
-          description: 'Host to bind the server to',
-        },
-        'data-dir': {
-          type: 'string',
-          default: '~/.vibe-code',
-          description: 'Directory to store application data',
-        },
-        'session-id': {
-          type: 'string',
-          description: 'Session ID for this connector instance',
-        },
-        'open-browser': {
-          type: 'boolean',
-          default: true,
-          description: 'Open browser after starting',
-        },
-      });
-    })
+    .command(
+      'start',
+      'Start the desktop connector and connect to central service',
+      yargs => {
+        return yargs.options({
+          'session-id': {
+            type: 'string',
+            required: true,
+            description: 'Session ID for this connector instance (required)',
+          },
+          'central-url': {
+            type: 'string',
+            default: 'https://vibe.theduck.chat',
+            description: 'Central service URL to connect to',
+          },
+          'data-dir': {
+            type: 'string',
+            default: '~/.vibe-code',
+            description: 'Directory to store application data',
+          },
+          'auto-reconnect': {
+            type: 'boolean',
+            default: true,
+            description: 'Automatically reconnect if connection is lost',
+          },
+        });
+      }
+    )
     .command('status', 'Check desktop connector status')
     .command('stop', 'Stop the desktop connector')
     .command('install', 'Install desktop connector', yargs => {
@@ -101,33 +101,42 @@ async function main() {
 }
 
 async function handleStart(options: any) {
-  const spinner = ora('Starting Vibe Code Desktop Connector...').start();
+  const spinner = ora('Connecting to Vibe Code central service...').start();
 
   try {
+    // Validate session ID
+    if (!options.sessionId) {
+      throw new Error('Session ID is required. Use --session-id <uuid>');
+    }
+
     const connector = new DesktopConnector({
-      port: options.port,
-      host: options.host,
-      dataDir: options.dataDir,
-      openBrowser: options.openBrowser,
       sessionId: options.sessionId,
+      centralUrl: options.centralUrl,
+      dataDir: options.dataDir,
+      autoReconnect: options.autoReconnect,
     });
 
     await connector.start();
 
     spinner.succeed(
-      `Desktop connector started on ${chalk.cyan(`http://${options.host}:${options.port}`)}`
+      `Desktop connector connected to ${chalk.cyan(options.centralUrl)}`
     );
 
-    if (options.sessionId) {
-      console.log(
-        `${chalk.blue('Session ID:')} ${chalk.cyan(options.sessionId)}`
-      );
-    }
-
-    if (options.openBrowser) {
-      const open = await import('open');
-      await open.default(`http://${options.host}:${options.port}`);
-    }
+    console.log(
+      `${chalk.blue('Session ID:')} ${chalk.cyan(options.sessionId)}`
+    );
+    console.log(
+      `${chalk.blue('Central Service:')} ${chalk.cyan(options.centralUrl)}`
+    );
+    console.log(
+      `${chalk.blue('Data Directory:')} ${chalk.cyan(options.dataDir)}`
+    );
+    console.log();
+    console.log(chalk.green('✓ Ready to receive commands from frontend'));
+    console.log(
+      chalk.yellow('  Frontend can now connect using this session ID')
+    );
+    console.log(chalk.gray('  Press Ctrl+C to stop'));
 
     // Handle graceful shutdown
     process.on('SIGINT', async () => {
@@ -145,27 +154,34 @@ async function handleStart(options: any) {
     // Keep the process alive
     process.stdin.resume();
   } catch (error) {
-    spinner.fail('Failed to start desktop connector');
+    spinner.fail('Failed to connect to central service');
     throw error;
   }
 }
 
 async function handleStatus() {
-  const spinner = ora('Checking status...').start();
+  const spinner = ora('Checking connection status...').start();
 
   try {
-    // Check if server is running by trying to connect
-    const response = await fetch('http://localhost:3000/api/v1/health');
+    // Check if central service is accessible
+    const response = await fetch('https://vibe.theduck.chat/api/v1/health');
     const data = await response.json();
 
-    spinner.succeed('Desktop connector is running');
-    console.log(chalk.green('✓ Status: Running'));
-    console.log(chalk.blue('✓ API: Available'));
-    console.log(chalk.blue(`✓ Uptime: ${data.uptime || 'Unknown'}`));
-    console.log(chalk.blue(`✓ URL: http://localhost:3000`));
+    spinner.succeed('Central service is accessible');
+    console.log(chalk.green('✓ Central Service: Available'));
+    console.log(chalk.blue('✓ URL: https://vibe.theduck.chat'));
+    console.log(
+      chalk.gray('  Note: This checks if the central service is reachable.')
+    );
+    console.log(
+      chalk.gray(
+        '  To check if a specific session is active, use the session ID.'
+      )
+    );
   } catch (error) {
-    spinner.fail('Desktop connector is not running');
-    console.log(chalk.red('✗ Status: Stopped'));
+    spinner.fail('Cannot reach central service');
+    console.log(chalk.red('✗ Central Service: Unreachable'));
+    console.log(chalk.gray('  Check your internet connection and try again.'));
   }
 }
 
@@ -173,10 +189,21 @@ async function handleStop() {
   const spinner = ora('Stopping desktop connector...').start();
 
   try {
-    await fetch('http://localhost:3000/api/v1/shutdown', { method: 'POST' });
-    spinner.succeed('Desktop connector stopped');
+    // Since the new architecture doesn't run a local server,
+    // stopping is handled by the process itself (Ctrl+C)
+    spinner.warn('Desktop connector runs as a streaming client');
+    console.log(chalk.yellow('To stop the desktop connector:'));
+    console.log(
+      chalk.gray("  1. Use Ctrl+C in the terminal where it's running")
+    );
+    console.log(chalk.gray('  2. Or kill the process directly'));
+    console.log(
+      chalk.gray(
+        '  3. The connector will automatically disconnect from the central service'
+      )
+    );
   } catch (error) {
-    spinner.warn('Desktop connector may not be running');
+    spinner.fail('Could not determine connector status');
   }
 }
 

@@ -7,7 +7,7 @@ export function SessionInitializer() {
     isConnected,
     openSessionManager,
     setConnected,
-    connectorUrl,
+    centralServiceUrl,
   } = useSessionStore();
 
   useEffect(() => {
@@ -25,24 +25,19 @@ export function SessionInitializer() {
       return;
     }
 
-    // If we have a session ID, try to verify it's still valid
+    // If we have a session ID, try to verify the central service is reachable
     try {
-      const response = await fetch(`${connectorUrl}/api/v1/health`);
+      const response = await fetch(`${centralServiceUrl}/api/v1/health`);
       if (response.ok) {
-        const data = await response.json();
-        if (data.type === 'desktop-connector') {
-          // Try to check session status
-          try {
-            const sessionResponse = await fetch(
-              `${connectorUrl}/api/v1/sessions/${sessionId}/status`
-            );
-            setConnected(sessionResponse.ok);
-          } catch {
-            // If session endpoint doesn't exist, assume connected if health check passed
-            setConnected(true);
-          }
-        } else {
-          setConnected(false);
+        // Try to check session status
+        try {
+          const sessionResponse = await fetch(
+            `${centralServiceUrl}/api/v1/sessions/${sessionId}/status`
+          );
+          setConnected(sessionResponse.ok);
+        } catch {
+          // If session endpoint doesn't exist, assume connected if health check passed
+          setConnected(true);
         }
       } else {
         setConnected(false);

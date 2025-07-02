@@ -1,28 +1,50 @@
 import { useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { useSessionStore } from '../stores/sessionStore';
 
 let socket: Socket | null = null;
 
 export function useSocket(): Socket | null {
   const [socketInstance, setSocketInstance] = useState<Socket | null>(null);
+  const { sessionId, centralServiceUrl } = useSessionStore();
 
   useEffect(() => {
-    if (!socket) {
-      socket = io('/', {
+    if (!socket && sessionId) {
+      // Connect to centralized service with session ID
+      socket = io(`${centralServiceUrl}/frontend`, {
+        auth: {
+          sessionId,
+          type: 'frontend',
+          version: '1.0.0',
+        },
         transports: ['websocket', 'polling'],
         autoConnect: true,
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionAttempts: 5,
       });
 
       socket.on('connect', () => {
-        console.log('Socket connected:', socket?.id);
+        console.log('Socket connected to central service:', socket?.id);
+        console.log('Session ID:', sessionId);
       });
 
       socket.on('disconnect', reason => {
-        console.log('Socket disconnected:', reason);
+        console.log('Socket disconnected from central service:', reason);
       });
 
       socket.on('error', error => {
         console.error('Socket error:', error);
+      });
+
+      // Register frontend with the session
+      socket.emit('frontend:register', {
+        sessionId,
+        metadata: {
+          version: '1.0.0',
+          userAgent: navigator.userAgent,
+          timestamp: new Date().toISOString(),
+        },
       });
     }
 
@@ -32,7 +54,7 @@ export function useSocket(): Socket | null {
       // Don't disconnect on unmount, keep connection alive
       // socket?.disconnect();
     };
-  }, []);
+  }, [sessionId, centralServiceUrl]);
 
   return socketInstance;
 }

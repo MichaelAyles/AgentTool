@@ -19,8 +19,8 @@ interface SessionManagerProps {
 interface SessionStatus {
   hasActiveSession: boolean;
   sessionId?: string;
-  connectorRunning: boolean;
-  connectorUrl: string;
+  centralServiceReachable: boolean;
+  centralServiceUrl: string;
 }
 
 export function SessionManager({
@@ -30,8 +30,8 @@ export function SessionManager({
 }: SessionManagerProps) {
   const [sessionStatus, setSessionStatus] = useState<SessionStatus>({
     hasActiveSession: false,
-    connectorRunning: false,
-    connectorUrl: 'http://localhost:3000',
+    centralServiceReachable: false,
+    centralServiceUrl: 'https://vibe.theduck.chat',
   });
   const [inputSessionId, setInputSessionId] = useState('');
   const [newSessionId, setNewSessionId] = useState('');
@@ -53,48 +53,40 @@ export function SessionManager({
     setIsChecking(true);
 
     try {
-      // Check if desktop connector is running
+      // Check if central service is reachable
       const response = await fetch(
-        `${sessionStatus.connectorUrl}/api/v1/health`
+        `${sessionStatus.centralServiceUrl}/api/v1/health`
       );
       const data = await response.json();
 
-      if (data.type === 'desktop-connector') {
-        // Check for existing session
-        const currentSessionId = localStorage.getItem('vibe-code-session-id');
-        let hasActiveSession = false;
+      // Check for existing session
+      const currentSessionId = localStorage.getItem('vibe-code-session-id');
+      let hasActiveSession = false;
 
-        if (currentSessionId) {
-          try {
-            const sessionResponse = await fetch(
-              `${sessionStatus.connectorUrl}/api/v1/sessions/${currentSessionId}/status`
-            );
-            hasActiveSession = sessionResponse.ok;
-          } catch {
-            // Session doesn't exist or connector doesn't support session checking
-            hasActiveSession = false;
-          }
+      if (currentSessionId) {
+        try {
+          const sessionResponse = await fetch(
+            `${sessionStatus.centralServiceUrl}/api/v1/sessions/${currentSessionId}/status`
+          );
+          hasActiveSession = sessionResponse.ok;
+        } catch {
+          // Session doesn't exist or is not active
+          hasActiveSession = false;
         }
-
-        setSessionStatus({
-          hasActiveSession,
-          sessionId: hasActiveSession ? currentSessionId : undefined,
-          connectorRunning: true,
-          connectorUrl: sessionStatus.connectorUrl,
-        });
-      } else {
-        setSessionStatus(prev => ({
-          ...prev,
-          hasActiveSession: false,
-          connectorRunning: false,
-        }));
       }
+
+      setSessionStatus({
+        hasActiveSession,
+        sessionId: hasActiveSession ? currentSessionId : undefined,
+        centralServiceReachable: true,
+        centralServiceUrl: sessionStatus.centralServiceUrl,
+      });
     } catch (error) {
-      // Desktop connector not available
+      // Central service not available
       setSessionStatus(prev => ({
         ...prev,
         hasActiveSession: false,
-        connectorRunning: false,
+        centralServiceReachable: false,
       }));
     } finally {
       setIsChecking(false);
@@ -125,8 +117,8 @@ export function SessionManager({
     onClose();
   };
 
-  const openConnectorInNewTab = () => {
-    window.open(sessionStatus.connectorUrl, '_blank');
+  const openCentralServiceInNewTab = () => {
+    window.open(sessionStatus.centralServiceUrl, '_blank');
   };
 
   const getConnectorCommand = () => {
@@ -158,18 +150,18 @@ export function SessionManager({
         <div className='p-4 space-y-4'>
           {/* Status */}
           <div className='flex items-center space-x-2 text-sm'>
-            {sessionStatus.connectorRunning ? (
+            {sessionStatus.centralServiceReachable ? (
               <>
                 <Wifi className='w-4 h-4 text-green-600' />
                 <span className='text-green-700'>
-                  Desktop connector running
+                  Central service available
                 </span>
               </>
             ) : (
               <>
                 <WifiOff className='w-4 h-4 text-red-600' />
                 <span className='text-red-700'>
-                  Desktop connector not detected
+                  Central service unreachable
                 </span>
               </>
             )}
@@ -260,77 +252,53 @@ export function SessionManager({
 
               {/* Desktop Connector Instructions */}
               <div className='space-y-3'>
-                {sessionStatus.connectorRunning ? (
-                  /* Connector is running */
-                  <div>
-                    <p className='text-sm text-gray-600 mb-2'>
-                      Desktop connector is running. Click to start this session:
-                    </p>
-                    <div className='flex space-x-2'>
-                      <button
-                        onClick={handleStartNewSession}
-                        className='bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700 transition-colors flex items-center space-x-2'
-                      >
-                        <Terminal className='w-4 h-4' />
-                        <span>Start Session</span>
-                      </button>
-                      <button
-                        onClick={openConnectorInNewTab}
-                        className='bg-gray-600 text-white px-4 py-2 rounded text-sm hover:bg-gray-700 transition-colors flex items-center space-x-2'
-                      >
-                        <ExternalLink className='w-4 h-4' />
-                        <span>Open Connector</span>
-                      </button>
-                    </div>
+                <div>
+                  <p className='text-sm text-gray-600 mb-2'>
+                    Start the desktop connector with this session:
+                  </p>
+                  <div className='bg-black text-green-400 rounded p-3 font-mono text-xs mb-2 overflow-x-auto'>
+                    {getConnectorCommand()}
                   </div>
-                ) : (
-                  /* Connector not running */
-                  <div>
-                    <p className='text-sm text-gray-600 mb-2'>
-                      Start the desktop connector with this session:
+                  <div className='flex space-x-2'>
+                    <button
+                      onClick={() =>
+                        copyToClipboard(getConnectorCommand(), 'command')
+                      }
+                      className='bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700 transition-colors flex items-center space-x-2'
+                    >
+                      <Copy className='w-4 h-4' />
+                      <span>Copy Command</span>
+                    </button>
+                    <button
+                      onClick={handleStartNewSession}
+                      className='bg-green-600 text-white px-3 py-2 rounded text-sm hover:bg-green-700 transition-colors'
+                    >
+                      Use Session ID
+                    </button>
+                  </div>
+                  {copySuccess === 'command' && (
+                    <p className='text-xs text-green-600 mt-1'>
+                      Command copied!
                     </p>
-                    <div className='bg-black text-green-400 rounded p-3 font-mono text-xs mb-2 overflow-x-auto'>
-                      {getConnectorCommand()}
-                    </div>
-                    <div className='flex space-x-2'>
-                      <button
-                        onClick={() =>
-                          copyToClipboard(getConnectorCommand(), 'command')
-                        }
-                        className='bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700 transition-colors flex items-center space-x-2'
-                      >
-                        <Copy className='w-4 h-4' />
-                        <span>Copy Command</span>
-                      </button>
-                      <button
-                        onClick={handleStartNewSession}
-                        className='bg-green-600 text-white px-3 py-2 rounded text-sm hover:bg-green-700 transition-colors'
-                      >
-                        Use Session ID
-                      </button>
-                    </div>
-                    {copySuccess === 'command' && (
-                      <p className='text-xs text-green-600 mt-1'>
-                        Command copied!
-                      </p>
-                    )}
+                  )}
 
-                    <div className='mt-3 p-3 bg-blue-50 border border-blue-200 rounded'>
-                      <p className='text-xs text-blue-800'>
-                        💡 After running the command, the desktop connector will
-                        be available at{' '}
-                        <a
-                          href={sessionStatus.connectorUrl}
-                          target='_blank'
-                          rel='noopener noreferrer'
-                          className='underline hover:text-blue-900'
-                        >
-                          {sessionStatus.connectorUrl}
-                        </a>
-                      </p>
-                    </div>
+                  <div className='mt-3 p-3 bg-blue-50 border border-blue-200 rounded'>
+                    <p className='text-xs text-blue-800'>
+                      💡 After running the command, the desktop connector will
+                      stream to{' '}
+                      <a
+                        href={sessionStatus.centralServiceUrl}
+                        target='_blank'
+                        rel='noopener noreferrer'
+                        className='underline hover:text-blue-900'
+                      >
+                        {sessionStatus.centralServiceUrl}
+                      </a>{' '}
+                      and this frontend will automatically connect via the
+                      session ID.
+                    </p>
                   </div>
-                )}
+                </div>
               </div>
             </div>
           </div>

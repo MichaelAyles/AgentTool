@@ -4,14 +4,14 @@ import { persist } from 'zustand/middleware';
 interface SessionState {
   sessionId: string | null;
   isConnected: boolean;
-  connectorUrl: string;
+  centralServiceUrl: string;
   lastConnectedAt: Date | null;
   showSessionManager: boolean;
 
   // Actions
   setSessionId: (sessionId: string) => void;
   setConnected: (connected: boolean) => void;
-  setConnectorUrl: (url: string) => void;
+  setCentralServiceUrl: (url: string) => void;
   openSessionManager: () => void;
   closeSessionManager: () => void;
   clearSession: () => void;
@@ -23,7 +23,7 @@ export const useSessionStore = create<SessionState>()(
     set => ({
       sessionId: null,
       isConnected: false,
-      connectorUrl: 'http://localhost:3000',
+      centralServiceUrl: 'https://vibe.theduck.chat',
       lastConnectedAt: null,
       showSessionManager: false,
 
@@ -39,7 +39,7 @@ export const useSessionStore = create<SessionState>()(
           lastConnectedAt: connected ? new Date() : undefined,
         }),
 
-      setConnectorUrl: (url: string) => set({ connectorUrl: url }),
+      setCentralServiceUrl: (url: string) => set({ centralServiceUrl: url }),
 
       openSessionManager: () => set({ showSessionManager: true }),
 
@@ -59,7 +59,7 @@ export const useSessionStore = create<SessionState>()(
       name: 'vibe-code-session',
       partialize: state => ({
         sessionId: state.sessionId,
-        connectorUrl: state.connectorUrl,
+        centralServiceUrl: state.centralServiceUrl,
         lastConnectedAt: state.lastConnectedAt,
       }),
     }
