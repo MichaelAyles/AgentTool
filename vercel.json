@@ -1,15 +1,6 @@
 {
-  "version": 2,
-  "name": "vibe-code-frontend",
-  "builds": [
-    {
-      "src": "packages/frontend/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
-    }
-  ],
+  "buildCommand": "cd packages/frontend && npm install && npm run vercel-build",
+  "outputDirectory": "packages/frontend/dist",
   "routes": [
     {
       "src": "/api/(.*)",
