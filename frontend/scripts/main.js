@@ -8,11 +8,14 @@ class VibeApp {
         this.reconnectAttempts = 0;
         this.maxReconnectAttempts = 5;
         this.currentUuid = this.generateUUID();
+        this.connectionStateDebounceTimer = null;
+        this.lastConnectionState = null;
         
         this.initializeElements();
         this.attachEventListeners();
         this.updateUuidDisplay();
         this.initializeTheme();
+        this.checkConnectorAvailability();
     }
     
     initializeElements() {
@@ -29,9 +32,7 @@ class VibeApp {
         this.copyInstallBtn = document.getElementById('copy-install');
         this.installCommand = document.getElementById('install-command');
         
-        // Status elements
-        this.statusIcon = document.getElementById('status-icon');
-        this.statusText = document.getElementById('status-text');
+        // Status elements (removed - using single button approach)
         this.sessionIdSpan = document.getElementById('session-id');
         this.connectionTimeSpan = document.getElementById('connection-time');
         this.disconnectBtn = document.getElementById('disconnect-btn');
@@ -128,6 +129,24 @@ class VibeApp {
         }
     }
     
+    async checkConnectorAvailability() {
+        try {
+            const response = await fetch('http://localhost:3001/health', { 
+                method: 'GET',
+                signal: AbortSignal.timeout(3000)
+            });
+            if (response.ok) {
+                this.setConnectionState('available');
+            } else {
+                this.setConnectionState('no-connection');
+            }
+        } catch (error) {
+            this.setConnectionState('no-connection');
+            // Retry check in 5 seconds
+            setTimeout(() => this.checkConnectorAvailability(), 5000);
+        }
+    }
+
     handleConnect() {
         if (!this.validateUuid()) return;
         
@@ -154,7 +173,12 @@ class VibeApp {
             
             this.wsConnection.onclose = (event) => {
                 console.log('WebSocket disconnected:', event.code, event.reason);
-                this.handleConnectionError('Connection closed');
+                // Only show connection closed if it wasn't an intentional disconnect
+                if (event.code !== 1000 && this.lastConnectionState !== 'disconnected') {
+                    this.handleConnectionError('Connection closed');
+                } else {
+                    this.setConnectionState('disconnected');
+                }
             };
             
             this.wsConnection.onerror = (error) => {
@@ -162,13 +186,13 @@ class VibeApp {
                 this.handleConnectionError('Unable to connect to desktop connector. Make sure it is running on localhost:3002');
             };
             
-            // Connection timeout
+            // Connection timeout - increased to reduce premature timeouts
             setTimeout(() => {
                 if (this.wsConnection.readyState === WebSocket.CONNECTING) {
                     this.wsConnection.close();
                     this.handleConnectionError('Connection timeout. Make sure desktop connector is running.');
                 }
-            }, 10000);
+            }, 15000);
             
         } catch (error) {
             console.error('Failed to create WebSocket connection:', error);
@@ -199,10 +223,15 @@ class VibeApp {
         
         if (this.reconnectAttempts < this.maxReconnectAttempts) {
             this.reconnectAttempts++;
+            // Exponential backoff with minimum 3 seconds to reduce flickering
+            const delay = Math.max(3000, 2000 * this.reconnectAttempts);
             setTimeout(() => {
                 this.showError(`Reconnecting... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
                 this.handleConnect();
-            }, 2000 * this.reconnectAttempts);
+            }, delay);
+        } else {
+            // After max reconnect attempts, go back to checking availability
+            setTimeout(() => this.checkConnectorAvailability(), 10000);
         }
     }
     
@@ -222,6 +251,9 @@ class VibeApp {
         this.sessionId = null;
         this.connectionStartTime = null;
         this.reconnectAttempts = 0;
+        
+        // After disconnect, check if connector is still available
+        setTimeout(() => this.checkConnectorAvailability(), 2000);
     }
     
     async killConnector() {
@@ -250,35 +282,66 @@ class VibeApp {
     }
     
     setConnectionState(state) {
-        // Update status indicator
-        this.statusIcon.className = `status-icon ${state}`;
+        // Clear any existing debounce timer
+        if (this.connectionStateDebounceTimer) {
+            clearTimeout(this.connectionStateDebounceTimer);
+        }
         
-        // Update button and text
+        // Don't update if state hasn't changed
+        if (this.lastConnectionState === state) {
+            return;
+        }
+        
+        // For immediate feedback on user actions, don't debounce connecting state
+        if (state === 'connecting' && this.lastConnectionState === 'disconnected') {
+            this.updateConnectionStateUI(state);
+            this.lastConnectionState = state;
+            return;
+        }
+        
+        // Debounce other state changes to prevent flickering
+        this.connectionStateDebounceTimer = setTimeout(() => {
+            this.updateConnectionStateUI(state);
+            this.lastConnectionState = state;
+        }, 300);
+    }
+    
+    updateConnectionStateUI(state) {
         const btn = this.connectBtn;
         const btnText = btn.querySelector('.btn-text');
         
-        btn.classList.remove('connecting', 'connected');
+        // Remove all state classes
+        btn.classList.remove('no-connection', 'available', 'connected', 'disconnected');
         
         switch (state) {
+            case 'no-connection':
+                btn.classList.add('no-connection');
+                btnText.textContent = 'No Connection Found';
+                btn.disabled = true;
+                break;
+                
+            case 'available':
+                btn.classList.add('available');
+                btnText.textContent = 'Connect to Terminal';
+                btn.disabled = false;
+                break;
+                
             case 'connecting':
-                this.statusText.textContent = 'Connecting...';
-                btn.classList.add('connecting');
+                btn.classList.add('available'); // Use blue color while connecting
                 btnText.textContent = 'Connecting...';
                 btn.disabled = true;
                 break;
                 
             case 'connected':
-                this.statusText.textContent = 'Connected';
                 btn.classList.add('connected');
                 btnText.textContent = 'Connected';
                 btn.disabled = true;
                 break;
                 
             case 'disconnected':
-            default:
-                this.statusText.textContent = 'Disconnected';
-                btnText.textContent = 'Connect to Terminal';
-                btn.disabled = false;
+                btn.classList.add('disconnected');
+                btnText.textContent = 'Disconnected';
+                btn.disabled = true;
                 break;
         }
     }

@@ -299,6 +299,57 @@ body {
     flex-wrap: wrap;
 }
 
+.connection-btn {
+    border: none;
+    border-radius: 0.75rem;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    position: relative;
+    overflow: hidden;
+    min-width: 200px;
+    justify-content: center;
+}
+
+/* No Connection Found - Gray */
+.connection-btn.no-connection {
+    background: var(--bg-secondary);
+    color: var(--text-tertiary);
+    cursor: not-allowed;
+}
+
+/* Connect to Terminal - Blue */
+.connection-btn.available {
+    background: var(--accent-primary);
+    color: white;
+}
+
+.connection-btn.available:hover {
+    background: var(--accent-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgb(59 130 246 / 0.4);
+}
+
+/* Connected - Green */
+.connection-btn.connected {
+    background: var(--success-color);
+    color: white;
+    cursor: default;
+}
+
+/* Disconnected - Gentle Red */
+.connection-btn.disconnected {
+    background: #dc3545;
+    color: white;
+    cursor: default;
+}
+
+/* Connecting state - keep current primary-btn styles for backwards compatibility */
 .primary-btn {
     background: var(--accent-primary);
     color: white;
