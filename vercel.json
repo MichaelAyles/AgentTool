@@ -1,5 +1,5 @@
 {
-  "buildCommand": "cd packages/frontend && npm install && npm run vercel-build",
+  "buildCommand": "npm run vercel-build",
   "outputDirectory": "packages/frontend/dist",
   "routes": [
     {

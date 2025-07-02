@@ -28,7 +28,8 @@
     "clean": "bun run --filter '*' clean",
     "prepare": "husky install",
     "setup": "bun install && bun run build",
-    "pre-commit": "lint-staged"
+    "pre-commit": "lint-staged",
+    "vercel-build": "cd packages/frontend && npm install && npm run vercel-build"
   },
   "devDependencies": {
     "@playwright/test": "^1.53.2",
