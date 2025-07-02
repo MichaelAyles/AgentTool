@@ -45,6 +45,7 @@ import dockerSandboxingRouter from './docker-sandboxing.js';
 import containerOrchestrationRouter from './container-orchestration.js';
 import dockerResourceMonitoringRouter from './docker-resource-monitoring.js';
 import dockerCleanupRouter from './docker-cleanup.js';
+import validationRouter from './validation.js';
 
 interface Services {
   adapterRegistry: AdapterRegistry;
@@ -146,6 +147,9 @@ export function setupRoutes(app: Express, services: Services): void {
 
   // Docker cleanup
   app.use('/api/cleanup', dockerCleanupRouter);
+
+  // Validation and Middle Manager workflow
+  app.use('/api/validation', validationRouter);
 
   // Adapters
   app.get('/api/adapters', (req, res) => {

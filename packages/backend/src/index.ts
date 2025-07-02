@@ -247,6 +247,13 @@ mcpServerRegistry.initialize().catch(error => {
 });
 console.log('✅ MCP server registry initialized');
 
+// Initialize validation storage
+import { validationStorage } from './services/validation-storage.js';
+validationStorage.initializeDatabase().catch(error => {
+  console.warn('⚠️ Validation storage initialization failed:', error.message);
+});
+console.log('✅ Validation storage initialized');
+
 // Routes
 setupRoutes(app, { adapterRegistry, processManager });
 
