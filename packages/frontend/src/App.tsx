@@ -6,6 +6,7 @@ import { Settings } from './components/Settings';
 import { ProcessMonitor } from './components/ProcessMonitor';
 import { NotificationCenter } from './components/NotificationCenter';
 import { CLIManager } from './components/cli';
+import { LocalAgentConnection } from './pages/LocalAgentConnection';
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
           <Route path='/terminal/:sessionId' element={<Terminal />} />
           <Route path='/monitor' element={<ProcessMonitor />} />
           <Route path='/cli' element={<CLIManager />} />
+          <Route path='/connect' element={<LocalAgentConnection />} />
           <Route path='/settings' element={<Settings />} />
         </Routes>
       </Layout>

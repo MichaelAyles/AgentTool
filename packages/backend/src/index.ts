@@ -2,6 +2,11 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cookieParser from 'cookie-parser';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 import { setupRoutes } from './api/index.js';
 import { setupWebSocket } from './websocket/index.js';
 import { ProcessManager } from './processes/index.js';
@@ -19,6 +24,11 @@ import {
   sanitizeInput,
   structuredLogger,
 } from './middleware/index.js';
+import {
+  metricsMiddleware,
+  metricsHandler,
+  metrics,
+} from './middleware/metrics.js';
 
 const app = express();
 const server = createServer(app);
@@ -61,6 +71,9 @@ app.use(sanitizeInput());
 // Logging middleware
 app.use(requestLogger);
 app.use(errorLogger);
+
+// Metrics middleware
+app.use(metricsMiddleware);
 
 // Services
 const adapterRegistry = new AdapterRegistry();
@@ -247,8 +260,27 @@ mcpServerRegistry.initialize().catch(error => {
 });
 console.log('✅ MCP server registry initialized');
 
+// Initialize validation storage
+import { validationStorage } from './services/validation-storage.js';
+validationStorage.initializeDatabase().catch(error => {
+  console.warn('⚠️ Validation storage initialization failed:', error.message);
+});
+console.log('✅ Validation storage initialized');
+
+// Serve install script
+const projectRoot = path.resolve(__dirname, '../../../');
+app.get('/install.sh', (req, res) => {
+  const installScriptPath = path.join(projectRoot, 'install.sh');
+  res.setHeader('Content-Type', 'text/plain');
+  res.setHeader('Content-Disposition', 'inline; filename="install.sh"');
+  res.sendFile(installScriptPath);
+});
+
 // Routes
 setupRoutes(app, { adapterRegistry, processManager });
+
+// Metrics endpoint
+app.get('/metrics', metricsHandler);
 
 // WebSocket
 setupWebSocket(io, { adapterRegistry, processManager });

@@ -1,0 +1,392 @@
+version: '3.8'
+
+services:
+  # Production Redis with persistence
+  redis:
+    image: redis:7-alpine
+    container_name: vibe-code-redis-prod
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data_prod:/data
+      - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    command: redis-server /usr/local/etc/redis/redis.conf
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - vibe-code-network
+    restart: unless-stopped
+
+  # Production PostgreSQL with backup
+  postgres:
+    image: postgres:15-alpine
+    container_name: vibe-code-postgres-prod
+    environment:
+      POSTGRES_DB: vibecode
+      POSTGRES_USER: vibecode
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_INITDB_ARGS: '--auth-host=scram-sha-256'
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+      - ./backups/postgres:/backups
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U vibecode -d vibecode']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - vibe-code-network
+    restart: unless-stopped
+
+  # Production Backend
+  backend:
+    build:
+      context: .
+      dockerfile: packages/backend/Dockerfile
+      target: production
+    image: vibe-code-backend:latest
+    container_name: vibe-code-backend-prod
+    ports:
+      - '3000:3000'
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      REDIS_URL: redis://redis:6379
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      SESSION_SECRET: ${SESSION_SECRET}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      GOOGLE_AI_API_KEY: ${GOOGLE_AI_API_KEY}
+      DANGEROUS_MODE_ENABLED: ${DANGEROUS_MODE_ENABLED:-false}
+      AUDIT_LOG_LEVEL: ${AUDIT_LOG_LEVEL:-info}
+      METRICS_ENABLED: true
+      HEALTH_CHECK_ENABLED: true
+    volumes:
+      - backend_logs_prod:/app/logs
+      - backend_config_prod:/app/.config
+      - backend_tmp_prod:/app/.tmp
+      - ./backups/backend:/app/backups
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '2.0'
+        reservations:
+          memory: 1G
+          cpus: '1.0'
+      replicas: 2
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:3000/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - vibe-code-network
+    restart: unless-stopped
+
+  # Production Frontend
+  frontend:
+    build:
+      context: .
+      dockerfile: packages/frontend/Dockerfile
+      target: production
+      args:
+        VITE_API_URL: ${VITE_API_URL}
+    image: vibe-code-frontend:latest
+    container_name: vibe-code-frontend-prod
+    ports:
+      - '80:80'
+    environment:
+      VITE_API_URL: ${VITE_API_URL}
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+      replicas: 2
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:80']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - vibe-code-network
+    restart: unless-stopped
+
+  # Production Nginx Load Balancer
+  nginx:
+    image: nginx:alpine
+    container_name: vibe-code-nginx-prod
+    ports:
+      - '443:443'
+      - '80:80'
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/ssl:/etc/nginx/ssl:ro
+      - nginx_logs_prod:/var/log/nginx
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
+        reservations:
+          memory: 128M
+          cpus: '0.25'
+    depends_on:
+      - frontend
+      - backend
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:80/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - vibe-code-network
+    restart: unless-stopped
+
+  # Monitoring Stack
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: vibe-code-prometheus-prod
+    ports:
+      - '9090:9090'
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./docker/prometheus/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+      - prometheus_data_prod:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=720h'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+    networks:
+      - vibe-code-network
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: vibe-code-grafana-prod
+    ports:
+      - '3001:3000'
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD}
+      GF_SECURITY_ADMIN_USER: admin
+      GF_USERS_ALLOW_SIGN_UP: false
+      GF_INSTALL_PLUGINS: grafana-clock-panel,grafana-simple-json-datasource
+    volumes:
+      - grafana_data_prod:/var/lib/grafana
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+    depends_on:
+      - prometheus
+    networks:
+      - vibe-code-network
+    restart: unless-stopped
+
+  # Log Management
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.10.0
+    container_name: vibe-code-elasticsearch-prod
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - 'ES_JAVA_OPTS=-Xms1g -Xmx1g'
+      - cluster.name=vibe-code-logs
+      - node.name=vibe-code-es-01
+    ports:
+      - '9200:9200'
+    volumes:
+      - elasticsearch_data_prod:/usr/share/elasticsearch/data
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '2.0'
+        reservations:
+          memory: 1G
+          cpus: '1.0'
+    networks:
+      - vibe-code-network
+    restart: unless-stopped
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.10.0
+    container_name: vibe-code-logstash-prod
+    ports:
+      - '5044:5044'
+      - '9600:9600'
+    volumes:
+      - ./docker/logstash/pipeline:/usr/share/logstash/pipeline:ro
+      - ./docker/logstash/config:/usr/share/logstash/config:ro
+    environment:
+      - 'LS_JAVA_OPTS=-Xmx512m -Xms512m'
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+    depends_on:
+      - elasticsearch
+    networks:
+      - vibe-code-network
+    restart: unless-stopped
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.10.0
+    container_name: vibe-code-kibana-prod
+    ports:
+      - '5601:5601'
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+      SERVER_NAME: vibe-code-kibana
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+    depends_on:
+      - elasticsearch
+    networks:
+      - vibe-code-network
+    restart: unless-stopped
+
+  # System Monitoring
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: vibe-code-node-exporter
+    ports:
+      - '9100:9100'
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    networks:
+      - vibe-code-network
+    restart: unless-stopped
+
+  # Container Monitoring
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: vibe-code-cadvisor
+    ports:
+      - '8080:8080'
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    privileged: true
+    devices:
+      - /dev/kmsg
+    networks:
+      - vibe-code-network
+    restart: unless-stopped
+
+  # Backup Service
+  backup:
+    build:
+      context: ./docker/backup
+      dockerfile: Dockerfile
+    container_name: vibe-code-backup
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: vibecode
+      POSTGRES_USER: vibecode
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      BACKUP_SCHEDULE: ${BACKUP_SCHEDULE:-0 2 * * *}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      BACKUP_S3_BUCKET: ${BACKUP_S3_BUCKET}
+    volumes:
+      - ./backups:/backups
+      - postgres_data_prod:/var/lib/postgresql/data:ro
+      - backend_logs_prod:/app/logs:ro
+    depends_on:
+      - postgres
+    networks:
+      - vibe-code-network
+    restart: unless-stopped
+
+volumes:
+  redis_data_prod:
+  postgres_data_prod:
+  backend_logs_prod:
+  backend_config_prod:
+  backend_tmp_prod:
+  nginx_logs_prod:
+  prometheus_data_prod:
+  grafana_data_prod:
+  elasticsearch_data_prod:
+
+networks:
+  vibe-code-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
