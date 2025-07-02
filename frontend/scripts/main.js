@@ -7,49 +7,70 @@ class VibeApp {
         this.connectionTimer = null;
         this.reconnectAttempts = 0;
         this.maxReconnectAttempts = 5;
-        
-        // Generate a UUID for new installations
-        this.setupUuid = this.generateUUID();
+        this.currentUuid = this.generateUUID();
         
         this.initializeElements();
         this.attachEventListeners();
-        this.updateSetupCommand();
+        this.updateUuidDisplay();
+        this.initializeTheme();
     }
     
     initializeElements() {
-        // Connection panel elements
+        // UUID elements
         this.uuidInput = document.getElementById('uuid-input');
+        this.regenerateBtn = document.getElementById('regenerate-uuid');
+        this.copyUuidBtn = document.getElementById('copy-uuid');
+        this.commandUuidSpan = document.getElementById('command-uuid');
+        this.uuidError = document.getElementById('uuid-error');
+        
+        // Connection elements
         this.connectBtn = document.getElementById('connect-btn');
         this.connectionError = document.getElementById('connection-error');
-        this.setupUuidSpan = document.getElementById('setup-uuid');
-        this.copySetupBtn = document.getElementById('copy-setup');
+        this.copyInstallBtn = document.getElementById('copy-install');
+        this.installCommand = document.getElementById('install-command');
         
-        // Status panel elements
-        this.statusPanel = document.getElementById('status-panel');
+        // Status elements
         this.statusIcon = document.getElementById('status-icon');
         this.statusText = document.getElementById('status-text');
-        this.connectionDetails = document.getElementById('connection-details');
         this.sessionIdSpan = document.getElementById('session-id');
         this.connectionTimeSpan = document.getElementById('connection-time');
         this.disconnectBtn = document.getElementById('disconnect-btn');
         
-        // Terminal panel
-        this.terminalPanel = document.getElementById('terminal-panel');
+        // Terminal elements
+        this.terminalSection = document.getElementById('terminal-section');
         this.terminalContainer = document.getElementById('terminal-container');
+        
+        // Theme toggle
+        this.themeToggle = document.getElementById('theme-toggle');
     }
     
     attachEventListeners() {
+        // UUID controls
+        this.regenerateBtn.addEventListener('click', () => this.regenerateUuid());
+        this.copyUuidBtn.addEventListener('click', () => this.copyUuid());
+        this.uuidInput.addEventListener('input', (e) => this.handleUuidInput(e));
+        this.uuidInput.addEventListener('blur', () => this.validateUuid());
+        
+        // Connection controls
         this.connectBtn.addEventListener('click', () => this.handleConnect());
-        this.uuidInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') this.handleConnect();
-        });
-        this.uuidInput.addEventListener('input', () => this.clearError());
-        this.copySetupBtn.addEventListener('click', () => this.copySetupCommand());
+        this.copyInstallBtn.addEventListener('click', () => this.copyInstallCommand());
         this.disconnectBtn.addEventListener('click', () => this.disconnect());
+        
+        // Theme toggle
+        this.themeToggle.addEventListener('click', () => this.toggleTheme());
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    this.handleConnect();
+                }
+            }
+        });
     }
     
     generateUUID() {
-        // Generate a v4 UUID
         return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
             const r = Math.random() * 16 | 0;
             const v = c === 'x' ? r : (r & 0x3 | 0x8);
@@ -57,51 +78,60 @@ class VibeApp {
         });
     }
     
-    updateSetupCommand() {
-        this.setupUuidSpan.textContent = this.setupUuid;
-        // Also populate the connection input with the same UUID
-        this.uuidInput.value = this.setupUuid;
+    regenerateUuid() {
+        this.currentUuid = this.generateUUID();
+        this.updateUuidDisplay();
+        this.showSuccessMessage('New UUID generated!');
     }
     
-    async copySetupCommand() {
-        const command = document.getElementById('setup-command').textContent;
+    updateUuidDisplay() {
+        this.uuidInput.value = this.currentUuid;
+        this.commandUuidSpan.textContent = this.currentUuid;
+    }
+    
+    handleUuidInput(e) {
+        this.currentUuid = e.target.value;
+        this.commandUuidSpan.textContent = this.currentUuid;
+        this.clearError();
+    }
+    
+    validateUuid() {
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (this.currentUuid && !uuidRegex.test(this.currentUuid)) {
+            this.showUuidError('Invalid UUID format');
+            return false;
+        }
+        this.clearUuidError();
+        return true;
+    }
+    
+    async copyUuid() {
+        try {
+            await navigator.clipboard.writeText(this.currentUuid);
+            this.showSuccessMessage('UUID copied to clipboard!');
+        } catch (err) {
+            console.error('Failed to copy UUID:', err);
+            this.showUuidError('Failed to copy UUID');
+        }
+    }
+    
+    async copyInstallCommand() {
+        const command = this.installCommand.textContent;
         try {
             await navigator.clipboard.writeText(command);
-            
-            // Visual feedback
-            const originalContent = this.copySetupBtn.innerHTML;
-            this.copySetupBtn.innerHTML = '✓ Copied!';
-            this.copySetupBtn.style.color = 'var(--success-color)';
-            
-            setTimeout(() => {
-                this.copySetupBtn.innerHTML = originalContent;
-                this.copySetupBtn.style.color = '';
-            }, 2000);
+            this.showSuccessMessage('Install command copied!');
         } catch (err) {
-            console.error('Failed to copy:', err);
-            this.showError('Failed to copy to clipboard');
+            console.error('Failed to copy command:', err);
+            this.showError('Failed to copy install command');
         }
     }
     
     handleConnect() {
-        const uuid = this.uuidInput.value.trim();
+        if (!this.validateUuid()) return;
         
-        // Validate UUID format
-        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-        if (!uuidRegex.test(uuid)) {
-            this.showError('Please enter a valid UUID');
-            return;
-        }
-        
-        this.connect(uuid);
-    }
-    
-    connect(uuid) {
         this.clearError();
-        this.updateStatus('connecting', 'Connecting...');
-        this.connectBtn.disabled = true;
+        this.setConnectionState('connecting');
         
-        // Connect to desktop connector WebSocket
         const wsUrl = 'ws://localhost:3002';
         
         try {
@@ -109,10 +139,9 @@ class VibeApp {
             
             this.wsConnection.onopen = () => {
                 console.log('WebSocket connected');
-                // Send authentication message
                 this.sendMessage({
                     type: 'auth',
-                    uuid: uuid,
+                    uuid: this.currentUuid,
                     timestamp: Date.now()
                 });
             };
@@ -131,7 +160,7 @@ class VibeApp {
                 this.handleConnectionError('Unable to connect to desktop connector. Make sure it is running on localhost:3002');
             };
             
-            // Set connection timeout
+            // Connection timeout
             setTimeout(() => {
                 if (this.wsConnection.readyState === WebSocket.CONNECTING) {
                     this.wsConnection.close();
@@ -150,21 +179,12 @@ class VibeApp {
         this.connectionStartTime = Date.now();
         this.reconnectAttempts = 0;
         
-        this.updateStatus('connected', 'Connected');
+        this.setConnectionState('connected');
         this.sessionIdSpan.textContent = uuid.substring(0, 8) + '...';
-        this.connectionDetails.classList.remove('hidden');
-        this.statusPanel.classList.remove('hidden');
-        this.terminalPanel.classList.remove('hidden');
+        this.terminalSection.classList.remove('hidden');
         
-        // Update connection panel to show success
-        this.connectionError.textContent = '';
-        this.connectionError.style.color = 'var(--success-color, #00aa00)';
-        this.connectionError.textContent = '✅ Connected successfully!';
-        
-        // Start connection timer
+        this.showSuccessMessage('✅ Connected successfully!');
         this.startConnectionTimer();
-        
-        // Initialize terminal (placeholder for now)
         this.initializeTerminal();
         
         // Store UUID for reconnection
@@ -172,15 +192,14 @@ class VibeApp {
     }
     
     handleConnectionError(message) {
-        this.updateStatus('disconnected', 'Disconnected');
+        this.setConnectionState('disconnected');
         this.showError(message);
-        this.connectBtn.disabled = false;
         
         if (this.reconnectAttempts < this.maxReconnectAttempts) {
             this.reconnectAttempts++;
             setTimeout(() => {
                 this.showError(`Reconnecting... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
-                this.connect(this.sessionId);
+                this.handleConnect();
             }, 2000 * this.reconnectAttempts);
         }
     }
@@ -190,10 +209,8 @@ class VibeApp {
             this.wsConnection.close();
         }
         
-        this.updateStatus('disconnected', 'Disconnected');
-        this.connectionDetails.classList.add('hidden');
-        this.terminalPanel.classList.add('hidden');
-        this.connectBtn.disabled = false;
+        this.setConnectionState('disconnected');
+        this.terminalSection.classList.add('hidden');
         
         if (this.connectionTimer) {
             clearInterval(this.connectionTimer);
@@ -205,22 +222,37 @@ class VibeApp {
         this.reconnectAttempts = 0;
     }
     
-    updateStatus(status, text) {
-        this.statusIcon.className = `status-icon ${status}`;
-        this.statusText.textContent = text;
+    setConnectionState(state) {
+        // Update status indicator
+        this.statusIcon.className = `status-icon ${state}`;
         
-        // Update connect button state based on connection status
-        if (status === 'connected') {
-            this.connectBtn.textContent = 'Connected';
-            this.connectBtn.disabled = true;
-            this.connectBtn.style.backgroundColor = 'var(--success-color, #00aa00)';
-        } else if (status === 'connecting') {
-            this.connectBtn.textContent = 'Connecting...';
-            this.connectBtn.disabled = true;
-        } else {
-            this.connectBtn.textContent = 'Connect';
-            this.connectBtn.disabled = false;
-            this.connectBtn.style.backgroundColor = '';
+        // Update button and text
+        const btn = this.connectBtn;
+        const btnText = btn.querySelector('.btn-text');
+        
+        btn.classList.remove('connecting', 'connected');
+        
+        switch (state) {
+            case 'connecting':
+                this.statusText.textContent = 'Connecting...';
+                btn.classList.add('connecting');
+                btnText.textContent = 'Connecting...';
+                btn.disabled = true;
+                break;
+                
+            case 'connected':
+                this.statusText.textContent = 'Connected';
+                btn.classList.add('connected');
+                btnText.textContent = 'Connected';
+                btn.disabled = true;
+                break;
+                
+            case 'disconnected':
+            default:
+                this.statusText.textContent = 'Disconnected';
+                btnText.textContent = 'Connect to Terminal';
+                btn.disabled = false;
+                break;
         }
     }
     
@@ -234,50 +266,40 @@ class VibeApp {
     }
     
     initializeTerminal() {
-        // Create terminal display area
         this.terminalContainer.innerHTML = `
             <div id="terminal-output" style="
                 color: #00ff00; 
-                background: #000; 
-                padding: 1rem; 
-                font-family: 'Courier New', monospace; 
+                background: transparent; 
+                padding: 0;
+                font-family: var(--font-mono);
                 font-size: 14px;
-                height: 400px;
+                height: 350px;
                 overflow-y: auto;
-                border: 1px solid #333;
                 white-space: pre-wrap;
+                margin-bottom: 1rem;
             "></div>
             <div id="terminal-input-area" style="
                 display: flex;
-                margin-top: 8px;
                 align-items: center;
-                background: #000;
-                border: 1px solid #333;
-                padding: 4px;
+                background: rgba(0, 255, 0, 0.1);
+                border: 1px solid rgba(0, 255, 0, 0.3);
+                border-radius: 0.5rem;
+                padding: 0.5rem;
             ">
-                <span style="color: #00ff00; font-family: monospace;">$</span>
+                <span style="color: #00ff00; font-family: var(--font-mono); margin-right: 0.5rem;">$</span>
                 <input type="text" id="terminal-input" style="
                     flex: 1;
                     background: transparent;
                     border: none;
                     color: #00ff00;
-                    font-family: 'Courier New', monospace;
+                    font-family: var(--font-mono);
                     font-size: 14px;
-                    padding: 4px 8px;
                     outline: none;
                 " placeholder="Enter command...">
             </div>
-            <style>
-                @keyframes blink {
-                    0%, 50% { opacity: 1; }
-                    51%, 100% { opacity: 0; }
-                }
-            </style>
         `;
         
-        // Set up terminal input handling
         const terminalInput = document.getElementById('terminal-input');
-        const terminalOutput = document.getElementById('terminal-output');
         
         terminalInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
@@ -302,22 +324,9 @@ class VibeApp {
         terminalInput.focus();
         
         // Initial terminal message
-        this.appendToTerminal(`Terminal connected to session ${this.sessionId}\n`);
+        this.appendToTerminal(`Welcome to Vibe Coding Terminal\n`);
+        this.appendToTerminal(`Session: ${this.sessionId}\n`);
         this.appendToTerminal(`Type commands and press Enter to execute\n\n`);
-    }
-    
-    showError(message) {
-        this.connectionError.textContent = message;
-    }
-    
-    clearError() {
-        this.connectionError.textContent = '';
-    }
-    
-    sendMessage(message) {
-        if (this.wsConnection && this.wsConnection.readyState === WebSocket.OPEN) {
-            this.wsConnection.send(JSON.stringify(message));
-        }
     }
     
     handleWebSocketMessage(event) {
@@ -348,7 +357,6 @@ class VibeApp {
                     break;
                     
                 case 'ping':
-                    // Respond to ping with pong
                     this.sendMessage({
                         type: 'pong',
                         timestamp: Date.now()
@@ -356,7 +364,6 @@ class VibeApp {
                     break;
                     
                 case 'pong':
-                    // Handle pong response
                     break;
                     
                 default:
@@ -371,22 +378,76 @@ class VibeApp {
         const terminalOutput = document.getElementById('terminal-output');
         if (terminalOutput) {
             terminalOutput.textContent += text;
-            // Auto-scroll to bottom
             terminalOutput.scrollTop = terminalOutput.scrollHeight;
         }
     }
     
-    // Check for stored UUID on load and attempt auto-connection
+    sendMessage(message) {
+        if (this.wsConnection && this.wsConnection.readyState === WebSocket.OPEN) {
+            this.wsConnection.send(JSON.stringify(message));
+        }
+    }
+    
+    // Theme management
+    initializeTheme() {
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        this.setTheme(savedTheme);
+    }
+    
+    toggleTheme() {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        this.setTheme(newTheme);
+    }
+    
+    setTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+    }
+    
+    // Message helpers
+    showError(message) {
+        this.connectionError.textContent = message;
+        this.connectionError.style.color = 'var(--error-color)';
+        setTimeout(() => this.clearError(), 5000);
+    }
+    
+    showUuidError(message) {
+        this.uuidError.textContent = message;
+        setTimeout(() => this.clearUuidError(), 5000);
+    }
+    
+    showSuccessMessage(message) {
+        this.connectionError.textContent = message;
+        this.connectionError.style.color = 'var(--success-color)';
+        setTimeout(() => this.clearError(), 3000);
+    }
+    
+    clearError() {
+        this.connectionError.textContent = '';
+    }
+    
+    clearUuidError() {
+        this.uuidError.textContent = '';
+    }
+    
+    // Auto-connection for returning users
     checkStoredConnection() {
         const storedUuid = localStorage.getItem('lastConnectedUUID');
         if (storedUuid) {
-            this.uuidInput.value = storedUuid;
-            // Attempt automatic connection after a short delay
+            this.currentUuid = storedUuid;
+            this.updateUuidDisplay();
+            // Attempt automatic connection after a delay
             setTimeout(() => {
-                this.connect(storedUuid);
+                this.handleConnect();
             }, 1000);
         }
     }
+}
+
+// Global functions
+function showAbout() {
+    alert('Vibe Coding - Remote Terminal Access\\n\\nBuilt with ❤️ for developers\\n\\nConnect to your local terminal from anywhere with secure WebSocket connections.');
 }
 
 // Initialize the application when DOM is ready

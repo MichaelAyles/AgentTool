@@ -1,73 +1,135 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vibe Coding - Terminal Access</title>
+    <title>Vibe Coding - Remote Terminal Access</title>
     <link rel="stylesheet" href="/styles/main.css">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>Vibe Coding</h1>
-            <p class="tagline">Access your terminal from anywhere</p>
+    <div class="app">
+        <!-- Header with theme toggle -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">
+                    <h1>Vibe Coding</h1>
+                    <p class="tagline">Remote terminal access made simple</p>
+                </div>
+                <div class="header-controls">
+                    <button id="theme-toggle" class="theme-toggle" title="Toggle theme">
+                        <svg class="sun-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="5"/>
+                            <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                        </svg>
+                        <svg class="moon-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
         </header>
 
-        <main>
-            <div id="connection-panel" class="panel">
-                <h2>Connect to Desktop</h2>
-                
-                <div class="connection-method">
-                    <h3>Connect with UUID</h3>
-                    <p>Enter the UUID from your desktop connector:</p>
-                    <div class="input-group">
-                        <input type="text" 
-                               id="uuid-input" 
-                               placeholder="e.g., 550e8400-e29b-41d4-a716-446655440000"
-                               pattern="[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
-                               maxlength="36">
-                        <button id="connect-btn" class="primary-btn">Connect</button>
+        <!-- Main content -->
+        <main class="main">
+            <!-- Hero section with UUID -->
+            <section class="hero">
+                <div class="hero-content">
+                    <h2>Your Session UUID</h2>
+                    <div class="uuid-section">
+                        <div class="uuid-display">
+                            <input type="text" id="uuid-input" class="uuid-input" 
+                                   placeholder="Click to edit or generate new UUID"
+                                   pattern="[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+                                   maxlength="36">
+                            <div class="uuid-controls">
+                                <button id="regenerate-uuid" class="icon-btn" title="Generate new UUID">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="23 4 23 10 17 10"/>
+                                        <polyline points="1 20 1 14 7 14"/>
+                                        <path d="m3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                                    </svg>
+                                </button>
+                                <button id="copy-uuid" class="icon-btn" title="Copy UUID">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div id="uuid-error" class="error-message"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Connection section -->
+            <section class="connection-section">
+                <div class="card">
+                    <h3>Quick Start</h3>
+                    <div class="steps">
+                        <div class="step">
+                            <div class="step-number">1</div>
+                            <div class="step-content">
+                                <h4>Install Connector</h4>
+                                <div class="install-command">
+                                    <code id="install-command">curl -fsSL https://raw.githubusercontent.com/MichaelAyles/AgentTool/main/install.sh | bash -s <span id="command-uuid">loading...</span></code>
+                                    <button id="copy-install" class="icon-btn" title="Copy command">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="step">
+                            <div class="step-number">2</div>
+                            <div class="step-content">
+                                <h4>Connect</h4>
+                                <div class="connect-controls">
+                                    <button id="connect-btn" class="primary-btn">
+                                        <span class="btn-text">Connect to Terminal</span>
+                                        <div class="btn-loading">
+                                            <div class="spinner"></div>
+                                        </div>
+                                    </button>
+                                    <div class="connection-status">
+                                        <div id="status-icon" class="status-icon disconnected"></div>
+                                        <span id="status-text">Disconnected</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div id="connection-error" class="error-message"></div>
                 </div>
+            </section>
 
-                <div class="divider">OR</div>
-
-                <div class="setup-method">
-                    <h3>New Installation</h3>
-                    <p>Install the desktop connector on your machine:</p>
-                    <div class="setup-script">
-                        <code id="setup-command">curl -fsSL https://raw.githubusercontent.com/MichaelAyles/AgentTool/main/install.sh | bash -s <span id="setup-uuid">generating...</span></code>
-                        <button id="copy-setup" class="secondary-btn" title="Copy to clipboard">
-                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                                <path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V2zm2 0v8h8V2H6zM2 6a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1H8v1H2V8h1V6H2z"/>
-                            </svg>
-                        </button>
+            <!-- Terminal section -->
+            <section id="terminal-section" class="terminal-section hidden">
+                <div class="card">
+                    <div class="terminal-header">
+                        <h3>Terminal Session</h3>
+                        <div class="terminal-controls">
+                            <div class="session-info">
+                                <span>Session: <span id="session-id">loading...</span></span>
+                                <span>Duration: <span id="connection-time">0:00</span></span>
+                            </div>
+                            <button id="disconnect-btn" class="secondary-btn">Disconnect</button>
+                        </div>
                     </div>
-                    <p class="note">Run this command in your terminal to install and connect automatically</p>
+                    <div id="terminal-container" class="terminal-container"></div>
                 </div>
-            </div>
-
-            <div id="status-panel" class="panel hidden">
-                <h2>Connection Status</h2>
-                <div class="status-indicator">
-                    <div id="status-icon" class="status-icon disconnected"></div>
-                    <span id="status-text">Disconnected</span>
-                </div>
-                <div id="connection-details" class="details hidden">
-                    <p>Session ID: <span id="session-id"></span></p>
-                    <p>Connected for: <span id="connection-time">0:00</span></p>
-                    <button id="disconnect-btn" class="secondary-btn">Disconnect</button>
-                </div>
-            </div>
-
-            <div id="terminal-panel" class="panel hidden">
-                <div id="terminal-container"></div>
-            </div>
+            </section>
         </main>
 
-        <footer>
-            <p>&copy; 2025 Vibe Coding. <a href="https://github.com/MichaelAyles/AgentTool">GitHub</a></p>
+        <!-- Footer -->
+        <footer class="footer">
+            <p>&copy; 2025 Vibe Coding. Built with ❤️ for developers.</p>
+            <div class="footer-links">
+                <a href="https://github.com/MichaelAyles/AgentTool" target="_blank">GitHub</a>
+                <a href="#" onclick="showAbout()">About</a>
+            </div>
         </footer>
     </div>
 
