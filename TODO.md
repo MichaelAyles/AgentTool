@@ -189,4 +189,4 @@
 - Use WebSockets for real-time terminal streaming
 - Keep security in mind from the beginning
 - Test on all target platforms early and often
-- Focus on user experience and ease of setup
+- Focus on user experience and ease of setupit sti

@@ -1,0 +1,28 @@
+{
+  "name": "vibe-coding-app",
+  "version": "0.1.0",
+  "description": "Browser-based terminal access via UUID pairing",
+  "private": true,
+  "scripts": {
+    "dev": "cd frontend && python3 -m http.server 8000",
+    "build": "echo 'No build step required for static frontend'",
+    "test": "echo 'No tests configured yet'",
+    "lint": "echo 'No linting configured yet'"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MichaelAyles/AgentTool.git"
+  },
+  "keywords": [
+    "terminal",
+    "websocket",
+    "remote-access",
+    "uuid-pairing"
+  ],
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/MichaelAyles/AgentTool/issues"
+  },
+  "homepage": "https://github.com/MichaelAyles/AgentTool#readme"
+}

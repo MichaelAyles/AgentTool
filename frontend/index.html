@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vibe Coding - Terminal Access</title>
+    <link rel="stylesheet" href="/styles/main.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Vibe Coding</h1>
+            <p class="tagline">Access your terminal from anywhere</p>
+        </header>
+
+        <main>
+            <div id="connection-panel" class="panel">
+                <h2>Connect to Desktop</h2>
+                
+                <div class="connection-method">
+                    <h3>Connect with UUID</h3>
+                    <p>Enter the UUID from your desktop connector:</p>
+                    <div class="input-group">
+                        <input type="text" 
+                               id="uuid-input" 
+                               placeholder="e.g., 550e8400-e29b-41d4-a716-446655440000"
+                               pattern="[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+                               maxlength="36">
+                        <button id="connect-btn" class="primary-btn">Connect</button>
+                    </div>
+                    <div id="connection-error" class="error-message"></div>
+                </div>
+
+                <div class="divider">OR</div>
+
+                <div class="setup-method">
+                    <h3>New Installation</h3>
+                    <p>Install the desktop connector on your machine:</p>
+                    <div class="setup-script">
+                        <code id="setup-command">curl -fsSL https://vibe.theduck.chat/install.sh | bash -s <span id="setup-uuid">generating...</span></code>
+                        <button id="copy-setup" class="secondary-btn" title="Copy to clipboard">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                <path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V2zm2 0v8h8V2H6zM2 6a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1H8v1H2V8h1V6H2z"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <p class="note">Run this command in your terminal to install and connect automatically</p>
+                </div>
+            </div>
+
+            <div id="status-panel" class="panel hidden">
+                <h2>Connection Status</h2>
+                <div class="status-indicator">
+                    <div id="status-icon" class="status-icon disconnected"></div>
+                    <span id="status-text">Disconnected</span>
+                </div>
+                <div id="connection-details" class="details hidden">
+                    <p>Session ID: <span id="session-id"></span></p>
+                    <p>Connected for: <span id="connection-time">0:00</span></p>
+                    <button id="disconnect-btn" class="secondary-btn">Disconnect</button>
+                </div>
+            </div>
+
+            <div id="terminal-panel" class="panel hidden">
+                <div id="terminal-container"></div>
+            </div>
+        </main>
+
+        <footer>
+            <p>&copy; 2025 Vibe Coding. <a href="https://github.com/MichaelAyles/AgentTool">GitHub</a></p>
+        </footer>
+    </div>
+
+    <script src="/scripts/main.js"></script>
+</body>
+</html>
