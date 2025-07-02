@@ -24,16 +24,8 @@
     "allowUnusedLabels": true,
     "outDir": "./dist",
     "rootDir": "./src",
-    "composite": true,
-    "declaration": true,
-    "declarationMap": true,
     "types": ["vite/client"]
   },
   "include": ["src/**/*", "src/**/*.tsx"],
-  "exclude": ["dist", "node_modules", "**/*.test.*", "**/*.spec.*"],
-  "references": [
-    {
-      "path": "../shared"
-    }
-  ]
+  "exclude": ["dist", "node_modules", "**/*.test.*", "**/*.spec.*"]
 }
