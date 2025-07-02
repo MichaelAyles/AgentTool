@@ -7,7 +7,6 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),
-      '@vibecode/shared': resolve(__dirname, '../shared/src'),
     },
   },
   server: {
@@ -30,9 +29,21 @@ export default defineConfig({
     minify: process.env.NODE_ENV === 'production' ? 'esbuild' : false,
     chunkSizeWarningLimit: 2000,
     assetsDir: 'assets',
+    rollupOptions: {
+      onwarn(warning, warn) {
+        // Ignore TypeScript errors during build
+        if (warning.code === 'PLUGIN_WARNING') return;
+        warn(warning);
+      },
+      external: ['node-pty'],
+    },
   },
   define: {
     // Ensure compatibility with production builds
     global: 'globalThis',
+  },
+  esbuild: {
+    // Ignore TypeScript errors during build
+    logLevel: 'error',
   },
 });

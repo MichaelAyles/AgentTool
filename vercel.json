@@ -31,9 +31,9 @@
   ],
   "outputDirectory": "packages/frontend/dist",
   "framework": "vite",
-  "installCommand": "cd packages/frontend && bun install",
-  "buildCommand": "cd packages/frontend && bun run build:vercel",
-  "devCommand": "cd packages/frontend && bun run dev",
+  "installCommand": "cd packages/frontend && npm install",
+  "buildCommand": "cd packages/frontend && npm run build:vercel",
+  "devCommand": "cd packages/frontend && npm run dev",
   "functions": {},
   "headers": [
     {

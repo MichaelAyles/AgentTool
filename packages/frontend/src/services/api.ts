@@ -1,4 +1,4 @@
-import type { Project } from '@vibecode/shared';
+import type { Project } from '../types';
 
 // Configuration for backend selection
 interface BackendConfig {
