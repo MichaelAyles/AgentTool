@@ -21,12 +21,12 @@ npm run build
 npm run start
 ```
 
-### Method 2: One-line Install (when vibe.theduck.chat/install.sh is ready)
+### Method 2: One-line Install (✅ WORKING NOW!)
 ```bash
-curl -fsSL https://vibe.theduck.chat/install.sh | bash -s 70de9afe-ce1a-42c4-b46f-4d4e591803b1
+curl -fsSL https://raw.githubusercontent.com/MichaelAyles/AgentTool/main/install.sh | bash -s 70de9afe-ce1a-42c4-b46f-4d4e591803b1
 ```
 
-**Status:** vibe.theduck.chat is live but install.sh needs deployment to correct project
+**Status:** ✅ Install script now hosted on GitHub and accessible immediately!
 
 Then connect using your UUID: **70de9afe-ce1a-42c4-b46f-4d4e591803b1**
 
