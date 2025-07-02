@@ -1,33 +1,12 @@
 # Dependencies
 node_modules/
-.pnpm-store/
-.bun/
-
-# Build outputs
-dist/
-build/
-.next/
-.nuxt/
-.vercel/
-
-# Environment files
-.env
-.env.local
-.env.production*
-.env.staging*
-.env.test*
-.env.development*
-
-# Logs
-logs/
-*.log
 npm-debug.log*
 yarn-debug.log*
+yarn-error.log*
 pnpm-debug.log*
-bun-debug.log*
 
 # Runtime data
-pids/
+pids
 *.pid
 *.seed
 *.pid.lock
@@ -37,16 +16,147 @@ coverage/
 *.lcov
 
 # nyc test coverage
-.nyc_output/
+.nyc_output
 
-# IDE files
+# Grunt intermediate storage (https://gruntjs.com/creating-plugins#storing-task-files)
+.grunt
+
+# Bower dependency directory (https://bower.io/)
+bower_components
+
+# node-waf configuration
+.lock-wscript
+
+# Compiled binary addons (https://nodejs.org/api/addons.html)
+build/Release
+
+# Dependency directories
+jspm_packages/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional stylelint cache
+.stylelintcache
+
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variables file
+.env
+.env.test
+.env.production
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# parcel-bundler cache (https://parceljs.org/)
+.cache
+.parcel-cache
+
+# Next.js build output
+.next
+out/
+
+# Nuxt.js build / generate output
+.nuxt
+dist/
+
+# Gatsby files
+.cache/
+public
+
+# Vuepress build output
+.vuepress/dist
+
+# Serverless directories
+.serverless/
+
+# FuseBox cache
+.fusebox/
+
+# DynamoDB Local files
+.dynamodb/
+
+# TernJS port file
+.tern-port
+
+# Stores VSCode versions used for testing VSCode extensions
+.vscode-test
+
+# yarn v2
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.tmp
+*.temp
+
+# Linux
+*~
+
+# IDEs and editors
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# OS files
+# Logs
+logs
+*.log
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Build outputs
+dist/
+build/
+out/
+
+# Test results
+test-results/
+coverage/
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+
+# OS generated files
 .DS_Store
 .DS_Store?
 ._*
@@ -55,58 +165,14 @@ coverage/
 ehthumbs.db
 Thumbs.db
 
-# Database
-*.sqlite
-*.db
-vibecode.db*
+# Project specific
+# Desktop connector session data
+sessions/
+*.session
 
-# Docker
-.dockerignore
+# UUID tracking files
+*.uuid
 
-# Temporary files
-tmp/
-temp/
-*.tmp
-
-# Lock files (keep bun.lockb)
-package-lock.json
-yarn.lock
-pnpm-lock.yaml
-
-# Redundant documentation files
-SESSION_MANAGEMENT.md
-VERCEL_DEPLOYMENT.md
-DEPLOYMENT_CHECKLIST.md
-**/docs/README.md
-
-# Empty or template directories
-**/template/
-**/.mcp/
-**/.marketplace/
-**/adapters/template/
-
-# Generated files
-*.tgz
-*.tar.gz
-
-# Security
-.env.production
-.env.staging
-*.key
-*.pem
-*.p12
-*.pfx
-
-# Cache
-.cache/
-.parcel-cache/
-.vite/
-.turbo/
-
-# Testing
-.nyc_output/
-coverage/
-
-# Local development
-.vscode/settings.json
-.idea/workspace.xml
+# Local development files
+dev-config.json
+local-config.json
