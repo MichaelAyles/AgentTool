@@ -1,40 +1,19 @@
 {
-  "version": 2,
-  "name": "vibe-code",
-  "builds": [
-    {
-      "src": "packages/frontend/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
-    }
-  ],
-  "routes": [
-    {
-      "src": "/install-desktop.sh",
-      "dest": "/install-desktop.sh",
-      "headers": {
-        "Content-Type": "application/x-sh",
-        "Cache-Control": "public, max-age=3600"
-      }
-    },
-    {
-      "src": "/api/(.*)",
-      "dest": "/api-fallback.html",
-      "status": 503
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
-    }
-  ],
+  "buildCommand": "cd packages/frontend && npm run vercel-build",
   "outputDirectory": "packages/frontend/dist",
-  "framework": "vite",
   "installCommand": "cd packages/frontend && npm install",
-  "buildCommand": "cd packages/frontend && npm run build:vercel",
   "devCommand": "cd packages/frontend && npm run dev",
-  "functions": {},
+  "framework": "vite",
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api-fallback.html"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
   "headers": [
     {
       "source": "/assets/(.*)",
@@ -65,12 +44,6 @@
           "value": "strict-origin-when-cross-origin"
         }
       ]
-    }
-  ],
-  "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/api-fallback.html"
     }
   ]
 }

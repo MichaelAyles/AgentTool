@@ -363,3 +363,11 @@ curl -sSL https://vibecode.com/install.sh | bash -s -- <session-id>
   - Persistent validation storage with statistics and export
 
 **Next Priority**: Setup CI/CD pipeline (setup-5) and remaining frontend/infrastructure tasks
+
+## Project Creation & Management
+
+- [ ] **project-1**: Simplify new project window.
+- [ ] **project-2**: Allow the user to use a file picker for the connectors OS.
+- [ ] **project-3**: Allow the user to git clone to a dir on the connectors os.
+- [ ] **project-4**: Allow the user to create a new git repo and select a dir on the connector os.
+- [ ] **project-5**: For existing local, it should detect if its already git connected and what branch it's on.

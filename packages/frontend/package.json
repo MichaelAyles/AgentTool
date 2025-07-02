@@ -5,12 +5,13 @@
   "type": "module",
   "scripts": {
     "build": "tsc && vite build",
-    "build:vercel": "NODE_ENV=production vite build --mode production",
+    "build:vercel": "NODE_ENV=production vite build --mode production --logLevel warn",
+    "build:fast": "vite build --mode production --logLevel error",
     "dev": "vite",
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "test": "vitest",
-    "vercel-build": "npm run build:vercel",
+    "vercel-build": "npm run build:fast",
     "vercel-dev": "npm run dev",
     "analyze": "vite build --mode analyze"
   },
