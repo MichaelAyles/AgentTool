@@ -1,21 +1,25 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
-import { 
-  User, 
-  Session, 
-  AuthRequest, 
-  AuthResponse, 
-  JWTPayload, 
+import {
+  User,
+  Session,
+  AuthRequest,
+  AuthResponse,
+  JWTPayload,
   RefreshTokenPayload,
   UserRole,
   AuthProvider,
   LocalCredentials,
-  AuthConfig
+  AuthConfig,
 } from './types.js';
 import { db } from '../database/index.js';
 import { structuredLogger } from '../middleware/logging.js';
-import { AppError, AuthenticationError, ValidationError } from '../middleware/error-handler.js';
+import {
+  AppError,
+  AuthenticationError,
+  ValidationError,
+} from '../middleware/error-handler.js';
 
 export class AuthService {
   private config: AuthConfig;
@@ -36,7 +40,8 @@ export class AuthService {
       this.config.oauth.github = {
         clientId: process.env.GITHUB_CLIENT_ID,
         clientSecret: process.env.GITHUB_CLIENT_SECRET,
-        callbackUrl: process.env.GITHUB_CALLBACK_URL || '/api/auth/github/callback',
+        callbackUrl:
+          process.env.GITHUB_CALLBACK_URL || '/api/auth/github/callback',
       };
       this.config.enabledProviders.push('github');
     }
@@ -45,16 +50,21 @@ export class AuthService {
       this.config.oauth.google = {
         clientId: process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        callbackUrl: process.env.GOOGLE_CALLBACK_URL || '/api/auth/google/callback',
+        callbackUrl:
+          process.env.GOOGLE_CALLBACK_URL || '/api/auth/google/callback',
       };
       this.config.enabledProviders.push('google');
     }
 
-    if (process.env.MICROSOFT_CLIENT_ID && process.env.MICROSOFT_CLIENT_SECRET) {
+    if (
+      process.env.MICROSOFT_CLIENT_ID &&
+      process.env.MICROSOFT_CLIENT_SECRET
+    ) {
       this.config.oauth.microsoft = {
         clientId: process.env.MICROSOFT_CLIENT_ID,
         clientSecret: process.env.MICROSOFT_CLIENT_SECRET,
-        callbackUrl: process.env.MICROSOFT_CALLBACK_URL || '/api/auth/microsoft/callback',
+        callbackUrl:
+          process.env.MICROSOFT_CALLBACK_URL || '/api/auth/microsoft/callback',
       };
       this.config.enabledProviders.push('microsoft');
     }
@@ -66,31 +76,54 @@ export class AuthService {
         case 'local':
           return await this.authenticateLocal(request.credentials!);
         case 'github':
-          return await this.authenticateOAuth('github', request.code!, request.state);
+          return await this.authenticateOAuth(
+            'github',
+            request.code!,
+            request.state
+          );
         case 'google':
-          return await this.authenticateOAuth('google', request.code!, request.state);
+          return await this.authenticateOAuth(
+            'google',
+            request.code!,
+            request.state
+          );
         case 'microsoft':
-          return await this.authenticateOAuth('microsoft', request.code!, request.state);
+          return await this.authenticateOAuth(
+            'microsoft',
+            request.code!,
+            request.state
+          );
         default:
-          throw new ValidationError(`Unsupported authentication provider: ${request.provider}`);
+          throw new ValidationError(
+            `Unsupported authentication provider: ${request.provider}`
+          );
       }
     } catch (error) {
-      structuredLogger.error('Authentication failed', error, { provider: request.provider });
-      
-      if (error instanceof AuthenticationError || error instanceof ValidationError) {
+      structuredLogger.error('Authentication failed', error, {
+        provider: request.provider,
+      });
+
+      if (
+        error instanceof AuthenticationError ||
+        error instanceof ValidationError
+      ) {
         throw error;
       }
-      
+
       throw new AuthenticationError('Authentication failed');
     }
   }
 
-  private async authenticateLocal(credentials: LocalCredentials): Promise<AuthResponse> {
+  private async authenticateLocal(
+    credentials: LocalCredentials
+  ): Promise<AuthResponse> {
     const { username, password } = credentials;
 
     // Find user by username or email
-    const user = await db.getUserByUsername(username) || await db.getUserByEmail(username);
-    
+    const user =
+      (await db.getUserByUsername(username)) ||
+      (await db.getUserByEmail(username));
+
     if (!user) {
       throw new AuthenticationError('Invalid username or password');
     }
@@ -137,21 +170,24 @@ export class AuthService {
   ): Promise<AuthResponse> {
     // Exchange code for access token
     const tokenResponse = await this.exchangeCodeForToken(provider, code);
-    
+
     if (!tokenResponse.access_token) {
       throw new AuthenticationError('Failed to obtain access token');
     }
 
     // Get user info from provider
-    const providerUserInfo = await this.getProviderUserInfo(provider, tokenResponse.access_token);
+    const providerUserInfo = await this.getProviderUserInfo(
+      provider,
+      tokenResponse.access_token
+    );
 
     // Find or create user
     let user = await db.getUserByProviderId(provider, providerUserInfo.id);
-    
+
     if (!user) {
       // Check if user exists with same email
       user = await db.getUserByEmail(providerUserInfo.email);
-      
+
       if (user) {
         // Link provider to existing user
         await db.linkAuthProvider(user.id, {
@@ -217,30 +253,37 @@ export class AuthService {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        'Accept': 'application/json',
+        Accept: 'application/json',
       },
       body: params.toString(),
     });
 
     if (!response.ok) {
-      throw new AuthenticationError(`Failed to exchange code for token: ${response.statusText}`);
+      throw new AuthenticationError(
+        `Failed to exchange code for token: ${response.statusText}`
+      );
     }
 
     return await response.json();
   }
 
-  private async getProviderUserInfo(provider: string, accessToken: string): Promise<any> {
+  private async getProviderUserInfo(
+    provider: string,
+    accessToken: string
+  ): Promise<any> {
     const userInfoUrl = this.getUserInfoUrl(provider);
-    
+
     const response = await fetch(userInfoUrl, {
       headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Accept': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+        Accept: 'application/json',
       },
     });
 
     if (!response.ok) {
-      throw new AuthenticationError(`Failed to get user info: ${response.statusText}`);
+      throw new AuthenticationError(
+        `Failed to get user info: ${response.statusText}`
+      );
     }
 
     const data = await response.json();
@@ -313,19 +356,21 @@ export class AuthService {
       displayName: providerInfo.displayName,
       avatar: providerInfo.avatar,
       role: UserRole.USER,
-      providers: [{
-        provider: provider as any,
-        providerId: providerInfo.id,
-        email: providerInfo.email,
-        connected: new Date(),
-      }],
+      providers: [
+        {
+          provider: provider as any,
+          providerId: providerInfo.id,
+          email: providerInfo.email,
+          connected: new Date(),
+        },
+      ],
       settings: {},
       created: new Date(),
       active: true,
     };
 
     await db.createUser(user);
-    
+
     structuredLogger.info('Created new user from OAuth provider', {
       userId: user.id,
       provider,
@@ -338,13 +383,14 @@ export class AuthService {
   private async createSession(user: User): Promise<Session> {
     const sessionId = uuidv4();
     const now = new Date();
-    
+
     // Create JWT token
     const jwtPayload: JWTPayload = {
       userId: user.id,
       sessionId,
       role: user.role,
-      exp: Math.floor(Date.now() / 1000) + this.parseExpiry(this.config.jwtExpiry),
+      exp:
+        Math.floor(Date.now() / 1000) + this.parseExpiry(this.config.jwtExpiry),
       iat: Math.floor(Date.now() / 1000),
     };
 
@@ -354,7 +400,9 @@ export class AuthService {
     const refreshPayload: RefreshTokenPayload = {
       userId: user.id,
       sessionId,
-      exp: Math.floor(Date.now() / 1000) + this.parseExpiry(this.config.refreshTokenExpiry),
+      exp:
+        Math.floor(Date.now() / 1000) +
+        this.parseExpiry(this.config.refreshTokenExpiry),
       iat: Math.floor(Date.now() / 1000),
     };
 
@@ -378,7 +426,7 @@ export class AuthService {
   async verifyToken(token: string): Promise<JWTPayload> {
     try {
       const payload = jwt.verify(token, this.config.jwtSecret) as JWTPayload;
-      
+
       // Check if session exists and is valid
       const session = await db.getSession(payload.sessionId);
       if (!session || session.expiresAt < new Date()) {
@@ -399,8 +447,11 @@ export class AuthService {
 
   async refreshSession(refreshToken: string): Promise<AuthResponse> {
     try {
-      const payload = jwt.verify(refreshToken, this.config.jwtSecret) as RefreshTokenPayload;
-      
+      const payload = jwt.verify(
+        refreshToken,
+        this.config.jwtSecret
+      ) as RefreshTokenPayload;
+
       // Get session and user
       const session = await db.getSession(payload.sessionId);
       if (!session || session.userId !== payload.userId) {
@@ -447,7 +498,11 @@ export class AuthService {
     structuredLogger.info('All user sessions revoked', { userId });
   }
 
-  async changePassword(userId: string, oldPassword: string, newPassword: string): Promise<void> {
+  async changePassword(
+    userId: string,
+    oldPassword: string,
+    newPassword: string
+  ): Promise<void> {
     // Verify old password
     const passwordHash = await db.getUserPasswordHash(userId);
     if (!passwordHash) {
@@ -461,7 +516,7 @@ export class AuthService {
 
     // Hash new password
     const newPasswordHash = await bcrypt.hash(newPassword, 10);
-    
+
     // Update password
     await db.updateUserPassword(userId, newPasswordHash);
 
@@ -474,7 +529,7 @@ export class AuthService {
   async setPassword(userId: string, password: string): Promise<void> {
     // Hash password
     const passwordHash = await bcrypt.hash(password, 10);
-    
+
     // Update password
     await db.updateUserPassword(userId, passwordHash);
 
@@ -486,15 +541,23 @@ export class AuthService {
     const value = parseInt(expiry.slice(0, -1));
 
     switch (unit) {
-      case 's': return value;
-      case 'm': return value * 60;
-      case 'h': return value * 60 * 60;
-      case 'd': return value * 60 * 60 * 24;
-      default: return 3600; // Default 1 hour
+      case 's':
+        return value;
+      case 'm':
+        return value * 60;
+      case 'h':
+        return value * 60 * 60;
+      case 'd':
+        return value * 60 * 60 * 24;
+      default:
+        return 3600; // Default 1 hour
     }
   }
 
-  getOAuthUrl(provider: 'github' | 'google' | 'microsoft', state?: string): string {
+  getOAuthUrl(
+    provider: 'github' | 'google' | 'microsoft',
+    state?: string
+  ): string {
     const config = this.config.oauth[provider];
     if (!config) {
       throw new ValidationError(`OAuth not configured for ${provider}`);
@@ -513,19 +576,19 @@ export class AuthService {
       case 'github':
         params.append('scope', 'user:email');
         return `https://github.com/login/oauth/authorize?${params.toString()}`;
-      
+
       case 'google':
         params.append('response_type', 'code');
         params.append('scope', 'openid email profile');
         params.append('access_type', 'offline');
         return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
-      
+
       case 'microsoft':
         params.append('response_type', 'code');
         params.append('scope', 'openid email profile User.Read');
         params.append('response_mode', 'query');
         return `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?${params.toString()}`;
-      
+
       default:
         throw new Error(`Unknown provider: ${provider}`);
     }

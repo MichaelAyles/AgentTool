@@ -5,8 +5,8 @@ import { securityEventLogger } from './event-logger.js';
 export enum CommandRisk {
   SAFE = 'safe',
   MODERATE = 'moderate',
-  DANGEROUS = 'dangerous', 
-  CRITICAL = 'critical'
+  DANGEROUS = 'dangerous',
+  CRITICAL = 'critical',
 }
 
 // Command classification result
@@ -34,44 +34,95 @@ export interface ValidationResult {
 const DANGEROUS_COMMANDS = {
   // File system destruction
   destructive: [
-    'rm', 'rmdir', 'del', 'erase', 'format', 'mkfs',
-    'dd', 'shred', 'wipe', 'zero', 'fdisk', 'parted'
+    'rm',
+    'rmdir',
+    'del',
+    'erase',
+    'format',
+    'mkfs',
+    'dd',
+    'shred',
+    'wipe',
+    'zero',
+    'fdisk',
+    'parted',
   ],
-  
+
   // System modification
   system: [
-    'chmod', 'chown', 'chgrp', 'mount', 'umount',
-    'systemctl', 'service', 'init', 'shutdown', 'reboot', 'halt'
+    'chmod',
+    'chown',
+    'chgrp',
+    'mount',
+    'umount',
+    'systemctl',
+    'service',
+    'init',
+    'shutdown',
+    'reboot',
+    'halt',
   ],
-  
+
   // User management
   user: [
-    'passwd', 'useradd', 'userdel', 'usermod', 'groupadd', 'groupdel',
-    'su', 'sudo', 'doas'
+    'passwd',
+    'useradd',
+    'userdel',
+    'usermod',
+    'groupadd',
+    'groupdel',
+    'su',
+    'sudo',
+    'doas',
   ],
-  
+
   // Network/Security
   network: [
-    'iptables', 'ufw', 'firewall-cmd', 'netsh', 'ipconfig',
-    'ifconfig', 'route', 'nc', 'netcat', 'telnet'
+    'iptables',
+    'ufw',
+    'firewall-cmd',
+    'netsh',
+    'ipconfig',
+    'ifconfig',
+    'route',
+    'nc',
+    'netcat',
+    'telnet',
   ],
-  
+
   // Package management (can install malicious software)
   package: [
-    'apt', 'yum', 'dnf', 'pacman', 'brew', 'choco', 'pip', 'npm',
-    'gem', 'cargo', 'go get', 'composer'
+    'apt',
+    'yum',
+    'dnf',
+    'pacman',
+    'brew',
+    'choco',
+    'pip',
+    'npm',
+    'gem',
+    'cargo',
+    'go get',
+    'composer',
   ],
-  
+
   // Process control
-  process: [
-    'kill', 'killall', 'pkill', 'taskkill', 'tasklist'
-  ]
+  process: ['kill', 'killall', 'pkill', 'taskkill', 'tasklist'],
 };
 
 // Critical commands that should never be allowed
 const CRITICAL_COMMANDS = [
-  'format', 'fdisk', 'parted', 'mkfs', 'dd', 'shred',
-  'reboot', 'shutdown', 'halt', 'init 0', 'init 6'
+  'format',
+  'fdisk',
+  'parted',
+  'mkfs',
+  'dd',
+  'shred',
+  'reboot',
+  'shutdown',
+  'halt',
+  'init 0',
+  'init 6',
 ];
 
 // Commands that require dangerous mode
@@ -79,26 +130,55 @@ const DANGEROUS_MODE_COMMANDS = [
   ...DANGEROUS_COMMANDS.destructive,
   ...DANGEROUS_COMMANDS.system,
   ...DANGEROUS_COMMANDS.user,
-  ...DANGEROUS_COMMANDS.network.slice(0, 5) // Only firewall commands
+  ...DANGEROUS_COMMANDS.network.slice(0, 5), // Only firewall commands
 ];
 
 // Safe commands that should always be allowed
 const SAFE_COMMANDS = [
-  'ls', 'dir', 'pwd', 'cd', 'cat', 'type', 'head', 'tail',
-  'grep', 'find', 'which', 'where', 'echo', 'printf',
-  'date', 'time', 'whoami', 'id', 'ps', 'top', 'htop',
-  'history', 'alias', 'help', 'man', 'info', 'wc', 'sort',
-  'uniq', 'cut', 'awk', 'sed', 'tr', 'tee', 'xargs'
+  'ls',
+  'dir',
+  'pwd',
+  'cd',
+  'cat',
+  'type',
+  'head',
+  'tail',
+  'grep',
+  'find',
+  'which',
+  'where',
+  'echo',
+  'printf',
+  'date',
+  'time',
+  'whoami',
+  'id',
+  'ps',
+  'top',
+  'htop',
+  'history',
+  'alias',
+  'help',
+  'man',
+  'info',
+  'wc',
+  'sort',
+  'uniq',
+  'cut',
+  'awk',
+  'sed',
+  'tr',
+  'tee',
+  'xargs',
 ];
 
 export class CommandValidator {
-  
   /**
    * Validate and classify a command
    */
   static validateCommand(
-    command: string, 
-    args: string[] = [], 
+    command: string,
+    args: string[] = [],
     context: {
       userId: string;
       sessionId: string;
@@ -124,7 +204,10 @@ export class CommandValidator {
     }
 
     // Check if dangerous mode is required
-    if (classification.risk === CommandRisk.DANGEROUS && !context.dangerousModeEnabled) {
+    if (
+      classification.risk === CommandRisk.DANGEROUS &&
+      !context.dangerousModeEnabled
+    ) {
       result.allowed = false;
       result.errors.push('Dangerous mode required for this command');
       this.logBlockedCommand(command, args, context, 'dangerous_mode_required');
@@ -155,10 +238,13 @@ export class CommandValidator {
   /**
    * Classify command risk level
    */
-  static classifyCommand(command: string, args: string[] = []): CommandClassification {
+  static classifyCommand(
+    command: string,
+    args: string[] = []
+  ): CommandClassification {
     const cmdLower = command.toLowerCase();
     const fullCommand = [command, ...args].join(' ').toLowerCase();
-    
+
     const classification: CommandClassification = {
       command,
       risk: CommandRisk.SAFE,
@@ -170,10 +256,13 @@ export class CommandValidator {
     };
 
     // Check for critical commands
-    if (CRITICAL_COMMANDS.some(critical => 
-      cmdLower.includes(critical.toLowerCase()) || 
-      fullCommand.includes(critical.toLowerCase())
-    )) {
+    if (
+      CRITICAL_COMMANDS.some(
+        critical =>
+          cmdLower.includes(critical.toLowerCase()) ||
+          fullCommand.includes(critical.toLowerCase())
+      )
+    ) {
       classification.risk = CommandRisk.CRITICAL;
       classification.securityLevel = SecurityLevel.CRITICAL;
       classification.reasons.push('Critical system command');
@@ -183,15 +272,18 @@ export class CommandValidator {
     }
 
     // Check for dangerous commands
-    if (DANGEROUS_MODE_COMMANDS.some(dangerous => 
-      cmdLower.startsWith(dangerous.toLowerCase()) ||
-      cmdLower === dangerous.toLowerCase()
-    )) {
+    if (
+      DANGEROUS_MODE_COMMANDS.some(
+        dangerous =>
+          cmdLower.startsWith(dangerous.toLowerCase()) ||
+          cmdLower === dangerous.toLowerCase()
+      )
+    ) {
       classification.risk = CommandRisk.DANGEROUS;
       classification.securityLevel = SecurityLevel.DANGEROUS;
       classification.reasons.push('Dangerous system operation');
       classification.requiresConfirmation = true;
-      
+
       // Check specific dangerous patterns
       if (DANGEROUS_COMMANDS.destructive.includes(cmdLower)) {
         classification.reasons.push('File system destructive operation');
@@ -202,7 +294,7 @@ export class CommandValidator {
       if (DANGEROUS_COMMANDS.user.includes(cmdLower)) {
         classification.reasons.push('User management operation');
       }
-      
+
       return classification;
     }
 
@@ -225,47 +317,53 @@ export class CommandValidator {
   /**
    * Sanitize command and arguments
    */
-  static sanitizeCommand(command: string, args: string[]): {
+  static sanitizeCommand(
+    command: string,
+    args: string[]
+  ): {
     command: string;
     args: string[];
     warnings: string[];
   } {
     const warnings: string[] = [];
-    
+
     // Sanitize command
     let sanitizedCommand = command.trim();
-    
+
     // Remove dangerous shell operators
     const dangerousOperators = ['|', '&', ';', '$(', '`', '>', '<', '||', '&&'];
     for (const op of dangerousOperators) {
       if (sanitizedCommand.includes(op)) {
         warnings.push(`Removed dangerous operator: ${op}`);
-        sanitizedCommand = sanitizedCommand.replace(new RegExp(`\\${op.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'g'), '');
+        sanitizedCommand = sanitizedCommand.replace(
+          new RegExp(`\\${op.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'g'),
+          ''
+        );
       }
     }
 
     // Sanitize arguments
     const sanitizedArgs = args.map(arg => {
       let sanitized = arg.trim();
-      
+
       // Remove shell injection attempts
       const injectionPatterns = [
         /\$\([^)]*\)/g, // Command substitution
-        /`[^`]*`/g,     // Backtick execution
-        /&&|;|\|\|/g,   // Command chaining
-        /<|>/g,         // Redirection
+        /`[^`]*`/g, // Backtick execution
+        /&&|;|\|\|/g, // Command chaining
+        /<|>/g, // Redirection
       ];
-      
+
       for (const pattern of injectionPatterns) {
         if (pattern.test(sanitized)) {
           warnings.push(`Sanitized argument: ${arg}`);
           sanitized = sanitized.replace(pattern, '');
         }
       }
-      
+
       // Escape special characters
       sanitized = sanitized.replace(/['"\\]/g, '\\$&');
-      
+
       return sanitized;
     });
 
@@ -279,7 +377,10 @@ export class CommandValidator {
   /**
    * Validate command content for suspicious patterns
    */
-  static validateCommandContent(command: string, args: string[]): {
+  static validateCommandContent(
+    command: string,
+    args: string[]
+  ): {
     warnings: string[];
     errors: string[];
   } {
@@ -289,20 +390,41 @@ export class CommandValidator {
 
     // Check for suspicious patterns
     const suspiciousPatterns = [
-      { pattern: /\bpasswd\b.*\broot\b/i, message: 'Root password change attempt' },
-      { pattern: /\brm\b.*-rf.*\/\b/i, message: 'Recursive force delete of system directories' },
-      { pattern: /\bchmod\b.*777/i, message: 'Setting dangerous file permissions' },
+      {
+        pattern: /\bpasswd\b.*\broot\b/i,
+        message: 'Root password change attempt',
+      },
+      {
+        pattern: /\brm\b.*-rf.*\/\b/i,
+        message: 'Recursive force delete of system directories',
+      },
+      {
+        pattern: /\bchmod\b.*777/i,
+        message: 'Setting dangerous file permissions',
+      },
       { pattern: /\bmkfs\b/i, message: 'File system creation/formatting' },
       { pattern: /\bdd\b.*\/dev\//i, message: 'Direct device manipulation' },
-      { pattern: /\bcurl\b.*\|\s*(bash|sh)/i, message: 'Downloading and executing remote scripts' },
-      { pattern: /\bwget\b.*\|\s*(bash|sh)/i, message: 'Downloading and executing remote scripts' },
-      { pattern: /\/etc\/passwd|\/etc\/shadow/i, message: 'System user file access' },
+      {
+        pattern: /\bcurl\b.*\|\s*(bash|sh)/i,
+        message: 'Downloading and executing remote scripts',
+      },
+      {
+        pattern: /\bwget\b.*\|\s*(bash|sh)/i,
+        message: 'Downloading and executing remote scripts',
+      },
+      {
+        pattern: /\/etc\/passwd|\/etc\/shadow/i,
+        message: 'System user file access',
+      },
       { pattern: /\biptables\b.*-F/i, message: 'Firewall rules flush' },
     ];
 
     for (const { pattern, message } of suspiciousPatterns) {
       if (pattern.test(fullCommand)) {
-        if (message.includes('Root password') || message.includes('File system creation')) {
+        if (
+          message.includes('Root password') ||
+          message.includes('File system creation')
+        ) {
           errors.push(message);
         } else {
           warnings.push(message);
@@ -434,10 +556,10 @@ export class CommandValidator {
    */
   static getSaferAlternatives(command: string): string[] {
     const suggestions: Record<string, string[]> = {
-      'rm': ['trash', 'mv to backup directory'],
-      'dd': ['cp for file copying', 'rsync for synchronization'],
-      'chmod': ['Use specific permissions instead of 777'],
-      'sudo': ['Use specific commands with limited scope'],
+      rm: ['trash', 'mv to backup directory'],
+      dd: ['cp for file copying', 'rsync for synchronization'],
+      chmod: ['Use specific permissions instead of 777'],
+      sudo: ['Use specific commands with limited scope'],
       'curl | bash': ['Download first, review, then execute'],
       'wget | sh': ['Download first, review, then execute'],
     };
@@ -459,7 +581,7 @@ export class CommandValidator {
     commands: Array<{ command: string; args: string[] }>,
     context: any
   ): Array<ValidationResult> {
-    return commands.map(({ command, args }) => 
+    return commands.map(({ command, args }) =>
       this.validateCommand(command, args, context)
     );
   }

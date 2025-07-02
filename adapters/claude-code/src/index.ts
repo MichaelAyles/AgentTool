@@ -1,5 +1,9 @@
 import { BaseAdapter } from '@vibecode/adapter-sdk';
-import type { ExecuteOptions, CLICapabilities, JSONSchema } from '@vibecode/adapter-sdk';
+import type {
+  ExecuteOptions,
+  CLICapabilities,
+  JSONSchema,
+} from '@vibecode/adapter-sdk';
 import type { ProcessHandle } from '@vibecode/shared';
 import { generateId } from '@vibecode/shared';
 
@@ -27,29 +31,40 @@ export class ClaudeCodeAdapter extends BaseAdapter {
     try {
       const { spawn } = await import('child_process');
       const process = spawn('claude-code', ['--version'], { stdio: 'pipe' });
-      
+
       await new Promise<void>((resolve, reject) => {
-        process.on('close', (code) => {
+        process.on('close', code => {
           if (code === 0) {
             resolve();
           } else {
-            reject(new Error('Claude Code not found. Please install claude-code CLI.'));
+            reject(
+              new Error(
+                'Claude Code not found. Please install claude-code CLI.'
+              )
+            );
           }
         });
-        
+
         process.on('error', () => {
-          reject(new Error('Claude Code not found. Please install claude-code CLI.'));
+          reject(
+            new Error('Claude Code not found. Please install claude-code CLI.')
+          );
         });
       });
     } catch (error) {
-      throw new Error('Claude Code CLI is not installed or not available in PATH');
+      throw new Error(
+        'Claude Code CLI is not installed or not available in PATH'
+      );
     }
   }
 
-  async execute(command: string, options: ExecuteOptions): Promise<ProcessHandle> {
+  async execute(
+    command: string,
+    options: ExecuteOptions
+  ): Promise<ProcessHandle> {
     // Parse the command to extract Claude Code specific arguments
     const args = this.parseClaudeCommand(command);
-    
+
     // Add working directory context
     if (options.workingDirectory) {
       args.unshift('--cwd', options.workingDirectory);
@@ -66,17 +81,17 @@ export class ClaudeCodeAdapter extends BaseAdapter {
   private parseClaudeCommand(command: string): string[] {
     // Handle different Claude Code command formats
     const trimmed = command.trim();
-    
+
     // If it starts with claude-code, remove it
     if (trimmed.startsWith('claude-code ')) {
       return this.parseCommand(trimmed.substring(11));
     }
-    
+
     // If it's a direct message, wrap it appropriately
     if (!trimmed.includes('--')) {
       return [trimmed];
     }
-    
+
     return this.parseCommand(trimmed);
   }
 
@@ -94,7 +109,7 @@ export class ClaudeCodeAdapter extends BaseAdapter {
     const process = this.processes.get(handle.id);
     if (process) {
       await new Promise<void>((resolve, reject) => {
-        process.on('close', (code) => {
+        process.on('close', code => {
           if (code === 0) {
             resolve();
           } else {

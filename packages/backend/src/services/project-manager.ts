@@ -35,7 +35,10 @@ export interface InitProjectOptions {
 }
 
 export class ProjectManager {
-  async createProject(options: CreateProjectOptions, userId: string): Promise<Project> {
+  async createProject(
+    options: CreateProjectOptions,
+    userId: string
+  ): Promise<Project> {
     const { name, path, activeAdapter, gitRemote, description } = options;
 
     // Validate inputs
@@ -84,7 +87,10 @@ export class ProjectManager {
     return project;
   }
 
-  async cloneProject(options: CloneProjectOptions, userId: string): Promise<Project> {
+  async cloneProject(
+    options: CloneProjectOptions,
+    userId: string
+  ): Promise<Project> {
     const { repoUrl, localPath, branch, activeAdapter, name, depth } = options;
 
     // Validate inputs
@@ -97,11 +103,11 @@ export class ProjectManager {
     // Clone repository
     const git = simpleGit();
     const cloneOptions: any = {};
-    
+
     if (branch) {
       cloneOptions['--branch'] = branch;
     }
-    
+
     if (depth) {
       cloneOptions['--depth'] = depth.toString();
     }
@@ -162,8 +168,18 @@ export class ProjectManager {
     return project;
   }
 
-  async initializeProject(options: InitProjectOptions, userId: string): Promise<Project> {
-    const { path, name, activeAdapter, gitInit = true, template, description } = options;
+  async initializeProject(
+    options: InitProjectOptions,
+    userId: string
+  ): Promise<Project> {
+    const {
+      path,
+      name,
+      activeAdapter,
+      gitInit = true,
+      template,
+      description,
+    } = options;
 
     // Validate inputs
     await this.validateInitOptions(options);
@@ -178,9 +194,10 @@ export class ProjectManager {
 
       // Create initial README if directory is empty
       const files = await fs.readdir(path);
-      if (files.length <= 1) { // Only .git directory
+      if (files.length <= 1) {
+        // Only .git directory
         await this.createInitialFiles(path, name, description);
-        
+
         // Make initial commit
         await git.add('.');
         await git.commit('Initial commit');
@@ -241,10 +258,10 @@ export class ProjectManager {
   }> {
     try {
       const git = simpleGit(projectPath);
-      
+
       // Check if it's a git repository
       const isGitRepo = await git.checkIsRepo();
-      
+
       if (!isGitRepo) {
         const files = await fs.readdir(projectPath);
         return {
@@ -283,7 +300,9 @@ export class ProjectManager {
         },
       };
     } catch (error) {
-      structuredLogger.error('Failed to get project info', error, { projectPath });
+      structuredLogger.error('Failed to get project info', error, {
+        projectPath,
+      });
       throw new AppError(`Failed to analyze project: ${error.message}`, 500);
     }
   }
@@ -309,12 +328,21 @@ export class ProjectManager {
       // Check for common conflicts
       let hasConflicts = false;
       if (!isEmpty) {
-        const conflictFiles = ['package.json', '.git', 'README.md', 'Dockerfile'];
-        const foundConflicts = files.filter(file => conflictFiles.includes(file));
-        
+        const conflictFiles = [
+          'package.json',
+          '.git',
+          'README.md',
+          'Dockerfile',
+        ];
+        const foundConflicts = files.filter(file =>
+          conflictFiles.includes(file)
+        );
+
         if (foundConflicts.length > 0) {
           hasConflicts = true;
-          warnings.push(`Directory contains existing files: ${foundConflicts.join(', ')}`);
+          warnings.push(
+            `Directory contains existing files: ${foundConflicts.join(', ')}`
+          );
         }
       }
 
@@ -343,7 +371,9 @@ export class ProjectManager {
     }
   }
 
-  private async validateProjectCreation(options: CreateProjectOptions): Promise<void> {
+  private async validateProjectCreation(
+    options: CreateProjectOptions
+  ): Promise<void> {
     const { name, path, activeAdapter } = options;
 
     if (!name || name.trim().length === 0) {
@@ -364,7 +394,9 @@ export class ProjectManager {
     }
   }
 
-  private async validateCloneOptions(options: CloneProjectOptions): Promise<void> {
+  private async validateCloneOptions(
+    options: CloneProjectOptions
+  ): Promise<void> {
     const { repoUrl, localPath, activeAdapter } = options;
 
     if (!repoUrl || repoUrl.trim().length === 0) {
@@ -390,7 +422,9 @@ export class ProjectManager {
     }
   }
 
-  private async validateInitOptions(options: InitProjectOptions): Promise<void> {
+  private async validateInitOptions(
+    options: InitProjectOptions
+  ): Promise<void> {
     const { path, name, activeAdapter } = options;
 
     if (!name || name.trim().length === 0) {
@@ -432,7 +466,11 @@ export class ProjectManager {
     }
   }
 
-  private async createInitialFiles(path: string, name: string, description?: string): Promise<void> {
+  private async createInitialFiles(
+    path: string,
+    name: string,
+    description?: string
+  ): Promise<void> {
     const readmeContent = `# ${name}
 
 ${description || 'A new project created with Vibe Code.'}
@@ -447,7 +485,7 @@ Use Vibe Code to interact with various AI coding tools and manage your developme
 `;
 
     await fs.writeFile(join(path, 'README.md'), readmeContent);
-    
+
     // Create basic .gitignore
     const gitignoreContent = `node_modules/
 .env
@@ -465,11 +503,14 @@ build/
     await fs.writeFile(join(path, '.gitignore'), gitignoreContent);
   }
 
-  private async applyProjectTemplate(path: string, template: string): Promise<void> {
+  private async applyProjectTemplate(
+    path: string,
+    template: string
+  ): Promise<void> {
     // This is a placeholder for template application
     // In a full implementation, this would copy files from template directories
     structuredLogger.info('Applying project template', { path, template });
-    
+
     switch (template) {
       case 'node':
         await this.applyNodeTemplate(path);

@@ -33,68 +33,85 @@ export class DangerousModeIntegration {
    */
   private setupDangerousModeControllerIntegration(): void {
     // Dangerous mode enabled
-    dangerousModeController.on('dangerousModeEnabled', async ({ sessionId, userId, expiresAt }) => {
-      const session = dangerousModeController.getSessionStatus(sessionId);
-      if (session) {
-        await securityNotificationService.sendSessionChangeNotification(
-          'dangerous_mode_enabled',
-          session,
-          {
-            expiresAt: expiresAt?.toISOString(),
-            activationCount: session.activationCount,
-          }
-        );
+    dangerousModeController.on(
+      'dangerousModeEnabled',
+      async ({ sessionId, userId, expiresAt }) => {
+        const session = dangerousModeController.getSessionStatus(sessionId);
+        if (session) {
+          await securityNotificationService.sendSessionChangeNotification(
+            'dangerous_mode_enabled',
+            session,
+            {
+              expiresAt: expiresAt?.toISOString(),
+              activationCount: session.activationCount,
+            }
+          );
+        }
       }
-    });
+    );
 
     // Dangerous mode disabled
-    dangerousModeController.on('dangerousModeDisabled', async ({ sessionId, userId, reason }) => {
-      const session = dangerousModeController.getSessionStatus(sessionId);
-      if (session) {
-        await securityNotificationService.sendSessionChangeNotification(
-          'dangerous_mode_disabled',
-          session,
-          {
-            disableReason: reason,
-            finalRiskScore: session.riskScore,
-            totalCommands: session.commandsExecuted,
-            warningsGenerated: session.warnings.length,
-          }
-        );
+    dangerousModeController.on(
+      'dangerousModeDisabled',
+      async ({ sessionId, userId, reason }) => {
+        const session = dangerousModeController.getSessionStatus(sessionId);
+        if (session) {
+          await securityNotificationService.sendSessionChangeNotification(
+            'dangerous_mode_disabled',
+            session,
+            {
+              disableReason: reason,
+              finalRiskScore: session.riskScore,
+              totalCommands: session.commandsExecuted,
+              warningsGenerated: session.warnings.length,
+            }
+          );
+        }
       }
-    });
+    );
 
     // Dangerous warnings
-    dangerousModeController.on('dangerousWarning', async ({ sessionId, userId, warning }) => {
-      if (warning.type === 'command_blocked') {
-        await securityNotificationService.sendCommandBlockedNotification(
-          warning.metadata.command,
-          warning.message,
-          userId,
-          sessionId,
-          {
-            warningId: warning.id,
-            warningType: warning.type,
-            severity: warning.severity,
-            metadata: warning.metadata,
-          }
-        );
+    dangerousModeController.on(
+      'dangerousWarning',
+      async ({ sessionId, userId, warning }) => {
+        if (warning.type === 'command_blocked') {
+          await securityNotificationService.sendCommandBlockedNotification(
+            warning.metadata.command,
+            warning.message,
+            userId,
+            sessionId,
+            {
+              warningId: warning.id,
+              warningType: warning.type,
+              severity: warning.severity,
+              metadata: warning.metadata,
+            }
+          );
+        }
       }
-    });
+    );
 
     // Confirmation required
-    dangerousModeController.on('confirmationRequired', async ({ sessionId, userId, confirmationCode }) => {
-      // This could trigger a notification if needed
-      console.log(`Confirmation required for session ${sessionId}: ${confirmationCode}`);
-    });
+    dangerousModeController.on(
+      'confirmationRequired',
+      async ({ sessionId, userId, confirmationCode }) => {
+        // This could trigger a notification if needed
+        console.log(
+          `Confirmation required for session ${sessionId}: ${confirmationCode}`
+        );
+      }
+    );
 
     // Emergency disable all
-    dangerousModeController.on('emergencyDisableAll', async ({ reason, affectedSessions }) => {
-      await securityNotificationService.sendEmergencyDisableNotification(
-        reason,
-        affectedSessions
-      );
-    });
+    dangerousModeController.on(
+      'emergencyDisableAll',
+      async ({ reason, affectedSessions }) => {
+        await securityNotificationService.sendEmergencyDisableNotification(
+          reason,
+          affectedSessions
+        );
+      }
+    );
   }
 
   /**
@@ -102,12 +119,12 @@ export class DangerousModeIntegration {
    */
   private setupSecurityMonitorIntegration(): void {
     // Security alerts
-    dangerousSecurityMonitor.on('securityAlert', async (alert) => {
+    dangerousSecurityMonitor.on('securityAlert', async alert => {
       await securityNotificationService.sendSecurityAlert(alert);
     });
 
     // Alert acknowledged
-    dangerousSecurityMonitor.on('alertAcknowledged', async (alert) => {
+    dangerousSecurityMonitor.on('alertAcknowledged', async alert => {
       // Log acknowledgment
       console.log(`Security alert ${alert.id} acknowledged`);
     });
@@ -126,70 +143,82 @@ export class DangerousModeIntegration {
    */
   private setupTimeoutManagerIntegration(): void {
     // Timeout triggered
-    dangerousTimeoutManager.on('timeoutTriggered', async (event) => {
+    dangerousTimeoutManager.on('timeoutTriggered', async event => {
       // Send timeout warning notification
       await securityNotificationService.sendTimeoutWarning(event);
     });
 
     // Timeout warning
-    dangerousTimeoutManager.on('timeoutWarning', async ({ sessionId, userId, warning }) => {
-      // This is handled by timeoutTriggered event, but we could add specific logic here
-      console.log(`Timeout warning for session ${sessionId}`);
-    });
+    dangerousTimeoutManager.on(
+      'timeoutWarning',
+      async ({ sessionId, userId, warning }) => {
+        // This is handled by timeoutTriggered event, but we could add specific logic here
+        console.log(`Timeout warning for session ${sessionId}`);
+      }
+    );
 
     // Extension requires approval
-    dangerousTimeoutManager.on('extensionRequiresApproval', async ({ sessionId, userId, requestedDuration, reason }) => {
-      // Send notification to admins about extension request
-      await securityNotificationService.sendSecurityAlert({
-        id: `ext_approval_${Date.now()}`,
-        type: 'threshold_exceeded',
-        severity: 'moderate',
-        sessionId,
-        userId,
-        message: `Extension approval required for session ${sessionId}`,
-        details: {
-          requestedDuration,
-          reason,
-          requiresApproval: true,
-        },
-        timestamp: new Date(),
-        action: 'warn',
-        acknowledged: false,
-      });
-    });
+    dangerousTimeoutManager.on(
+      'extensionRequiresApproval',
+      async ({ sessionId, userId, requestedDuration, reason }) => {
+        // Send notification to admins about extension request
+        await securityNotificationService.sendSecurityAlert({
+          id: `ext_approval_${Date.now()}`,
+          type: 'threshold_exceeded',
+          severity: 'moderate',
+          sessionId,
+          userId,
+          message: `Extension approval required for session ${sessionId}`,
+          details: {
+            requestedDuration,
+            reason,
+            requiresApproval: true,
+          },
+          timestamp: new Date(),
+          action: 'warn',
+          acknowledged: false,
+        });
+      }
+    );
 
     // Session extended
-    dangerousTimeoutManager.on('sessionExtended', async ({ sessionId, userId, newExpiresAt, extensionDuration }) => {
-      const session = dangerousModeController.getSessionStatus(sessionId);
-      if (session) {
-        await securityNotificationService.sendSessionChangeNotification(
-          'dangerous_mode_enabled', // Treat as re-enabling
-          session,
-          {
-            action: 'session_extended',
-            newExpiresAt: newExpiresAt.toISOString(),
-            extensionDuration,
-            previousActivationCount: session.activationCount,
-          }
-        );
+    dangerousTimeoutManager.on(
+      'sessionExtended',
+      async ({ sessionId, userId, newExpiresAt, extensionDuration }) => {
+        const session = dangerousModeController.getSessionStatus(sessionId);
+        if (session) {
+          await securityNotificationService.sendSessionChangeNotification(
+            'dangerous_mode_enabled', // Treat as re-enabling
+            session,
+            {
+              action: 'session_extended',
+              newExpiresAt: newExpiresAt.toISOString(),
+              extensionDuration,
+              previousActivationCount: session.activationCount,
+            }
+          );
+        }
       }
-    });
+    );
 
     // Grace period started
-    dangerousTimeoutManager.on('gracePeriodStarted', async ({ sessionId, trigger, gracePeriod, metadata }) => {
-      await securityNotificationService.sendTimeoutWarning({
-        sessionId,
-        userId: '', // Will be filled by the service
-        trigger,
-        remainingTime: gracePeriod,
-        canExtend: true,
-        warningLevel: 'moderate',
-        metadata: {
-          ...metadata,
-          isGracePeriod: true,
-        },
-      });
-    });
+    dangerousTimeoutManager.on(
+      'gracePeriodStarted',
+      async ({ sessionId, trigger, gracePeriod, metadata }) => {
+        await securityNotificationService.sendTimeoutWarning({
+          sessionId,
+          userId: '', // Will be filled by the service
+          trigger,
+          remainingTime: gracePeriod,
+          canExtend: true,
+          warningLevel: 'moderate',
+          metadata: {
+            ...metadata,
+            isGracePeriod: true,
+          },
+        });
+      }
+    );
 
     // Emergency disable all
     dangerousTimeoutManager.on('emergencyDisableAll', async ({ reason }) => {
@@ -205,14 +234,17 @@ export class DangerousModeIntegration {
    */
   private setupAutoDisableIntegration(): void {
     // Auto-disable triggered
-    autoDisableService.on('autoDisableTriggered', async (event) => {
+    autoDisableService.on('autoDisableTriggered', async event => {
       await securityNotificationService.sendAutoDisableNotification(event);
     });
 
     // Auto-disable notifications could also trigger additional escalations
-    autoDisableService.on('autoDisableTriggered', async (event) => {
+    autoDisableService.on('autoDisableTriggered', async event => {
       // If this is a critical auto-disable, send additional notifications
-      if (event.severity === 'critical' || event.trigger === 'privilege_escalation_attempt') {
+      if (
+        event.severity === 'critical' ||
+        event.trigger === 'privilege_escalation_attempt'
+      ) {
         await securityNotificationService.sendEmergencyDisableNotification(
           `Critical auto-disable: ${event.trigger}`,
           [event.sessionId]
@@ -345,14 +377,17 @@ export class DangerousModeIntegration {
     };
   } {
     const stats = securityNotificationService.getNotificationStats();
-    
+
     return {
       initialized: this.initialized,
       componentsConnected: {
-        controller: dangerousModeController.listenerCount('dangerousModeEnabled') > 0,
+        controller:
+          dangerousModeController.listenerCount('dangerousModeEnabled') > 0,
         monitor: dangerousSecurityMonitor.listenerCount('securityAlert') > 0,
-        timeoutManager: dangerousTimeoutManager.listenerCount('timeoutTriggered') > 0,
-        autoDisable: autoDisableService.listenerCount('autoDisableTriggered') > 0,
+        timeoutManager:
+          dangerousTimeoutManager.listenerCount('timeoutTriggered') > 0,
+        autoDisable:
+          autoDisableService.listenerCount('autoDisableTriggered') > 0,
       },
       notificationService: {
         totalNotifications: stats.total,

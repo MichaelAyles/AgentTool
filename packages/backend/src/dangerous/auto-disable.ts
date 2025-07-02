@@ -1,9 +1,16 @@
 import { EventEmitter } from 'events';
 import { SecurityLevel, SecurityEventType } from '../security/types.js';
-import { dangerousModeController, DangerousModeSession, DangerousModeState } from './controller.js';
+import {
+  dangerousModeController,
+  DangerousModeSession,
+  DangerousModeState,
+} from './controller.js';
 import { dangerousTimeoutManager, TimeoutTrigger } from './timeout-manager.js';
 import { dangerousSecurityMonitor } from './monitoring.js';
-import { comprehensiveAuditLogger, AuditCategory } from '../security/audit-logger.js';
+import {
+  comprehensiveAuditLogger,
+  AuditCategory,
+} from '../security/audit-logger.js';
 
 // Auto-disable trigger types
 export enum AutoDisableTrigger {
@@ -16,7 +23,7 @@ export enum AutoDisableTrigger {
   MULTIPLE_SECURITY_VIOLATIONS = 'multiple_security_violations',
   UNAUTHORIZED_ACCESS_ATTEMPT = 'unauthorized_access_attempt',
   BLACKLISTED_COMMAND_SEQUENCE = 'blacklisted_command_sequence',
-  ANOMALOUS_BEHAVIOR = 'anomalous_behavior'
+  ANOMALOUS_BEHAVIOR = 'anomalous_behavior',
 }
 
 // Auto-disable configuration
@@ -79,7 +86,8 @@ export class AutoDisableService extends EventEmitter {
   private config: AutoDisableConfig;
   private violationCounts: Map<string, number> = new Map();
   private userBaselines: Map<string, UserBaseline> = new Map();
-  private disabledSessions: Map<string, { until: Date; reason: string }> = new Map();
+  private disabledSessions: Map<string, { until: Date; reason: string }> =
+    new Map();
   private monitoringInterval?: NodeJS.Timeout;
 
   constructor(config: Partial<AutoDisableConfig> = {}) {
@@ -119,8 +127,12 @@ export class AutoDisableService extends EventEmitter {
     }
 
     // Evaluate trigger severity
-    const shouldDisable = await this.evaluateTrigger(session, trigger, evidence);
-    
+    const shouldDisable = await this.evaluateTrigger(
+      session,
+      trigger,
+      evidence
+    );
+
     if (shouldDisable) {
       await this.triggerAutoDisable(session, trigger, evidence);
       return true;
@@ -170,21 +182,27 @@ export class AutoDisableService extends EventEmitter {
     // Analyze command frequency
     const currentRate = this.calculateCommandRate(session);
     if (currentRate > baseline.averageCommandsPerMinute * 2) {
-      anomalies.push(`Command rate ${currentRate.toFixed(1)}/min exceeds baseline ${baseline.averageCommandsPerMinute.toFixed(1)}/min`);
+      anomalies.push(
+        `Command rate ${currentRate.toFixed(1)}/min exceeds baseline ${baseline.averageCommandsPerMinute.toFixed(1)}/min`
+      );
       anomalyScore += 30;
     }
 
     // Analyze error rate
     const currentErrorRate = this.calculateErrorRate(session);
     if (currentErrorRate > baseline.errorRate * 1.5) {
-      anomalies.push(`Error rate ${(currentErrorRate * 100).toFixed(1)}% exceeds baseline ${(baseline.errorRate * 100).toFixed(1)}%`);
+      anomalies.push(
+        `Error rate ${(currentErrorRate * 100).toFixed(1)}% exceeds baseline ${(baseline.errorRate * 100).toFixed(1)}%`
+      );
       anomalyScore += 20;
     }
 
     // Analyze command diversity
     const commandDiversity = this.calculateCommandDiversity(session);
     if (commandDiversity.unusualCommands > 3) {
-      anomalies.push(`${commandDiversity.unusualCommands} unusual commands detected`);
+      anomalies.push(
+        `${commandDiversity.unusualCommands} unusual commands detected`
+      );
       anomalyScore += 25;
     }
 
@@ -197,11 +215,15 @@ export class AutoDisableService extends EventEmitter {
     const isAnomalous = confidence > 0.6;
 
     if (isAnomalous) {
-      await this.checkAutoDisable(sessionId, AutoDisableTrigger.ANOMALOUS_BEHAVIOR, {
-        anomalies,
-        confidence,
-        anomalyScore,
-      });
+      await this.checkAutoDisable(
+        sessionId,
+        AutoDisableTrigger.ANOMALOUS_BEHAVIOR,
+        {
+          anomalies,
+          confidence,
+          anomalyScore,
+        }
+      );
     }
 
     return { isAnomalous, anomalies, confidence };
@@ -212,13 +234,13 @@ export class AutoDisableService extends EventEmitter {
    */
   updateUserBaseline(userId: string, sessionData: DangerousModeSession): void {
     const existing = this.userBaselines.get(userId);
-    
+
     const newBaseline: UserBaseline = {
       userId,
       averageCommandsPerMinute: this.calculateCommandRate(sessionData),
       commonCommands: this.extractCommonCommands(sessionData),
-      typicalSessionDuration: sessionData.enabledAt 
-        ? Date.now() - sessionData.enabledAt.getTime() 
+      typicalSessionDuration: sessionData.enabledAt
+        ? Date.now() - sessionData.enabledAt.getTime()
         : 0,
       errorRate: this.calculateErrorRate(sessionData),
       lastUpdated: new Date(),
@@ -226,14 +248,18 @@ export class AutoDisableService extends EventEmitter {
 
     if (existing) {
       // Merge with existing baseline using weighted average
-      newBaseline.averageCommandsPerMinute = 
-        (existing.averageCommandsPerMinute * 0.7) + (newBaseline.averageCommandsPerMinute * 0.3);
-      
-      newBaseline.errorRate = 
-        (existing.errorRate * 0.7) + (newBaseline.errorRate * 0.3);
-      
+      newBaseline.averageCommandsPerMinute =
+        existing.averageCommandsPerMinute * 0.7 +
+        newBaseline.averageCommandsPerMinute * 0.3;
+
+      newBaseline.errorRate =
+        existing.errorRate * 0.7 + newBaseline.errorRate * 0.3;
+
       // Merge common commands
-      const combinedCommands = [...existing.commonCommands, ...newBaseline.commonCommands];
+      const combinedCommands = [
+        ...existing.commonCommands,
+        ...newBaseline.commonCommands,
+      ];
       newBaseline.commonCommands = [...new Set(combinedCommands)].slice(0, 20); // Keep top 20
     }
 
@@ -249,14 +275,18 @@ export class AutoDisableService extends EventEmitter {
     activeViolations: number;
     cooldownSessions: number;
   } {
-    const disablesByTrigger = Object.values(AutoDisableTrigger).reduce((acc, trigger) => {
-      acc[trigger] = 0;
-      return acc;
-    }, {} as Record<AutoDisableTrigger, number>);
+    const disablesByTrigger = Object.values(AutoDisableTrigger).reduce(
+      (acc, trigger) => {
+        acc[trigger] = 0;
+        return acc;
+      },
+      {} as Record<AutoDisableTrigger, number>
+    );
 
     const now = new Date();
-    const cooldownSessions = Array.from(this.disabledSessions.values())
-      .filter(info => info.until > now).length;
+    const cooldownSessions = Array.from(this.disabledSessions.values()).filter(
+      info => info.until > now
+    ).length;
 
     return {
       totalDisables: this.disabledSessions.size,
@@ -270,26 +300,32 @@ export class AutoDisableService extends EventEmitter {
 
   private setupEventListeners(): void {
     // Listen for command validations
-    dangerousModeController.on('dangerousModeEnabled', ({ sessionId, userId }) => {
-      this.violationCounts.delete(sessionId);
-    });
+    dangerousModeController.on(
+      'dangerousModeEnabled',
+      ({ sessionId, userId }) => {
+        this.violationCounts.delete(sessionId);
+      }
+    );
 
-    dangerousModeController.on('dangerousModeDisabled', ({ sessionId, reason }) => {
-      if (reason === 'suspicious_activity') {
-        const session = dangerousModeController.getSessionStatus(sessionId);
-        if (session) {
-          this.updateUserBaseline(session.userId, session);
+    dangerousModeController.on(
+      'dangerousModeDisabled',
+      ({ sessionId, reason }) => {
+        if (reason === 'suspicious_activity') {
+          const session = dangerousModeController.getSessionStatus(sessionId);
+          if (session) {
+            this.updateUserBaseline(session.userId, session);
+          }
         }
       }
-    });
+    );
 
     // Listen for security alerts
-    dangerousSecurityMonitor.on('securityAlert', async (alert) => {
+    dangerousSecurityMonitor.on('securityAlert', async alert => {
       const triggerMap: Record<string, AutoDisableTrigger> = {
-        'rapid_fire_commands': AutoDisableTrigger.RAPID_FIRE_COMMANDS,
-        'high_risk_sequence': AutoDisableTrigger.BLACKLISTED_COMMAND_SEQUENCE,
-        'failed_command_spike': AutoDisableTrigger.FAILED_COMMAND_THRESHOLD,
-        'escalation_attempt': AutoDisableTrigger.PRIVILEGE_ESCALATION_ATTEMPT,
+        rapid_fire_commands: AutoDisableTrigger.RAPID_FIRE_COMMANDS,
+        high_risk_sequence: AutoDisableTrigger.BLACKLISTED_COMMAND_SEQUENCE,
+        failed_command_spike: AutoDisableTrigger.FAILED_COMMAND_THRESHOLD,
+        escalation_attempt: AutoDisableTrigger.PRIVILEGE_ESCALATION_ATTEMPT,
       };
 
       const trigger = triggerMap[alert.details.patternId];
@@ -303,7 +339,7 @@ export class AutoDisableService extends EventEmitter {
     });
 
     // Listen for timeout events
-    dangerousTimeoutManager.on('timeoutTriggered', async (event) => {
+    dangerousTimeoutManager.on('timeoutTriggered', async event => {
       if (event.trigger === TimeoutTrigger.RISK_THRESHOLD) {
         await this.checkAutoDisable(
           event.sessionId,
@@ -324,10 +360,15 @@ export class AutoDisableService extends EventEmitter {
         return session.riskScore >= this.config.riskScoreThreshold;
 
       case AutoDisableTrigger.FAILED_COMMAND_THRESHOLD:
-        return this.countFailedCommands(session) >= this.config.failedCommandThreshold;
+        return (
+          this.countFailedCommands(session) >=
+          this.config.failedCommandThreshold
+        );
 
       case AutoDisableTrigger.RAPID_FIRE_COMMANDS:
-        return this.calculateCommandRate(session) >= this.config.rapidFireThreshold;
+        return (
+          this.calculateCommandRate(session) >= this.config.rapidFireThreshold
+        );
 
       case AutoDisableTrigger.MULTIPLE_SECURITY_VIOLATIONS:
         const violations = this.violationCounts.get(session.sessionId) || 0;
@@ -361,8 +402,8 @@ export class AutoDisableService extends EventEmitter {
       evidence,
       timestamp: new Date(),
       canAppeal: this.canAppealDisable(trigger),
-      appealDeadline: this.canAppealDisable(trigger) 
-        ? new Date(Date.now() + 24 * 60 * 60 * 1000) 
+      appealDeadline: this.canAppealDisable(trigger)
+        ? new Date(Date.now() + 24 * 60 * 60 * 1000)
         : undefined,
     };
 
@@ -377,7 +418,10 @@ export class AutoDisableService extends EventEmitter {
     });
 
     // Disable the session
-    await dangerousModeController.disableDangerousMode(session.sessionId, 'suspicious_activity');
+    await dangerousModeController.disableDangerousMode(
+      session.sessionId,
+      'suspicious_activity'
+    );
 
     // Log the auto-disable
     await comprehensiveAuditLogger.logAuditEvent({
@@ -405,14 +449,16 @@ export class AutoDisableService extends EventEmitter {
   }
 
   private getUserBaseline(userId: string): UserBaseline {
-    return this.userBaselines.get(userId) || {
-      userId,
-      averageCommandsPerMinute: 2,
-      commonCommands: [],
-      typicalSessionDuration: 15 * 60 * 1000,
-      errorRate: 0.1,
-      lastUpdated: new Date(),
-    };
+    return (
+      this.userBaselines.get(userId) || {
+        userId,
+        averageCommandsPerMinute: 2,
+        commonCommands: [],
+        typicalSessionDuration: 15 * 60 * 1000,
+        errorRate: 0.1,
+        lastUpdated: new Date(),
+      }
+    );
   }
 
   private calculateCommandRate(session: DangerousModeSession): number {
@@ -446,9 +492,12 @@ export class AutoDisableService extends EventEmitter {
     return ['ls', 'cd', 'cat', 'grep'];
   }
 
-  private detectTimeAnomalies(session: DangerousModeSession, baseline: UserBaseline): string[] {
+  private detectTimeAnomalies(
+    session: DangerousModeSession,
+    baseline: UserBaseline
+  ): string[] {
     const anomalies: string[] = [];
-    
+
     if (!session.enabledAt) return anomalies;
 
     const sessionDuration = Date.now() - session.enabledAt.getTime();
@@ -473,7 +522,7 @@ export class AutoDisableService extends EventEmitter {
 
   private detectBlacklistedSequence(evidence: Record<string, any>): boolean {
     const command = evidence.command || '';
-    return this.config.emergencyPatterns.some(pattern => 
+    return this.config.emergencyPatterns.some(pattern =>
       command.toLowerCase().includes(pattern.toLowerCase())
     );
   }
@@ -507,7 +556,10 @@ export class AutoDisableService extends EventEmitter {
   private async notifyEscalationChain(event: AutoDisableEvent): Promise<void> {
     for (const adminUserId of this.config.escalationChain) {
       // In a real implementation, this would send notifications
-      console.log(`Notifying admin ${adminUserId} of auto-disable event`, event);
+      console.log(
+        `Notifying admin ${adminUserId} of auto-disable event`,
+        event
+      );
     }
   }
 
@@ -550,7 +602,7 @@ export class AutoDisableService extends EventEmitter {
 
   private cleanupOldViolations(): void {
     const cutoff = Date.now() - 24 * 60 * 60 * 1000; // 24 hours
-    
+
     for (const [sessionId, info] of this.disabledSessions.entries()) {
       if (info.until.getTime() < cutoff) {
         this.disabledSessions.delete(sessionId);

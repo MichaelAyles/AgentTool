@@ -1,11 +1,11 @@
 import { Fragment } from 'react';
 import { Transition } from '@headlessui/react';
 import { XMarkIcon } from '@heroicons/react/20/solid';
-import { 
-  CheckCircleIcon, 
-  ExclamationTriangleIcon, 
-  InformationCircleIcon, 
-  XCircleIcon 
+import {
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
+  InformationCircleIcon,
+  XCircleIcon,
 } from '@heroicons/react/24/outline';
 import { useNotifications, useUIActions } from '../store';
 
@@ -28,40 +28,38 @@ export function NotificationCenter() {
   const { removeNotification } = useUIActions();
 
   return (
-    <div className="fixed top-4 right-4 z-50 w-80 space-y-2">
-      {notifications.map((notification) => {
+    <div className='fixed top-4 right-4 z-50 w-80 space-y-2'>
+      {notifications.map(notification => {
         const Icon = iconMap[notification.type];
         const colorClass = colorMap[notification.type];
-        
+
         return (
           <Transition
             key={notification.id}
             show={true}
             as={Fragment}
-            enter="transform ease-out duration-300"
-            enterFrom="translate-x-full"
-            enterTo="translate-x-0"
-            leave="transform ease-in duration-200"
-            leaveFrom="translate-x-0"
-            leaveTo="translate-x-full"
+            enter='transform ease-out duration-300'
+            enterFrom='translate-x-full'
+            enterTo='translate-x-0'
+            leave='transform ease-in duration-200'
+            leaveFrom='translate-x-0'
+            leaveTo='translate-x-full'
           >
             <div className={`rounded-lg border p-4 shadow-lg ${colorClass}`}>
-              <div className="flex items-start">
-                <Icon className="h-5 w-5 flex-shrink-0 mt-0.5" />
-                <div className="ml-3 flex-1">
-                  <p className="text-sm font-medium">
-                    {notification.message}
-                  </p>
-                  <p className="text-xs opacity-75 mt-1">
+              <div className='flex items-start'>
+                <Icon className='h-5 w-5 flex-shrink-0 mt-0.5' />
+                <div className='ml-3 flex-1'>
+                  <p className='text-sm font-medium'>{notification.message}</p>
+                  <p className='text-xs opacity-75 mt-1'>
                     {notification.timestamp.toLocaleTimeString()}
                   </p>
                 </div>
                 <button
-                  type="button"
-                  className="ml-4 inline-flex rounded-md p-1.5 hover:bg-black hover:bg-opacity-10 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-current"
+                  type='button'
+                  className='ml-4 inline-flex rounded-md p-1.5 hover:bg-black hover:bg-opacity-10 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-current'
                   onClick={() => removeNotification(notification.id)}
                 >
-                  <XMarkIcon className="h-4 w-4" />
+                  <XMarkIcon className='h-4 w-4' />
                 </button>
               </div>
             </div>

@@ -7,22 +7,24 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const root = document.documentElement;
-    
+
     // Remove existing theme classes
     root.classList.remove('light', 'dark');
-    
+
     if (theme === 'system') {
       // Check system preference
-      const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const systemPrefersDark = window.matchMedia(
+        '(prefers-color-scheme: dark)'
+      ).matches;
       root.classList.add(systemPrefersDark ? 'dark' : 'light');
-      
+
       // Listen for system theme changes
       const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
       const handleChange = (e: MediaQueryListEvent) => {
         root.classList.remove('light', 'dark');
         root.classList.add(e.matches ? 'dark' : 'light');
       };
-      
+
       mediaQuery.addEventListener('change', handleChange);
       return () => mediaQuery.removeEventListener('change', handleChange);
     } else {
@@ -61,10 +63,10 @@ export function ThemeToggle() {
   return (
     <button
       onClick={toggleTheme}
-      className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+      className='p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors'
       title={`Current theme: ${theme} (click to change)`}
     >
-      <span className="text-lg">{getThemeIcon()}</span>
+      <span className='text-lg'>{getThemeIcon()}</span>
     </button>
   );
 }

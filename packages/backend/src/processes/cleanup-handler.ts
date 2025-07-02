@@ -1,8 +1,15 @@
 import { EventEmitter } from 'events';
-import { processStateMachine, ProcessState, ProcessEvent } from './state-machine.js';
+import {
+  processStateMachine,
+  ProcessState,
+  ProcessEvent,
+} from './state-machine.js';
 import { processLifecycleManager } from './lifecycle-manager.js';
 import { structuredLogger } from '../middleware/logging.js';
-import { comprehensiveAuditLogger, AuditCategory } from '../security/audit-logger.js';
+import {
+  comprehensiveAuditLogger,
+  AuditCategory,
+} from '../security/audit-logger.js';
 import { SecurityLevel } from '../security/types.js';
 import { securityNotificationService } from '../dangerous/notifications.js';
 import { spawn, ChildProcess } from 'child_process';
@@ -17,7 +24,7 @@ export enum CleanupOperation {
   TEMP_CLEANUP = 'temp_cleanup',
   RESOURCE_RELEASE = 'resource_release',
   NETWORK_CLEANUP = 'network_cleanup',
-  LOG_ROTATION = 'log_rotation'
+  LOG_ROTATION = 'log_rotation',
 }
 
 // Cleanup priority levels
@@ -26,7 +33,7 @@ export enum CleanupPriority {
   NORMAL = 2,
   HIGH = 3,
   CRITICAL = 4,
-  EMERGENCY = 5
+  EMERGENCY = 5,
 }
 
 // Cleanup strategy
@@ -119,7 +126,10 @@ const DEFAULT_CONFIG: CleanupConfig = {
 export class ProcessCleanupHandler extends EventEmitter {
   private config: CleanupConfig;
   private activeCleanups: Map<string, CleanupContext> = new Map();
-  private cleanupQueue: Array<{ sessionId: string; priority: CleanupPriority }> = [];
+  private cleanupQueue: Array<{
+    sessionId: string;
+    priority: CleanupPriority;
+  }> = [];
   private resourceMonitorInterval?: NodeJS.Timeout;
   private emergencyCleanupInterval?: NodeJS.Timeout;
   private cleanupHistory: Map<string, CleanupResult[]> = new Map();
@@ -209,7 +219,10 @@ export class ProcessCleanupHandler extends EventEmitter {
         }
 
         try {
-          const result = await this.executeCleanupStrategy(strategy, cleanupContext);
+          const result = await this.executeCleanupStrategy(
+            strategy,
+            cleanupContext
+          );
           results.push(result);
 
           if (!result.success) {
@@ -229,7 +242,12 @@ export class ProcessCleanupHandler extends EventEmitter {
             success: false,
             operation: strategy.operation,
             duration: 0,
-            resourcesReleased: { processes: 0, files: 0, directories: 0, memoryBytes: 0 },
+            resourcesReleased: {
+              processes: 0,
+              files: 0,
+              directories: 0,
+              memoryBytes: 0,
+            },
             errors: [(error as Error).message],
             warnings: [],
             metadata: {},
@@ -283,8 +301,11 @@ export class ProcessCleanupHandler extends EventEmitter {
 
     // Attempt recovery
     try {
-      const recovered = await strategy.recoveryAction(error, { sessionId, ...errorContext });
-      
+      const recovered = await strategy.recoveryAction(error, {
+        sessionId,
+        ...errorContext,
+      });
+
       if (recovered) {
         structuredLogger.info('Process error recovered', {
           sessionId,
@@ -316,7 +337,7 @@ export class ProcessCleanupHandler extends EventEmitter {
 
     // Get all active processes
     const activeProcesses = processLifecycleManager.getActiveProcesses();
-    
+
     // Notify security system
     await securityNotificationService.sendEmergencyDisableNotification(
       `Emergency process cleanup: ${reason}`,
@@ -325,10 +346,13 @@ export class ProcessCleanupHandler extends EventEmitter {
 
     // Force cleanup all processes
     const cleanupPromises = activeProcesses.map(sessionId =>
-      this.performCleanup(sessionId, reason, CleanupPriority.EMERGENCY)
-        .catch(error => {
-          structuredLogger.error('Emergency cleanup failed', error as Error, { sessionId });
-        })
+      this.performCleanup(sessionId, reason, CleanupPriority.EMERGENCY).catch(
+        error => {
+          structuredLogger.error('Emergency cleanup failed', error as Error, {
+            sessionId,
+          });
+        }
+      )
     );
 
     await Promise.all(cleanupPromises);
@@ -351,7 +375,10 @@ export class ProcessCleanupHandler extends EventEmitter {
       },
     });
 
-    this.emit('emergencyCleanup', { reason, affectedProcesses: activeProcesses });
+    this.emit('emergencyCleanup', {
+      reason,
+      affectedProcesses: activeProcesses,
+    });
   }
 
   /**
@@ -416,19 +443,21 @@ export class ProcessCleanupHandler extends EventEmitter {
               try {
                 if (proc.pid && !proc.killed) {
                   process.kill(proc.pid, 'SIGTERM');
-                  
+
                   // Wait for graceful shutdown
                   await new Promise(resolve => setTimeout(resolve, 2000));
-                  
+
                   // Force kill if still alive
                   if (!proc.killed) {
                     process.kill(proc.pid, 'SIGKILL');
                   }
-                  
+
                   processesTerminated++;
                 }
               } catch (error) {
-                errors.push(`Failed to terminate process ${proc.pid}: ${(error as Error).message}`);
+                errors.push(
+                  `Failed to terminate process ${proc.pid}: ${(error as Error).message}`
+                );
               }
             }
 
@@ -436,7 +465,12 @@ export class ProcessCleanupHandler extends EventEmitter {
               success: errors.length === 0,
               operation: CleanupOperation.PROCESS_TERMINATION,
               duration: Date.now() - startTime,
-              resourcesReleased: { processes: processesTerminated, files: 0, directories: 0, memoryBytes: 0 },
+              resourcesReleased: {
+                processes: processesTerminated,
+                files: 0,
+                directories: 0,
+                memoryBytes: 0,
+              },
               errors,
               warnings: [],
               metadata: { terminatedProcesses: processesTerminated },
@@ -446,7 +480,12 @@ export class ProcessCleanupHandler extends EventEmitter {
               success: false,
               operation: CleanupOperation.PROCESS_TERMINATION,
               duration: Date.now() - startTime,
-              resourcesReleased: { processes: 0, files: 0, directories: 0, memoryBytes: 0 },
+              resourcesReleased: {
+                processes: 0,
+                files: 0,
+                directories: 0,
+                memoryBytes: 0,
+              },
               errors: [(error as Error).message],
               warnings: [],
               metadata: {},
@@ -477,7 +516,9 @@ export class ProcessCleanupHandler extends EventEmitter {
                 filesDeleted++;
               } catch (error) {
                 if ((error as any).code !== 'ENOENT') {
-                  errors.push(`Failed to delete file ${filePath}: ${(error as Error).message}`);
+                  errors.push(
+                    `Failed to delete file ${filePath}: ${(error as Error).message}`
+                  );
                 }
               }
             }
@@ -489,7 +530,9 @@ export class ProcessCleanupHandler extends EventEmitter {
                 directoriesDeleted++;
               } catch (error) {
                 if ((error as any).code !== 'ENOENT') {
-                  warnings.push(`Failed to delete directory ${dirPath}: ${(error as Error).message}`);
+                  warnings.push(
+                    `Failed to delete directory ${dirPath}: ${(error as Error).message}`
+                  );
                 }
               }
             }
@@ -498,7 +541,12 @@ export class ProcessCleanupHandler extends EventEmitter {
               success: errors.length === 0,
               operation: CleanupOperation.FILE_CLEANUP,
               duration: Date.now() - startTime,
-              resourcesReleased: { processes: 0, files: filesDeleted, directories: directoriesDeleted, memoryBytes: 0 },
+              resourcesReleased: {
+                processes: 0,
+                files: filesDeleted,
+                directories: directoriesDeleted,
+                memoryBytes: 0,
+              },
               errors,
               warnings,
               metadata: { filesDeleted, directoriesDeleted },
@@ -508,7 +556,12 @@ export class ProcessCleanupHandler extends EventEmitter {
               success: false,
               operation: CleanupOperation.FILE_CLEANUP,
               duration: Date.now() - startTime,
-              resourcesReleased: { processes: 0, files: 0, directories: 0, memoryBytes: 0 },
+              resourcesReleased: {
+                processes: 0,
+                files: 0,
+                directories: 0,
+                memoryBytes: 0,
+              },
               errors: [(error as Error).message],
               warnings,
               metadata: {},
@@ -536,7 +589,9 @@ export class ProcessCleanupHandler extends EventEmitter {
                 tempFilesDeleted++;
               } catch (error) {
                 if ((error as any).code !== 'ENOENT') {
-                  errors.push(`Failed to delete temp file ${tempFile}: ${(error as Error).message}`);
+                  errors.push(
+                    `Failed to delete temp file ${tempFile}: ${(error as Error).message}`
+                  );
                 }
               }
             }
@@ -545,7 +600,12 @@ export class ProcessCleanupHandler extends EventEmitter {
               success: errors.length === 0,
               operation: CleanupOperation.TEMP_CLEANUP,
               duration: Date.now() - startTime,
-              resourcesReleased: { processes: 0, files: tempFilesDeleted, directories: 0, memoryBytes: 0 },
+              resourcesReleased: {
+                processes: 0,
+                files: tempFilesDeleted,
+                directories: 0,
+                memoryBytes: 0,
+              },
               errors,
               warnings: [],
               metadata: { tempFilesDeleted },
@@ -555,7 +615,12 @@ export class ProcessCleanupHandler extends EventEmitter {
               success: false,
               operation: CleanupOperation.TEMP_CLEANUP,
               duration: Date.now() - startTime,
-              resourcesReleased: { processes: 0, files: 0, directories: 0, memoryBytes: 0 },
+              resourcesReleased: {
+                processes: 0,
+                files: 0,
+                directories: 0,
+                memoryBytes: 0,
+              },
               errors: [(error as Error).message],
               warnings: [],
               metadata: {},
@@ -573,7 +638,7 @@ export class ProcessCleanupHandler extends EventEmitter {
         retryDelay: 1000,
         action: async (context: CleanupContext) => {
           const startTime = Date.now();
-          
+
           try {
             // Force garbage collection if available
             if (global.gc) {
@@ -588,7 +653,12 @@ export class ProcessCleanupHandler extends EventEmitter {
               success: true,
               operation: CleanupOperation.MEMORY_CLEANUP,
               duration: Date.now() - startTime,
-              resourcesReleased: { processes: 0, files: 0, directories: 0, memoryBytes: 0 },
+              resourcesReleased: {
+                processes: 0,
+                files: 0,
+                directories: 0,
+                memoryBytes: 0,
+              },
               errors: [],
               warnings: [],
               metadata: { gcTriggered: !!global.gc },
@@ -598,7 +668,12 @@ export class ProcessCleanupHandler extends EventEmitter {
               success: false,
               operation: CleanupOperation.MEMORY_CLEANUP,
               duration: Date.now() - startTime,
-              resourcesReleased: { processes: 0, files: 0, directories: 0, memoryBytes: 0 },
+              resourcesReleased: {
+                processes: 0,
+                files: 0,
+                directories: 0,
+                memoryBytes: 0,
+              },
               errors: [(error as Error).message],
               warnings: [],
               metadata: {},
@@ -617,7 +692,9 @@ export class ProcessCleanupHandler extends EventEmitter {
         escalationThreshold: 5,
         recoveryAction: async (error: Error, context: any) => {
           // Attempt to restart the process
-          return await processLifecycleManager.restartProcess(context.sessionId);
+          return await processLifecycleManager.restartProcess(
+            context.sessionId
+          );
         },
         fallbackAction: async (error: Error, context: any) => {
           // Clean up the failed process
@@ -631,7 +708,11 @@ export class ProcessCleanupHandler extends EventEmitter {
         escalationThreshold: 3,
         recoveryAction: async (error: Error, context: any) => {
           // Try memory cleanup first
-          await this.performCleanup(context.sessionId, 'memory_recovery', CleanupPriority.HIGH);
+          await this.performCleanup(
+            context.sessionId,
+            'memory_recovery',
+            CleanupPriority.HIGH
+          );
           return true;
         },
       },
@@ -643,7 +724,9 @@ export class ProcessCleanupHandler extends EventEmitter {
         recoveryAction: async (error: Error, context: any) => {
           // Stop and restart with fresh timeout
           await processLifecycleManager.stopProcess(context.sessionId, false);
-          return await processLifecycleManager.restartProcess(context.sessionId);
+          return await processLifecycleManager.restartProcess(
+            context.sessionId
+          );
         },
       },
     ];
@@ -651,11 +734,14 @@ export class ProcessCleanupHandler extends EventEmitter {
 
   private setupEventListeners(): void {
     // Listen for process lifecycle events
-    processLifecycleManager.on('processStopped', async ({ sessionId, graceful }) => {
-      if (this.config.enableAutomaticCleanup && !graceful) {
-        await this.performCleanup(sessionId, 'process_stopped');
+    processLifecycleManager.on(
+      'processStopped',
+      async ({ sessionId, graceful }) => {
+        if (this.config.enableAutomaticCleanup && !graceful) {
+          await this.performCleanup(sessionId, 'process_stopped');
+        }
       }
-    });
+    );
 
     processLifecycleManager.on('processError', async ({ sessionId, error }) => {
       await this.handleProcessError(sessionId, error);
@@ -684,10 +770,15 @@ export class ProcessCleanupHandler extends EventEmitter {
     // Discover temporary files
     if (context.processContext.workingDirectory) {
       try {
-        const tempDir = path.join(context.processContext.workingDirectory, '.tmp');
+        const tempDir = path.join(
+          context.processContext.workingDirectory,
+          '.tmp'
+        );
         try {
           const files = await fs.readdir(tempDir);
-          context.resources.tempFiles = files.map(file => path.join(tempDir, file));
+          context.resources.tempFiles = files.map(file =>
+            path.join(tempDir, file)
+          );
         } catch (error) {
           // Temp directory might not exist
         }
@@ -712,7 +803,10 @@ export class ProcessCleanupHandler extends EventEmitter {
     while (attempt <= strategy.retryCount) {
       try {
         const timeoutPromise = new Promise<CleanupResult>((_, reject) => {
-          setTimeout(() => reject(new Error('Cleanup timeout')), strategy.timeout);
+          setTimeout(
+            () => reject(new Error('Cleanup timeout')),
+            strategy.timeout
+          );
         });
 
         const result = await Promise.race([
@@ -740,7 +834,12 @@ export class ProcessCleanupHandler extends EventEmitter {
       success: false,
       operation: strategy.operation,
       duration: strategy.timeout,
-      resourcesReleased: { processes: 0, files: 0, directories: 0, memoryBytes: 0 },
+      resourcesReleased: {
+        processes: 0,
+        files: 0,
+        directories: 0,
+        memoryBytes: 0,
+      },
       errors: [lastError?.message || 'Unknown error'],
       warnings: [],
       metadata: { attempts: attempt },
@@ -763,8 +862,14 @@ export class ProcessCleanupHandler extends EventEmitter {
     return 'UNKNOWN';
   }
 
-  private findErrorRecoveryStrategy(errorType: string): ErrorRecoveryStrategy | null {
-    return this.config.errorRecoveryStrategies.find(s => s.errorType === errorType) || null;
+  private findErrorRecoveryStrategy(
+    errorType: string
+  ): ErrorRecoveryStrategy | null {
+    return (
+      this.config.errorRecoveryStrategies.find(
+        s => s.errorType === errorType
+      ) || null
+    );
   }
 
   private async escalateError(
@@ -772,10 +877,14 @@ export class ProcessCleanupHandler extends EventEmitter {
     error: Error,
     context: Record<string, any>
   ): Promise<void> {
-    structuredLogger.error('Error escalated - recovery threshold exceeded', error, {
-      sessionId,
-      context,
-    });
+    structuredLogger.error(
+      'Error escalated - recovery threshold exceeded',
+      error,
+      {
+        sessionId,
+        context,
+      }
+    );
 
     // Notify security system
     await securityNotificationService.sendSecurityAlert({
@@ -796,7 +905,11 @@ export class ProcessCleanupHandler extends EventEmitter {
     });
 
     // Force cleanup
-    await this.performCleanup(sessionId, 'error_escalation', CleanupPriority.EMERGENCY);
+    await this.performCleanup(
+      sessionId,
+      'error_escalation',
+      CleanupPriority.EMERGENCY
+    );
   }
 
   private async logCleanupCompletion(
@@ -805,12 +918,15 @@ export class ProcessCleanupHandler extends EventEmitter {
   ): Promise<void> {
     const totalDuration = results.reduce((sum, r) => sum + r.duration, 0);
     const successCount = results.filter(r => r.success).length;
-    const totalResources = results.reduce((sum, r) => ({
-      processes: sum.processes + r.resourcesReleased.processes,
-      files: sum.files + r.resourcesReleased.files,
-      directories: sum.directories + r.resourcesReleased.directories,
-      memoryBytes: sum.memoryBytes + r.resourcesReleased.memoryBytes,
-    }), { processes: 0, files: 0, directories: 0, memoryBytes: 0 });
+    const totalResources = results.reduce(
+      (sum, r) => ({
+        processes: sum.processes + r.resourcesReleased.processes,
+        files: sum.files + r.resourcesReleased.files,
+        directories: sum.directories + r.resourcesReleased.directories,
+        memoryBytes: sum.memoryBytes + r.resourcesReleased.memoryBytes,
+      }),
+      { processes: 0, files: 0, directories: 0, memoryBytes: 0 }
+    );
 
     await comprehensiveAuditLogger.logAuditEvent({
       category: AuditCategory.SYSTEM_CHANGES,
@@ -820,7 +936,9 @@ export class ProcessCleanupHandler extends EventEmitter {
       userId: context.userId,
       sessionId: context.sessionId,
       outcome: successCount === results.length ? 'success' : 'partial',
-      severity: context.dangerousModeEnabled ? SecurityLevel.MODERATE : SecurityLevel.SAFE,
+      severity: context.dangerousModeEnabled
+        ? SecurityLevel.MODERATE
+        : SecurityLevel.SAFE,
       details: {
         reason: context.cleanupReason,
         totalDuration,
@@ -849,17 +967,22 @@ export class ProcessCleanupHandler extends EventEmitter {
     const heapUsed = memoryUsage.heapUsed / 1024 / 1024; // MB
 
     // Trigger cleanup if memory usage is high
-    if (heapUsed > 500) { // 500MB threshold
-      structuredLogger.warn('High memory usage detected, triggering cleanup', { heapUsed });
+    if (heapUsed > 500) {
+      // 500MB threshold
+      structuredLogger.warn('High memory usage detected, triggering cleanup', {
+        heapUsed,
+      });
       // Could trigger selective cleanup here
     }
   }
 
   private async checkEmergencyConditions(): Promise<void> {
     const stats = processLifecycleManager.getSystemStatistics();
-    
+
     // Check if emergency cleanup is needed
-    if (stats.activeProcesses > this.config.emergencyCleanupThreshold.processCount) {
+    if (
+      stats.activeProcesses > this.config.emergencyCleanupThreshold.processCount
+    ) {
       await this.emergencyCleanup('too_many_processes');
     }
   }

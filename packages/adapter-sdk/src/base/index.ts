@@ -1,12 +1,17 @@
 import { spawn, ChildProcess } from 'child_process';
-import type { CLIAdapter, ExecuteOptions, AdapterConfig, JSONSchema } from '../types/index.js';
+import type {
+  CLIAdapter,
+  ExecuteOptions,
+  AdapterConfig,
+  JSONSchema,
+} from '../types/index.js';
 import type { ProcessHandle, OutputChunk } from '@vibecode/shared';
 import { generateId } from '@vibecode/shared';
 
 export abstract class BaseAdapter implements Partial<CLIAdapter> {
   abstract name: string;
   abstract version: string;
-  
+
   protected config?: AdapterConfig;
   protected processes = new Map<string, ChildProcess>();
 

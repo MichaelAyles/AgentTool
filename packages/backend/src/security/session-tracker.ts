@@ -64,7 +64,12 @@ export class SecuritySessionTracker {
   /**
    * Track resource access
    */
-  trackResourceAccess(sessionId: string, resource: string, action: string, success: boolean) {
+  trackResourceAccess(
+    sessionId: string,
+    resource: string,
+    action: string,
+    success: boolean
+  ) {
     const context = securityContextManager.getContext(sessionId);
     if (!context) return;
 
@@ -95,7 +100,12 @@ export class SecuritySessionTracker {
   /**
    * Track dangerous command execution
    */
-  trackDangerousCommand(sessionId: string, command: string, args: string[], success: boolean) {
+  trackDangerousCommand(
+    sessionId: string,
+    command: string,
+    args: string[],
+    success: boolean
+  ) {
     const context = securityContextManager.getContext(sessionId);
     if (!context) return;
 
@@ -126,7 +136,11 @@ export class SecuritySessionTracker {
   /**
    * Track permission escalation attempts
    */
-  trackPermissionEscalation(sessionId: string, attemptedRole: UserRole, success: boolean) {
+  trackPermissionEscalation(
+    sessionId: string,
+    attemptedRole: UserRole,
+    success: boolean
+  ) {
     const context = securityContextManager.getContext(sessionId);
     if (!context) return;
 
@@ -147,7 +161,11 @@ export class SecuritySessionTracker {
   /**
    * Track configuration changes
    */
-  trackConfigurationChange(sessionId: string, configType: string, changes: Record<string, any>) {
+  trackConfigurationChange(
+    sessionId: string,
+    configType: string,
+    changes: Record<string, any>
+  ) {
     const context = securityContextManager.getContext(sessionId);
     if (!context) return;
 
@@ -186,8 +204,14 @@ export class SecuritySessionTracker {
       activeProjects: context.activeProjects.length,
       lastActivity: context.lastActivity,
       requestCount: context.requestCount,
-      timeUntilDangerousDisable: context.dangerousModeEnabledAt ? 
-        Math.max(0, (context.dangerousModeEnabledAt.getTime() + 30 * 60 * 1000) - Date.now()) : 0,
+      timeUntilDangerousDisable: context.dangerousModeEnabledAt
+        ? Math.max(
+            0,
+            context.dangerousModeEnabledAt.getTime() +
+              30 * 60 * 1000 -
+              Date.now()
+          )
+        : 0,
     };
   }
 
@@ -201,7 +225,10 @@ export class SecuritySessionTracker {
   /**
    * Enable dangerous mode with confirmation
    */
-  enableDangerousMode(sessionId: string, confirmation: boolean = false): boolean {
+  enableDangerousMode(
+    sessionId: string,
+    confirmation: boolean = false
+  ): boolean {
     return securityContextManager.enableDangerousMode(sessionId, confirmation);
   }
 
@@ -222,21 +249,25 @@ export class SecuritySessionTracker {
   // Private helper methods
 
   private getClientIP(req: Request): string {
-    return (req.headers['x-forwarded-for'] as string)?.split(',')[0] || 
-           (req.headers['x-real-ip'] as string) ||
-           req.connection.remoteAddress ||
-           req.socket.remoteAddress ||
-           'unknown';
+    return (
+      (req.headers['x-forwarded-for'] as string)?.split(',')[0] ||
+      (req.headers['x-real-ip'] as string) ||
+      req.connection.remoteAddress ||
+      req.socket.remoteAddress ||
+      'unknown'
+    );
   }
 
   private extractLocationInfo(req: Request) {
     // Extract location from headers if available (e.g., from CloudFlare, AWS, etc.)
-    const country = req.headers['cf-ipcountry'] as string || 
-                   req.headers['x-country-code'] as string;
-    const region = req.headers['cf-region'] as string ||
-                  req.headers['x-region'] as string;
-    const city = req.headers['cf-ipcity'] as string ||
-                req.headers['x-city'] as string;
+    const country =
+      (req.headers['cf-ipcountry'] as string) ||
+      (req.headers['x-country-code'] as string);
+    const region =
+      (req.headers['cf-region'] as string) ||
+      (req.headers['x-region'] as string);
+    const city =
+      (req.headers['cf-ipcity'] as string) || (req.headers['x-city'] as string);
 
     if (country || region || city) {
       return { country, region, city };
@@ -247,7 +278,7 @@ export class SecuritySessionTracker {
 
   private extractDeviceInfo(req: Request) {
     const userAgent = req.headers['user-agent'] || '';
-    
+
     // Basic device detection
     let deviceType = 'desktop';
     if (/mobile/i.test(userAgent)) {
@@ -301,24 +332,29 @@ export class SecuritySessionTracker {
 
     const suspiciousPatterns = [
       // Multiple rapid requests
-      () => context.requestCount > 50 && 
-            (Date.now() - context.requestWindowStart.getTime()) < 60 * 1000,
-      
+      () =>
+        context.requestCount > 50 &&
+        Date.now() - context.requestWindowStart.getTime() < 60 * 1000,
+
       // Unusual user agent
-      () => !req.headers['user-agent'] || 
-            /bot|crawler|spider|scraper/i.test(req.headers['user-agent'] || ''),
-      
+      () =>
+        !req.headers['user-agent'] ||
+        /bot|crawler|spider|scraper/i.test(req.headers['user-agent'] || ''),
+
       // Missing common headers
       () => !req.headers['accept'] || !req.headers['accept-language'],
-      
+
       // Suspicious paths
-      () => req.path.includes('..') || 
-            req.path.includes('<script>') ||
-            /\.(php|asp|jsp)$/i.test(req.path),
+      () =>
+        req.path.includes('..') ||
+        req.path.includes('<script>') ||
+        /\.(php|asp|jsp)$/i.test(req.path),
     ];
 
-    const suspiciousCount = suspiciousPatterns.filter(pattern => pattern()).length;
-    
+    const suspiciousCount = suspiciousPatterns.filter(pattern =>
+      pattern()
+    ).length;
+
     if (suspiciousCount >= 2) {
       securityContextManager.recordViolation(sessionId, {
         type: SecurityEventType.SUSPICIOUS_ACTIVITY,
@@ -336,6 +372,8 @@ export class SecuritySessionTracker {
 }
 
 // Export factory function
-export function createSecuritySessionTracker(database: Database): SecuritySessionTracker {
+export function createSecuritySessionTracker(
+  database: Database
+): SecuritySessionTracker {
   return new SecuritySessionTracker(database);
 }

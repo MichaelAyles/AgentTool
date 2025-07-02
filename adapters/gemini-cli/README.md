@@ -46,6 +46,7 @@ export GOOGLE_CLOUD_PROJECT="your-project-id"
 ### 3. Gemini API Access
 
 Ensure you have access to Gemini models through:
+
 - Vertex AI API (for production use)
 - Or Gemini API (for development)
 
@@ -62,6 +63,7 @@ Ensure you have access to Gemini models through:
 ### Model Options
 
 The adapter supports various Gemini models:
+
 - `gemini-pro`: General-purpose model for text and code
 - `gemini-pro-vision`: Model with image understanding capabilities
 - `gemini-ultra`: Most capable model (when available)
@@ -163,6 +165,7 @@ The adapter integrates seamlessly with popular IDEs:
 ### Common Issues
 
 1. **Authentication Errors**
+
    ```bash
    # Verify credentials
    gcloud auth list
@@ -174,6 +177,7 @@ The adapter integrates seamlessly with popular IDEs:
    - Consider upgrading your plan or requesting quota increases
 
 3. **Model Not Available**
+
    ```bash
    # List available models
    gemini models list
@@ -264,6 +268,7 @@ This adapter is part of the Vibe Code project and follows the same licensing ter
 ## Support
 
 For support and questions:
+
 - GitHub Issues: [Vibe Code Repository](https://github.com/your-org/vibe-code)
 - Documentation: [Vibe Code Docs](https://docs.vibecode.dev)
 - Community: [Discord Server](https://discord.gg/vibecode)

@@ -1,8 +1,15 @@
 import { EventEmitter } from 'events';
 import { SecurityLevel, SecurityEventType } from '../security/types.js';
 import { securityEventLogger } from '../security/event-logger.js';
-import { comprehensiveAuditLogger, AuditCategory } from '../security/audit-logger.js';
-import { dangerousModeController, DangerousModeSession, DangerousModeState } from './controller.js';
+import {
+  comprehensiveAuditLogger,
+  AuditCategory,
+} from '../security/audit-logger.js';
+import {
+  dangerousModeController,
+  DangerousModeSession,
+  DangerousModeState,
+} from './controller.js';
 import { SecurityWarningService, WarningType } from './warnings.js';
 
 // Monitoring threshold configuration
@@ -118,7 +125,7 @@ export class DangerousSecurityMonitor extends EventEmitter {
     // Track command history
     const history = this.commandHistory.get(sessionId) || [];
     history.push(execution);
-    
+
     // Keep only last 100 commands per session
     if (history.length > 100) {
       history.splice(0, history.length - 100);
@@ -219,7 +226,7 @@ export class DangerousSecurityMonitor extends EventEmitter {
   }> {
     const sessions = Array.from(this.commandHistory.keys());
     const activeSessions = sessions.length;
-    
+
     let totalCommands = 0;
     let totalDuration = 0;
     const riskDistribution: Record<string, number> = {
@@ -232,7 +239,7 @@ export class DangerousSecurityMonitor extends EventEmitter {
     for (const sessionId of sessions) {
       const history = this.commandHistory.get(sessionId) || [];
       totalCommands += history.length;
-      
+
       // Calculate risk distribution
       for (const cmd of history) {
         riskDistribution[cmd.risk] = (riskDistribution[cmd.risk] || 0) + 1;
@@ -246,7 +253,8 @@ export class DangerousSecurityMonitor extends EventEmitter {
       }
     }
 
-    const averageSessionDuration = activeSessions > 0 ? totalDuration / activeSessions : 0;
+    const averageSessionDuration =
+      activeSessions > 0 ? totalDuration / activeSessions : 0;
 
     return {
       activeSessions,
@@ -262,11 +270,11 @@ export class DangerousSecurityMonitor extends EventEmitter {
    */
   getSecurityAlerts(sessionId?: string): MonitoringAlert[] {
     const alerts = Array.from(this.activeAlerts.values());
-    
+
     if (sessionId) {
       return alerts.filter(alert => alert.sessionId === sessionId);
     }
-    
+
     return alerts.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
   }
 
@@ -353,10 +361,13 @@ export class DangerousSecurityMonitor extends EventEmitter {
     // Implementation would analyze historical data
     // For now, return current state snapshot
     const alerts = Array.from(this.activeAlerts.values());
-    const alertsBySeverity = alerts.reduce((acc, alert) => {
-      acc[alert.severity] = (acc[alert.severity] || 0) + 1;
-      return acc;
-    }, {} as Record<SecurityLevel, number>);
+    const alertsBySeverity = alerts.reduce(
+      (acc, alert) => {
+        acc[alert.severity] = (acc[alert.severity] || 0) + 1;
+        return acc;
+      },
+      {} as Record<SecurityLevel, number>
+    );
 
     return {
       period: timeRange,
@@ -367,7 +378,10 @@ export class DangerousSecurityMonitor extends EventEmitter {
         averageDuration: 0,
       },
       commands: {
-        total: Array.from(this.commandHistory.values()).reduce((sum, cmds) => sum + cmds.length, 0),
+        total: Array.from(this.commandHistory.values()).reduce(
+          (sum, cmds) => sum + cmds.length,
+          0
+        ),
         byRisk: { safe: 0, moderate: 0, dangerous: 0, critical: 0 },
         failed: 0,
         blocked: 0,
@@ -394,7 +408,7 @@ export class DangerousSecurityMonitor extends EventEmitter {
         name: 'Rapid Fire Commands',
         description: 'User executing commands at an unusually high rate',
         severity: SecurityLevel.MODERATE,
-        detectFunction: (context) => {
+        detectFunction: context => {
           const recentCommands = context.recentCommands.filter(
             cmd => Date.now() - cmd.timestamp.getTime() < 60000 // Last minute
           );
@@ -409,10 +423,11 @@ export class DangerousSecurityMonitor extends EventEmitter {
         name: 'High Risk Command Sequence',
         description: 'Multiple high-risk commands executed in sequence',
         severity: SecurityLevel.DANGEROUS,
-        detectFunction: (context) => {
+        detectFunction: context => {
           const recentRiskyCommands = context.recentCommands.filter(
-            cmd => ['dangerous', 'critical'].includes(cmd.risk) &&
-                   Date.now() - cmd.timestamp.getTime() < 300000 // Last 5 minutes
+            cmd =>
+              ['dangerous', 'critical'].includes(cmd.risk) &&
+              Date.now() - cmd.timestamp.getTime() < 300000 // Last 5 minutes
           );
           return recentRiskyCommands.length >= 3;
         },
@@ -425,14 +440,18 @@ export class DangerousSecurityMonitor extends EventEmitter {
         name: 'Failed Command Spike',
         description: 'High number of failed command executions',
         severity: SecurityLevel.MODERATE,
-        detectFunction: (context) => {
+        detectFunction: context => {
           const failedCommands = context.recentCommands.filter(
             cmd => cmd.outcome === 'failure'
           );
-          return failedCommands.length > this.thresholds.maxFailedCommandsPerSession;
+          return (
+            failedCommands.length > this.thresholds.maxFailedCommandsPerSession
+          );
         },
         action: 'warn',
-        metadata: { failure_threshold: this.thresholds.maxFailedCommandsPerSession },
+        metadata: {
+          failure_threshold: this.thresholds.maxFailedCommandsPerSession,
+        },
       },
 
       {
@@ -440,14 +459,18 @@ export class DangerousSecurityMonitor extends EventEmitter {
         name: 'Privilege Escalation Attempt',
         description: 'Commands suggesting privilege escalation attempts',
         severity: SecurityLevel.DANGEROUS,
-        detectFunction: (context) => {
+        detectFunction: context => {
           const escalationCommands = ['sudo', 'su', 'chmod 777', 'passwd'];
           return context.recentCommands.some(cmd =>
-            escalationCommands.some(esc => cmd.command.toLowerCase().includes(esc))
+            escalationCommands.some(esc =>
+              cmd.command.toLowerCase().includes(esc)
+            )
           );
         },
         action: 'disable',
-        metadata: { escalation_commands: ['sudo', 'su', 'chmod 777', 'passwd'] },
+        metadata: {
+          escalation_commands: ['sudo', 'su', 'chmod 777', 'passwd'],
+        },
       },
 
       {
@@ -455,8 +478,13 @@ export class DangerousSecurityMonitor extends EventEmitter {
         name: 'System Exploration Pattern',
         description: 'Pattern suggesting system reconnaissance',
         severity: SecurityLevel.MODERATE,
-        detectFunction: (context) => {
-          const explorationCommands = ['find /', 'ls /etc', 'cat /etc/passwd', 'ps aux'];
+        detectFunction: context => {
+          const explorationCommands = [
+            'find /',
+            'ls /etc',
+            'cat /etc/passwd',
+            'ps aux',
+          ];
           const matches = context.recentCommands.filter(cmd =>
             explorationCommands.some(exp => cmd.command.includes(exp))
           );
@@ -506,9 +534,11 @@ export class DangerousSecurityMonitor extends EventEmitter {
     }
   }
 
-  private async detectSecurityPatterns(session: DangerousModeSession): Promise<void> {
+  private async detectSecurityPatterns(
+    session: DangerousModeSession
+  ): Promise<void> {
     const recentCommands = this.getRecentCommands(session.sessionId, 600000); // Last 10 minutes
-    
+
     const context: MonitoringContext = {
       session,
       recentCommands,
@@ -535,7 +565,10 @@ export class DangerousSecurityMonitor extends EventEmitter {
 
         // Execute pattern action
         if (pattern.action === 'disable') {
-          await dangerousModeController.disableDangerousMode(session.sessionId, 'suspicious_activity');
+          await dangerousModeController.disableDangerousMode(
+            session.sessionId,
+            'suspicious_activity'
+          );
         } else if (pattern.action === 'emergency') {
           await this.emergencyDisableAll(`Pattern detected: ${pattern.name}`);
         }
@@ -543,7 +576,9 @@ export class DangerousSecurityMonitor extends EventEmitter {
     }
   }
 
-  private async createAlert(alertData: Omit<MonitoringAlert, 'id' | 'timestamp' | 'acknowledged'>): Promise<void> {
+  private async createAlert(
+    alertData: Omit<MonitoringAlert, 'id' | 'timestamp' | 'acknowledged'>
+  ): Promise<void> {
     const alert: MonitoringAlert = {
       id: `alert_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
       timestamp: new Date(),
@@ -554,9 +589,12 @@ export class DangerousSecurityMonitor extends EventEmitter {
     this.activeAlerts.set(alert.id, alert);
 
     // Auto-remove alerts after 1 hour
-    setTimeout(() => {
-      this.activeAlerts.delete(alert.id);
-    }, 60 * 60 * 1000);
+    setTimeout(
+      () => {
+        this.activeAlerts.delete(alert.id);
+      },
+      60 * 60 * 1000
+    );
 
     this.emit('securityAlert', alert);
 
@@ -579,7 +617,10 @@ export class DangerousSecurityMonitor extends EventEmitter {
     });
   }
 
-  private getRecentCommands(sessionId: string, timeWindow: number): CommandExecution[] {
+  private getRecentCommands(
+    sessionId: string,
+    timeWindow: number
+  ): CommandExecution[] {
     const history = this.commandHistory.get(sessionId) || [];
     const cutoff = Date.now() - timeWindow;
     return history.filter(cmd => cmd.timestamp.getTime() > cutoff);
@@ -599,10 +640,12 @@ export class DangerousSecurityMonitor extends EventEmitter {
 
   private getUserBehaviorMetrics(sessionId: string): UserBehaviorMetrics {
     const history = this.getRecentCommands(sessionId, 600000); // Last 10 minutes
-    
+
     return {
       commandFrequency: history.length / 10, // Commands per minute
-      errorRate: history.filter(cmd => cmd.outcome === 'failure').length / history.length || 0,
+      errorRate:
+        history.filter(cmd => cmd.outcome === 'failure').length /
+          history.length || 0,
       typingSpeed: 0, // Would need to track typing patterns
       sessionPattern: 'normal', // Would analyze command patterns
       repeatCommands: this.countRepeatedCommands(history),
@@ -612,7 +655,7 @@ export class DangerousSecurityMonitor extends EventEmitter {
 
   private countRepeatedCommands(commands: CommandExecution[]): number {
     const commandCounts = new Map<string, number>();
-    
+
     for (const cmd of commands) {
       const key = `${cmd.command} ${cmd.args.join(' ')}`;
       commandCounts.set(key, (commandCounts.get(key) || 0) + 1);
@@ -621,30 +664,44 @@ export class DangerousSecurityMonitor extends EventEmitter {
     return Array.from(commandCounts.values()).filter(count => count > 1).length;
   }
 
-  private async updateUserBehaviorMetrics(sessionId: string, execution: CommandExecution): Promise<void> {
+  private async updateUserBehaviorMetrics(
+    sessionId: string,
+    execution: CommandExecution
+  ): Promise<void> {
     // Update behavior tracking
     // Implementation would maintain behavioral baselines and detect anomalies
   }
 
   private mapOutcomeToSeverity(outcome: string): SecurityLevel {
     switch (outcome) {
-      case 'success': return SecurityLevel.SAFE;
-      case 'failure': return SecurityLevel.MODERATE;
-      case 'blocked': return SecurityLevel.DANGEROUS;
-      default: return SecurityLevel.SAFE;
+      case 'success':
+        return SecurityLevel.SAFE;
+      case 'failure':
+        return SecurityLevel.MODERATE;
+      case 'blocked':
+        return SecurityLevel.DANGEROUS;
+      default:
+        return SecurityLevel.SAFE;
     }
   }
 
   private generateRecommendations(): string[] {
     const recommendations: string[] = [];
-    
+
     if (this.activeAlerts.size > 5) {
-      recommendations.push('High number of active security alerts - review dangerous mode policies');
+      recommendations.push(
+        'High number of active security alerts - review dangerous mode policies'
+      );
     }
 
-    const systemUsage = Array.from(this.commandHistory.values()).reduce((sum, cmds) => sum + cmds.length, 0);
+    const systemUsage = Array.from(this.commandHistory.values()).reduce(
+      (sum, cmds) => sum + cmds.length,
+      0
+    );
     if (systemUsage > 100) {
-      recommendations.push('High dangerous mode usage - consider training users on safe alternatives');
+      recommendations.push(
+        'High dangerous mode usage - consider training users on safe alternatives'
+      );
     }
 
     return recommendations;
@@ -662,19 +719,24 @@ export class DangerousSecurityMonitor extends EventEmitter {
     }, 30 * 1000); // Every 30 seconds
 
     // Cleanup old command history
-    setInterval(() => {
-      const cutoff = Date.now() - 24 * 60 * 60 * 1000; // 24 hours
-      
-      for (const [sessionId, history] of this.commandHistory.entries()) {
-        const filtered = history.filter(cmd => cmd.timestamp.getTime() > cutoff);
-        
-        if (filtered.length === 0) {
-          this.commandHistory.delete(sessionId);
-        } else {
-          this.commandHistory.set(sessionId, filtered);
+    setInterval(
+      () => {
+        const cutoff = Date.now() - 24 * 60 * 60 * 1000; // 24 hours
+
+        for (const [sessionId, history] of this.commandHistory.entries()) {
+          const filtered = history.filter(
+            cmd => cmd.timestamp.getTime() > cutoff
+          );
+
+          if (filtered.length === 0) {
+            this.commandHistory.delete(sessionId);
+          } else {
+            this.commandHistory.set(sessionId, filtered);
+          }
         }
-      }
-    }, 60 * 60 * 1000); // Every hour
+      },
+      60 * 60 * 1000
+    ); // Every hour
   }
 }
 

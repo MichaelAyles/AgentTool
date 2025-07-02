@@ -1,7 +1,10 @@
 import { EventEmitter } from 'events';
 import { AdapterRegistry, BaseAdapter } from '@vibecode/adapter-sdk';
 import { structuredLogger } from '../middleware/logging.js';
-import { comprehensiveAuditLogger, AuditCategory } from '../security/audit-logger.js';
+import {
+  comprehensiveAuditLogger,
+  AuditCategory,
+} from '../security/audit-logger.js';
 import { SecurityLevel } from '../security/types.js';
 
 // Adapter health status
@@ -34,7 +37,7 @@ export enum AdapterStatus {
   DEGRADED = 'degraded',
   ERROR = 'error',
   UNLOADING = 'unloading',
-  FAILED = 'failed'
+  FAILED = 'failed',
 }
 
 // Adapter configuration
@@ -190,11 +193,21 @@ export class AdapterLifecycleManager extends EventEmitter {
         version: adapter.version,
       });
 
-      this.emit('adapterRegistered', { adapterId, adapter, config: adapterConfig });
+      this.emit('adapterRegistered', {
+        adapterId,
+        adapter,
+        config: adapterConfig,
+      });
       return true;
     } catch (error) {
-      await this.updateAdapterStatus(adapterId, AdapterStatus.FAILED, error as Error);
-      structuredLogger.error('Failed to register adapter', error as Error, { adapterId });
+      await this.updateAdapterStatus(
+        adapterId,
+        AdapterStatus.FAILED,
+        error as Error
+      );
+      structuredLogger.error('Failed to register adapter', error as Error, {
+        adapterId,
+      });
       return false;
     }
   }
@@ -204,7 +217,10 @@ export class AdapterLifecycleManager extends EventEmitter {
    */
   async startAdapter(adapterId: string): Promise<boolean> {
     const status = this.adapterStatuses.get(adapterId);
-    if (!status || ![AdapterStatus.LOADED, AdapterStatus.ERROR].includes(status)) {
+    if (
+      !status ||
+      ![AdapterStatus.LOADED, AdapterStatus.ERROR].includes(status)
+    ) {
       return false;
     }
 
@@ -230,7 +246,11 @@ export class AdapterLifecycleManager extends EventEmitter {
       this.emit('adapterStarted', { adapterId });
       return true;
     } catch (error) {
-      await this.updateAdapterStatus(adapterId, AdapterStatus.ERROR, error as Error);
+      await this.updateAdapterStatus(
+        adapterId,
+        AdapterStatus.ERROR,
+        error as Error
+      );
       return false;
     }
   }
@@ -238,7 +258,10 @@ export class AdapterLifecycleManager extends EventEmitter {
   /**
    * Stop an adapter gracefully
    */
-  async stopAdapter(adapterId: string, graceful: boolean = true): Promise<boolean> {
+  async stopAdapter(
+    adapterId: string,
+    graceful: boolean = true
+  ): Promise<boolean> {
     const status = this.adapterStatuses.get(adapterId);
     if (!status || status === AdapterStatus.UNLOADED) {
       return false;
@@ -264,7 +287,11 @@ export class AdapterLifecycleManager extends EventEmitter {
       this.emit('adapterStopped', { adapterId, graceful });
       return true;
     } catch (error) {
-      await this.updateAdapterStatus(adapterId, AdapterStatus.ERROR, error as Error);
+      await this.updateAdapterStatus(
+        adapterId,
+        AdapterStatus.ERROR,
+        error as Error
+      );
       return false;
     }
   }
@@ -317,7 +344,9 @@ export class AdapterLifecycleManager extends EventEmitter {
       this.emit('adapterUnregistered', { adapterId });
       return true;
     } catch (error) {
-      structuredLogger.error('Failed to unregister adapter', error as Error, { adapterId });
+      structuredLogger.error('Failed to unregister adapter', error as Error, {
+        adapterId,
+      });
       return false;
     }
   }
@@ -355,7 +384,10 @@ export class AdapterLifecycleManager extends EventEmitter {
   /**
    * Get lifecycle history for an adapter
    */
-  getAdapterLifecycleHistory(adapterId: string, limit: number = 50): AdapterLifecycleEvent[] {
+  getAdapterLifecycleHistory(
+    adapterId: string,
+    limit: number = 50
+  ): AdapterLifecycleEvent[] {
     const history = this.lifecycleHistory.get(adapterId) || [];
     return history.slice(-limit);
   }
@@ -367,16 +399,23 @@ export class AdapterLifecycleManager extends EventEmitter {
     structuredLogger.warn('Emergency adapter shutdown initiated', { reason });
 
     const activeAdapters = this.getAdaptersByStatus(AdapterStatus.READY);
-    
+
     const shutdownPromises = activeAdapters.map(adapterId =>
       this.stopAdapter(adapterId, false).catch(error => {
-        structuredLogger.error('Emergency shutdown failed for adapter', error as Error, { adapterId });
+        structuredLogger.error(
+          'Emergency shutdown failed for adapter',
+          error as Error,
+          { adapterId }
+        );
       })
     );
 
     await Promise.all(shutdownPromises);
 
-    this.emit('emergencyShutdown', { reason, affectedAdapters: activeAdapters });
+    this.emit('emergencyShutdown', {
+      reason,
+      affectedAdapters: activeAdapters,
+    });
   }
 
   // Private methods
@@ -385,20 +424,28 @@ export class AdapterLifecycleManager extends EventEmitter {
     // Check if registry supports events (it may extend EventEmitter)
     if (typeof (this.adapterRegistry as any).on === 'function') {
       // Listen for registry events
-      (this.adapterRegistry as any).on('adapterRegistered', (adapter: BaseAdapter) => {
-        const adapterId = this.generateAdapterId(adapter);
-        this.updateAdapterStatus(adapterId, AdapterStatus.LOADED);
-      });
-
-      (this.adapterRegistry as any).on('adapterUnregistered', (adapterName: string) => {
-        const adapterId = this.findAdapterIdByName(adapterName);
-        if (adapterId) {
-          this.cleanupAdapterData(adapterId);
+      (this.adapterRegistry as any).on(
+        'adapterRegistered',
+        (adapter: BaseAdapter) => {
+          const adapterId = this.generateAdapterId(adapter);
+          this.updateAdapterStatus(adapterId, AdapterStatus.LOADED);
         }
-      });
+      );
+
+      (this.adapterRegistry as any).on(
+        'adapterUnregistered',
+        (adapterName: string) => {
+          const adapterId = this.findAdapterIdByName(adapterName);
+          if (adapterId) {
+            this.cleanupAdapterData(adapterId);
+          }
+        }
+      );
     } else {
       // Registry doesn't support events, we'll manually track adapter changes
-      structuredLogger.info('Adapter registry does not support events, using manual tracking');
+      structuredLogger.info(
+        'Adapter registry does not support events, using manual tracking'
+      );
     }
   }
 
@@ -418,7 +465,10 @@ export class AdapterLifecycleManager extends EventEmitter {
 
   private getAdapterById(adapterId: string): BaseAdapter | null {
     const adapters = this.adapterRegistry.list();
-    return adapters.find(adapter => this.generateAdapterId(adapter) === adapterId) || null;
+    return (
+      adapters.find(adapter => this.generateAdapterId(adapter) === adapterId) ||
+      null
+    );
   }
 
   private findAdapterIdByName(name: string): string | null {
@@ -435,9 +485,10 @@ export class AdapterLifecycleManager extends EventEmitter {
     status: AdapterStatus,
     error?: Error
   ): Promise<void> {
-    const previousStatus = this.adapterStatuses.get(adapterId) || AdapterStatus.UNLOADED;
+    const previousStatus =
+      this.adapterStatuses.get(adapterId) || AdapterStatus.UNLOADED;
     const startTime = Date.now();
-    
+
     this.adapterStatuses.set(adapterId, status);
 
     // Update health if error
@@ -469,9 +520,12 @@ export class AdapterLifecycleManager extends EventEmitter {
     this.emit('adapterStatusChanged', event);
   }
 
-  private initializeAdapterHealth(adapterId: string, adapter: BaseAdapter): void {
+  private initializeAdapterHealth(
+    adapterId: string,
+    adapter: BaseAdapter
+  ): void {
     const config = this.adapterConfigs.get(adapterId) || DEFAULT_CONFIG;
-    
+
     const health: AdapterHealth = {
       adapterId,
       name: adapter.name,
@@ -489,7 +543,10 @@ export class AdapterLifecycleManager extends EventEmitter {
     this.adapterHealth.set(adapterId, health);
   }
 
-  private initializeAdapterMetrics(adapterId: string, adapter: BaseAdapter): void {
+  private initializeAdapterMetrics(
+    adapterId: string,
+    adapter: BaseAdapter
+  ): void {
     const metrics: AdapterMetrics = {
       adapterId,
       name: adapter.name,
@@ -509,7 +566,7 @@ export class AdapterLifecycleManager extends EventEmitter {
 
   private startAdapterHealthMonitoring(adapterId: string): void {
     const config = this.adapterConfigs.get(adapterId) || DEFAULT_CONFIG;
-    
+
     const interval = setInterval(() => {
       this.performAdapterHealthCheck(adapterId);
     }, config.healthCheckInterval);
@@ -528,41 +585,41 @@ export class AdapterLifecycleManager extends EventEmitter {
   private performAdapterHealthCheck(adapterId: string): void {
     const health = this.adapterHealth.get(adapterId);
     const adapter = this.getAdapterById(adapterId);
-    
+
     if (!health || !adapter) {
       return;
     }
 
     try {
       const startTime = Date.now();
-      
+
       // Perform basic health check
       health.lastHealthCheck = new Date();
       health.uptime = Date.now() - health.lastHealthCheck.getTime();
-      
+
       // Check if adapter has health check method
       if (typeof (adapter as any).healthCheck === 'function') {
         (adapter as any).healthCheck();
       }
 
       health.responseTime = Date.now() - startTime;
-      health.healthy = health.responseTime <= health.resourceLimits.maxResponseTime;
+      health.healthy =
+        health.responseTime <= health.resourceLimits.maxResponseTime;
 
       // Update metrics
       const metrics = this.adapterMetrics.get(adapterId);
       if (metrics) {
         metrics.uptime = health.uptime;
-        metrics.averageResponseTime = 
+        metrics.averageResponseTime =
           (metrics.averageResponseTime + health.responseTime) / 2;
       }
 
       this.emit('adapterHealthCheck', { adapterId, health });
-
     } catch (error) {
       health.healthy = false;
       health.lastError = error as Error;
       health.errorCount++;
-      
+
       this.emit('adapterHealthCheckFailed', { adapterId, error });
     }
   }
@@ -574,8 +631,9 @@ export class AdapterLifecycleManager extends EventEmitter {
   }
 
   private performGlobalHealthAssessment(): void {
-    const unhealthyAdapters = Array.from(this.adapterHealth.values())
-      .filter(health => !health.healthy);
+    const unhealthyAdapters = Array.from(this.adapterHealth.values()).filter(
+      health => !health.healthy
+    );
 
     if (unhealthyAdapters.length > 0) {
       this.emit('globalHealthConcern', { unhealthyAdapters });
@@ -595,31 +653,46 @@ export class AdapterLifecycleManager extends EventEmitter {
 // Export factory function to create singleton with actual registry
 let adapterLifecycleManagerInstance: AdapterLifecycleManager | null = null;
 
-export function createAdapterLifecycleManager(adapterRegistry: AdapterRegistry): AdapterLifecycleManager {
+export function createAdapterLifecycleManager(
+  adapterRegistry: AdapterRegistry
+): AdapterLifecycleManager {
   if (adapterLifecycleManagerInstance) {
     return adapterLifecycleManagerInstance;
   }
-  
-  adapterLifecycleManagerInstance = new AdapterLifecycleManager(adapterRegistry);
+
+  adapterLifecycleManagerInstance = new AdapterLifecycleManager(
+    adapterRegistry
+  );
   return adapterLifecycleManagerInstance;
 }
 
 export function getAdapterLifecycleManager(): AdapterLifecycleManager {
   if (!adapterLifecycleManagerInstance) {
-    throw new Error('Adapter lifecycle manager not initialized. Call createAdapterLifecycleManager first.');
+    throw new Error(
+      'Adapter lifecycle manager not initialized. Call createAdapterLifecycleManager first.'
+    );
   }
   return adapterLifecycleManagerInstance;
 }
 
 // Temporary export for backwards compatibility
 export const adapterLifecycleManager = {
-  getAllAdapterStatuses: () => getAdapterLifecycleManager().getAllAdapterStatuses(),
-  getAdaptersByStatus: (status: AdapterStatus) => getAdapterLifecycleManager().getAdaptersByStatus(status),
-  getAdapterHealth: (adapterId: string) => getAdapterLifecycleManager().getAdapterHealth(adapterId),
-  getAdapterMetrics: (adapterId: string) => getAdapterLifecycleManager().getAdapterMetrics(adapterId),
-  getAdapterLifecycleHistory: (adapterId: string, limit?: number) => getAdapterLifecycleManager().getAdapterLifecycleHistory(adapterId, limit),
-  startAdapter: (adapterId: string) => getAdapterLifecycleManager().startAdapter(adapterId),
-  stopAdapter: (adapterId: string, graceful?: boolean) => getAdapterLifecycleManager().stopAdapter(adapterId, graceful),
-  restartAdapter: (adapterId: string) => getAdapterLifecycleManager().restartAdapter(adapterId),
-  emergencyShutdown: (reason?: string) => getAdapterLifecycleManager().emergencyShutdown(reason),
+  getAllAdapterStatuses: () =>
+    getAdapterLifecycleManager().getAllAdapterStatuses(),
+  getAdaptersByStatus: (status: AdapterStatus) =>
+    getAdapterLifecycleManager().getAdaptersByStatus(status),
+  getAdapterHealth: (adapterId: string) =>
+    getAdapterLifecycleManager().getAdapterHealth(adapterId),
+  getAdapterMetrics: (adapterId: string) =>
+    getAdapterLifecycleManager().getAdapterMetrics(adapterId),
+  getAdapterLifecycleHistory: (adapterId: string, limit?: number) =>
+    getAdapterLifecycleManager().getAdapterLifecycleHistory(adapterId, limit),
+  startAdapter: (adapterId: string) =>
+    getAdapterLifecycleManager().startAdapter(adapterId),
+  stopAdapter: (adapterId: string, graceful?: boolean) =>
+    getAdapterLifecycleManager().stopAdapter(adapterId, graceful),
+  restartAdapter: (adapterId: string) =>
+    getAdapterLifecycleManager().restartAdapter(adapterId),
+  emergencyShutdown: (reason?: string) =>
+    getAdapterLifecycleManager().emergencyShutdown(reason),
 };

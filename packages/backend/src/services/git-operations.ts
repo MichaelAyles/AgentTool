@@ -1,6 +1,9 @@
 import { SimpleGit } from 'simple-git';
 import { structuredLogger } from '../middleware/logging.js';
-import { comprehensiveAuditLogger, AuditCategory } from '../security/audit-logger.js';
+import {
+  comprehensiveAuditLogger,
+  AuditCategory,
+} from '../security/audit-logger.js';
 import { SecurityLevel } from '../security/types.js';
 
 // Git operation results
@@ -98,10 +101,10 @@ export class GitOperations {
    */
   async stageFiles(data: StageData): Promise<GitOperationResult> {
     const startTime = Date.now();
-    
+
     try {
       let result;
-      
+
       if (data.all) {
         result = await this.git.add('.');
       } else if (data.update) {
@@ -144,10 +147,10 @@ export class GitOperations {
    */
   async unstageFiles(data: UnstageData): Promise<GitOperationResult> {
     const startTime = Date.now();
-    
+
     try {
       let result;
-      
+
       if (data.all) {
         result = await this.git.reset(['HEAD']);
       } else {
@@ -187,7 +190,7 @@ export class GitOperations {
    */
   async commit(data: CommitData): Promise<GitOperationResult> {
     const startTime = Date.now();
-    
+
     try {
       // Validate commit message
       if (!data.message || data.message.trim().length === 0) {
@@ -197,15 +200,20 @@ export class GitOperations {
       // Set author if provided
       if (data.author) {
         await this.git.addConfig('user.name', data.author.name, false, 'local');
-        await this.git.addConfig('user.email', data.author.email, false, 'local');
+        await this.git.addConfig(
+          'user.email',
+          data.author.email,
+          false,
+          'local'
+        );
       }
 
       let commitOptions: string[] = ['-m', data.message];
-      
+
       if (data.amend) {
         commitOptions.push('--amend');
       }
-      
+
       if (data.allowEmpty) {
         commitOptions.push('--allow-empty');
       }
@@ -215,7 +223,10 @@ export class GitOperations {
         await this.git.add(data.files);
       }
 
-      const result = await this.git.commit(data.message, commitOptions.slice(2)); // Remove -m and message
+      const result = await this.git.commit(
+        data.message,
+        commitOptions.slice(2)
+      ); // Remove -m and message
 
       const operationResult: GitOperationResult = {
         success: true,
@@ -255,21 +266,21 @@ export class GitOperations {
    */
   async push(data: PushData = {}): Promise<GitOperationResult> {
     const startTime = Date.now();
-    
+
     try {
       const remote = data.remote || 'origin';
-      const branch = data.branch || await this.getCurrentBranch();
-      
+      const branch = data.branch || (await this.getCurrentBranch());
+
       let pushOptions: string[] = [];
-      
+
       if (data.setUpstream) {
         pushOptions.push('--set-upstream');
       }
-      
+
       if (data.force) {
         pushOptions.push('--force');
       }
-      
+
       if (data.tags) {
         pushOptions.push('--tags');
       }
@@ -312,17 +323,17 @@ export class GitOperations {
    */
   async pull(data: PullData = {}): Promise<GitOperationResult> {
     const startTime = Date.now();
-    
+
     try {
       const remote = data.remote || 'origin';
-      const branch = data.branch || await this.getCurrentBranch();
-      
+      const branch = data.branch || (await this.getCurrentBranch());
+
       let pullOptions: string[] = [];
-      
+
       if (data.rebase) {
         pullOptions.push('--rebase');
       }
-      
+
       if (data.strategy) {
         pullOptions.push('--strategy', data.strategy);
       }
@@ -366,14 +377,14 @@ export class GitOperations {
    */
   async createBranch(data: BranchData): Promise<GitOperationResult> {
     const startTime = Date.now();
-    
+
     try {
       let options: string[] = [];
-      
+
       if (data.force) {
         options.push('-f');
       }
-      
+
       if (data.track && data.upstream) {
         options.push('--track', data.upstream);
       }
@@ -419,7 +430,7 @@ export class GitOperations {
    */
   async checkoutBranch(branchName: string): Promise<GitOperationResult> {
     const startTime = Date.now();
-    
+
     try {
       const result = await this.git.checkout(branchName);
 
@@ -455,22 +466,22 @@ export class GitOperations {
    */
   async merge(data: MergeData): Promise<GitOperationResult> {
     const startTime = Date.now();
-    
+
     try {
       let options: string[] = [];
-      
+
       if (data.noFf) {
         options.push('--no-ff');
       }
-      
+
       if (data.squash) {
         options.push('--squash');
       }
-      
+
       if (data.strategy) {
         options.push('--strategy', data.strategy);
       }
-      
+
       if (data.message) {
         options.push('-m', data.message);
       }
@@ -513,14 +524,14 @@ export class GitOperations {
    */
   async reset(data: ResetData): Promise<GitOperationResult> {
     const startTime = Date.now();
-    
+
     try {
       let options: string[] = [`--${data.mode}`];
-      
+
       if (data.commit) {
         options.push(data.commit);
       }
-      
+
       if (data.files && data.files.length > 0) {
         options.push('--', ...data.files);
       }
@@ -559,16 +570,19 @@ export class GitOperations {
   /**
    * Create and apply a stash
    */
-  async stash(message?: string, includeUntracked: boolean = false): Promise<GitOperationResult> {
+  async stash(
+    message?: string,
+    includeUntracked: boolean = false
+  ): Promise<GitOperationResult> {
     const startTime = Date.now();
-    
+
     try {
       let options: string[] = [];
-      
+
       if (message) {
         options.push('-m', message);
       }
-      
+
       if (includeUntracked) {
         options.push('-u');
       }
@@ -608,7 +622,7 @@ export class GitOperations {
    */
   async stashPop(index: number = 0): Promise<GitOperationResult> {
     const startTime = Date.now();
-    
+
     try {
       const result = await this.git.stash(['pop', `stash@{${index}}`]);
 
@@ -644,10 +658,14 @@ export class GitOperations {
     return status.current || 'HEAD';
   }
 
-  private async logOperation(result: GitOperationResult, severity: SecurityLevel): Promise<void> {
-    const category = severity === SecurityLevel.DANGEROUS ? 
-      AuditCategory.DANGEROUS_OPERATIONS : 
-      AuditCategory.SYSTEM_CHANGES;
+  private async logOperation(
+    result: GitOperationResult,
+    severity: SecurityLevel
+  ): Promise<void> {
+    const category =
+      severity === SecurityLevel.DANGEROUS
+        ? AuditCategory.DANGEROUS_OPERATIONS
+        : AuditCategory.SYSTEM_CHANGES;
 
     await comprehensiveAuditLogger.logAuditEvent({
       category,
@@ -674,12 +692,16 @@ export class GitOperations {
         duration: result.duration,
       });
     } else {
-      structuredLogger.error(`Git operation failed: ${result.operation}`, new Error(result.error || 'Unknown error'), {
-        userId: this.userId,
-        projectPath: this.projectPath,
-        operation: result.operation,
-        duration: result.duration,
-      });
+      structuredLogger.error(
+        `Git operation failed: ${result.operation}`,
+        new Error(result.error || 'Unknown error'),
+        {
+          userId: this.userId,
+          projectPath: this.projectPath,
+          operation: result.operation,
+          duration: result.duration,
+        }
+      );
     }
   }
 }

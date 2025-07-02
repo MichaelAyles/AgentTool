@@ -22,11 +22,15 @@ declare global {
 /**
  * Middleware to authenticate requests using JWT tokens
  */
-export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
+export const authenticate = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     // Get token from Authorization header or cookie
     let token: string | undefined;
-    
+
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {
       token = authHeader.substring(7);
@@ -58,7 +62,7 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
     if (req.app.get('securityTracker')) {
       const securityTracker = req.app.get('securityTracker');
       const context = securityTracker.getSessionSecurity(payload.sessionId);
-      
+
       if (!context) {
         // Initialize security context for this session
         securityTracker.initializeSession({
@@ -95,11 +99,15 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
 /**
  * Optional authentication middleware - doesn't fail if no token
  */
-export const optionalAuth = async (req: Request, res: Response, next: NextFunction) => {
+export const optionalAuth = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     // Get token from Authorization header or cookie
     let token: string | undefined;
-    
+
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {
       token = authHeader.substring(7);
@@ -141,7 +149,11 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
 /**
  * Middleware to check for admin role
  */
-export const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
+export const requireAdmin = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   if (!req.user) {
     return res.status(401).json({ error: 'Authentication required' });
   }
@@ -163,7 +175,7 @@ export const requireRole = (allowedRoles: string[]) => {
     }
 
     if (!allowedRoles.includes(req.user.role)) {
-      return res.status(403).json({ 
+      return res.status(403).json({
         error: 'Insufficient permissions',
         required: allowedRoles,
         current: req.user.role,
@@ -177,9 +189,13 @@ export const requireRole = (allowedRoles: string[]) => {
 /**
  * Middleware to require authentication only for certain environments
  */
-export const requireAuthInProduction = (req: Request, res: Response, next: NextFunction) => {
+export const requireAuthInProduction = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   const isProduction = process.env.NODE_ENV === 'production';
-  
+
   if (!isProduction) {
     // In development, create a mock user if none exists
     if (!req.user) {
@@ -199,10 +215,14 @@ export const requireAuthInProduction = (req: Request, res: Response, next: NextF
 /**
  * Middleware to extract and validate API key authentication
  */
-export const authenticateApiKey = async (req: Request, res: Response, next: NextFunction) => {
+export const authenticateApiKey = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const apiKey = req.headers['x-api-key'] as string;
-    
+
     if (!apiKey) {
       return res.status(401).json({ error: 'API key required' });
     }
@@ -252,7 +272,7 @@ export const authRateLimit = (() => {
     const now = Date.now();
 
     const userAttempts = attempts.get(identifier);
-    
+
     if (userAttempts) {
       // Reset counter if window has passed
       if (now - userAttempts.lastAttempt > windowMs) {
@@ -260,7 +280,9 @@ export const authRateLimit = (() => {
       } else if (userAttempts.count >= maxAttempts) {
         return res.status(429).json({
           error: 'Too many authentication attempts',
-          retryAfter: Math.ceil((windowMs - (now - userAttempts.lastAttempt)) / 1000),
+          retryAfter: Math.ceil(
+            (windowMs - (now - userAttempts.lastAttempt)) / 1000
+          ),
         });
       }
     }
@@ -270,9 +292,12 @@ export const authRateLimit = (() => {
 
     // If auth failed (determined by response status), increment counter
     const originalSend = res.send;
-    res.send = function(data) {
+    res.send = function (data) {
       if (res.statusCode === 401 || res.statusCode === 403) {
-        const current = attempts.get(identifier) || { count: 0, lastAttempt: 0 };
+        const current = attempts.get(identifier) || {
+          count: 0,
+          lastAttempt: 0,
+        };
         attempts.set(identifier, {
           count: current.count + 1,
           lastAttempt: now,

@@ -225,11 +225,7 @@ export const GEMINI_CLI_SCHEMA: AdapterConfigSchema = {
       type: 'select',
       description: 'Gemini model to use',
       default: 'gemini-1.5-pro',
-      options: [
-        'gemini-1.5-pro',
-        'gemini-1.5-flash',
-        'gemini-1.0-pro',
-      ],
+      options: ['gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-1.0-pro'],
       group: 'model',
     },
     temperature: {
@@ -266,7 +262,7 @@ export const GEMINI_CLI_SCHEMA: AdapterConfigSchema = {
     },
     enableSafetySettings: {
       type: 'boolean',
-      description: 'Enable Google\'s safety filters',
+      description: "Enable Google's safety filters",
       default: true,
       group: 'safety',
     },
@@ -301,7 +297,8 @@ export const GEMINI_CLI_SCHEMA: AdapterConfigSchema = {
       },
       {
         condition: 'maxConcurrentSessions > 5',
-        message: 'Gemini API has rate limits, consider reducing concurrent sessions',
+        message:
+          'Gemini API has rate limits, consider reducing concurrent sessions',
         severity: 'warning',
       },
     ],
@@ -323,8 +320,21 @@ export const CUSTOM_SCRIPT_SCHEMA: AdapterConfigSchema = {
       description: 'Default script interpreter',
       default: 'bash',
       options: [
-        'bash', 'zsh', 'sh', 'python', 'node', 'deno', 'bun',
-        'ruby', 'php', 'go', 'rust', 'jq', 'awk', 'sed', 'custom'
+        'bash',
+        'zsh',
+        'sh',
+        'python',
+        'node',
+        'deno',
+        'bun',
+        'ruby',
+        'php',
+        'go',
+        'rust',
+        'jq',
+        'awk',
+        'sed',
+        'custom',
       ],
       group: 'execution',
     },
@@ -421,7 +431,8 @@ export const CUSTOM_SCRIPT_SCHEMA: AdapterConfigSchema = {
       },
       {
         condition: 'allowFileWrite === true && allowNetworkAccess === true',
-        message: 'Allowing both file write and network access increases security risk',
+        message:
+          'Allowing both file write and network access increases security risk',
         severity: 'info',
       },
     ],
@@ -447,15 +458,20 @@ export function getDefaultSchemas(): Record<string, AdapterConfigSchema> {
 /**
  * Register default schemas with the configuration manager
  */
-export async function registerDefaultSchemas(configManager: any): Promise<void> {
+export async function registerDefaultSchemas(
+  configManager: any
+): Promise<void> {
   const schemas = getDefaultSchemas();
-  
+
   for (const [adapterId, schema] of Object.entries(schemas)) {
     try {
       await configManager.registerSchema(adapterId, schema);
       console.log(`✅ Registered schema for ${adapterId}`);
     } catch (error) {
-      console.warn(`⚠️ Failed to register schema for ${adapterId}:`, (error as Error).message);
+      console.warn(
+        `⚠️ Failed to register schema for ${adapterId}:`,
+        (error as Error).message
+      );
     }
   }
 }

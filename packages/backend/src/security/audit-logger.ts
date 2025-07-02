@@ -1,8 +1,8 @@
-import { 
-  SecurityAuditLog, 
-  SecurityEvent, 
-  SecurityEventType, 
-  SecurityLevel 
+import {
+  SecurityAuditLog,
+  SecurityEvent,
+  SecurityEventType,
+  SecurityLevel,
 } from './types.js';
 import { structuredLogger } from '../middleware/logging.js';
 import { EventEmitter } from 'events';
@@ -12,7 +12,7 @@ import { join } from 'path';
 // Audit log categories
 export enum AuditCategory {
   AUTHENTICATION = 'authentication',
-  AUTHORIZATION = 'authorization', 
+  AUTHORIZATION = 'authorization',
   RESOURCE_ACCESS = 'resource_access',
   SYSTEM_CHANGES = 'system_changes',
   SECURITY_EVENTS = 'security_events',
@@ -20,7 +20,7 @@ export enum AuditCategory {
   DANGEROUS_OPERATIONS = 'dangerous_operations',
   DATA_ACCESS = 'data_access',
   CONFIGURATION = 'configuration',
-  COMPLIANCE = 'compliance'
+  COMPLIANCE = 'compliance',
 }
 
 // Audit retention policies
@@ -42,13 +42,14 @@ export enum ComplianceFramework {
   PCI_DSS = 'pci_dss',
   GDPR = 'gdpr',
   SOC2 = 'soc2',
-  ISO27001 = 'iso27001'
+  ISO27001 = 'iso27001',
 }
 
 export class ComprehensiveAuditLogger extends EventEmitter {
   private auditBuffer: SecurityAuditLog[] = [];
   private persistentLogs: Map<string, SecurityAuditLog[]> = new Map();
-  private retentionPolicies: Map<AuditCategory, AuditRetentionPolicy> = new Map();
+  private retentionPolicies: Map<AuditCategory, AuditRetentionPolicy> =
+    new Map();
   private auditDirectory: string;
   private bufferSize = 1000;
   private flushInterval = 10000; // 10 seconds
@@ -113,7 +114,10 @@ export class ComprehensiveAuditLogger extends EventEmitter {
     this.emit('auditEvent', auditEntry);
 
     // Immediate persistence for critical events
-    if (event.severity === SecurityLevel.CRITICAL || event.outcome === 'failure') {
+    if (
+      event.severity === SecurityLevel.CRITICAL ||
+      event.outcome === 'failure'
+    ) {
       await this.persistAuditEntry(auditEntry);
     }
 
@@ -146,7 +150,10 @@ export class ComprehensiveAuditLogger extends EventEmitter {
       ipAddress: event.ipAddress,
       userAgent: event.userAgent,
       outcome: event.outcome,
-      severity: event.outcome === 'failure' ? SecurityLevel.MODERATE : SecurityLevel.SAFE,
+      severity:
+        event.outcome === 'failure'
+          ? SecurityLevel.MODERATE
+          : SecurityLevel.SAFE,
       details: {
         provider: event.provider,
         ...event.details,
@@ -174,7 +181,10 @@ export class ComprehensiveAuditLogger extends EventEmitter {
       userId: event.userId,
       sessionId: event.sessionId,
       outcome: event.outcome,
-      severity: event.outcome === 'failure' ? SecurityLevel.MODERATE : SecurityLevel.SAFE,
+      severity:
+        event.outcome === 'failure'
+          ? SecurityLevel.MODERATE
+          : SecurityLevel.SAFE,
       details: {
         permission: event.permission,
         ...event.details,
@@ -238,7 +248,11 @@ export class ComprehensiveAuditLogger extends EventEmitter {
         command: event.command,
         ...event.details,
       },
-      compliance: [ComplianceFramework.SOX, ComplianceFramework.SOC2, ComplianceFramework.ISO27001],
+      compliance: [
+        ComplianceFramework.SOX,
+        ComplianceFramework.SOC2,
+        ComplianceFramework.ISO27001,
+      ],
     });
   }
 
@@ -306,7 +320,9 @@ export class ComprehensiveAuditLogger extends EventEmitter {
       logs = logs.filter(log => log.timestamp <= filter.endDate!);
     }
     if (filter.severity) {
-      logs = logs.filter(log => this.getSecurityLevelFromLogLevel(log.level) === filter.severity);
+      logs = logs.filter(
+        log => this.getSecurityLevelFromLogLevel(log.level) === filter.severity
+      );
     }
     if (filter.outcome) {
       logs = logs.filter(log => log.data.outcome === filter.outcome);
@@ -333,16 +349,16 @@ export class ComprehensiveAuditLogger extends EventEmitter {
     switch (format) {
       case 'json':
         return JSON.stringify(logs, null, 2);
-      
+
       case 'csv':
         return this.exportAsCSV(logs);
-      
+
       case 'xml':
         return this.exportAsXML(logs);
-      
+
       case 'syslog':
         return this.exportAsSyslog(logs);
-      
+
       default:
         throw new Error(`Unsupported export format: ${format}`);
     }
@@ -351,10 +367,13 @@ export class ComprehensiveAuditLogger extends EventEmitter {
   /**
    * Generate compliance report
    */
-  generateComplianceReport(framework: ComplianceFramework, dateRange: {
-    startDate: Date;
-    endDate: Date;
-  }): {
+  generateComplianceReport(
+    framework: ComplianceFramework,
+    dateRange: {
+      startDate: Date;
+      endDate: Date;
+    }
+  ): {
     framework: ComplianceFramework;
     period: { start: Date; end: Date };
     totalEvents: number;
@@ -370,27 +389,31 @@ export class ComprehensiveAuditLogger extends EventEmitter {
       endDate: dateRange.endDate,
     }).filter(log => log.data.compliance?.includes(framework));
 
-    const eventsByCategory = logs.reduce((acc, log) => {
-      acc[log.category] = (acc[log.category] || 0) + 1;
-      return acc;
-    }, {} as Record<AuditCategory, number>);
+    const eventsByCategory = logs.reduce(
+      (acc, log) => {
+        acc[log.category] = (acc[log.category] || 0) + 1;
+        return acc;
+      },
+      {} as Record<AuditCategory, number>
+    );
 
-    const securityIncidents = logs.filter(log => 
-      log.category === AuditCategory.SECURITY_EVENTS && 
-      log.level === 'error'
+    const securityIncidents = logs.filter(
+      log =>
+        log.category === AuditCategory.SECURITY_EVENTS && log.level === 'error'
     ).length;
 
-    const accessViolations = logs.filter(log => 
-      log.category === AuditCategory.AUTHORIZATION && 
-      log.data.outcome === 'failure'
+    const accessViolations = logs.filter(
+      log =>
+        log.category === AuditCategory.AUTHORIZATION &&
+        log.data.outcome === 'failure'
     ).length;
 
-    const systemChanges = logs.filter(log => 
-      log.category === AuditCategory.SYSTEM_CHANGES
+    const systemChanges = logs.filter(
+      log => log.category === AuditCategory.SYSTEM_CHANGES
     ).length;
 
-    const dataAccess = logs.filter(log => 
-      log.category === AuditCategory.DATA_ACCESS
+    const dataAccess = logs.filter(
+      log => log.category === AuditCategory.DATA_ACCESS
     ).length;
 
     return {
@@ -411,21 +434,23 @@ export class ComprehensiveAuditLogger extends EventEmitter {
    */
   async archiveOldLogs(): Promise<void> {
     const now = new Date();
-    
+
     for (const [category, policy] of this.retentionPolicies.entries()) {
-      const cutoffDate = new Date(now.getTime() - policy.retentionDays * 24 * 60 * 60 * 1000);
-      
+      const cutoffDate = new Date(
+        now.getTime() - policy.retentionDays * 24 * 60 * 60 * 1000
+      );
+
       // Find logs to archive
-      const logsToArchive = this.auditBuffer.filter(log => 
-        log.category === category && log.timestamp < cutoffDate
+      const logsToArchive = this.auditBuffer.filter(
+        log => log.category === category && log.timestamp < cutoffDate
       );
 
       if (logsToArchive.length > 0) {
         await this.archiveLogs(logsToArchive, policy);
-        
+
         // Remove from active buffer
-        this.auditBuffer = this.auditBuffer.filter(log => 
-          !(log.category === category && log.timestamp < cutoffDate)
+        this.auditBuffer = this.auditBuffer.filter(
+          log => !(log.category === category && log.timestamp < cutoffDate)
         );
       }
     }
@@ -443,16 +468,49 @@ export class ComprehensiveAuditLogger extends EventEmitter {
     };
 
     // Set specific policies for different categories
-    this.retentionPolicies.set(AuditCategory.AUTHENTICATION, { ...defaultPolicy, retentionDays: 365 });
-    this.retentionPolicies.set(AuditCategory.AUTHORIZATION, { ...defaultPolicy, retentionDays: 365 });
-    this.retentionPolicies.set(AuditCategory.DANGEROUS_OPERATIONS, { ...defaultPolicy, retentionDays: 2555, encryptionRequired: true }); // 7 years
-    this.retentionPolicies.set(AuditCategory.SECURITY_EVENTS, { ...defaultPolicy, retentionDays: 1095 }); // 3 years
-    this.retentionPolicies.set(AuditCategory.SYSTEM_CHANGES, { ...defaultPolicy, retentionDays: 730 }); // 2 years
-    this.retentionPolicies.set(AuditCategory.RESOURCE_ACCESS, { ...defaultPolicy, retentionDays: 180 });
-    this.retentionPolicies.set(AuditCategory.DATA_ACCESS, { ...defaultPolicy, retentionDays: 365, encryptionRequired: true });
-    this.retentionPolicies.set(AuditCategory.USER_MANAGEMENT, { ...defaultPolicy, retentionDays: 365 });
-    this.retentionPolicies.set(AuditCategory.CONFIGURATION, { ...defaultPolicy, retentionDays: 365 });
-    this.retentionPolicies.set(AuditCategory.COMPLIANCE, { ...defaultPolicy, retentionDays: 2555, encryptionRequired: true });
+    this.retentionPolicies.set(AuditCategory.AUTHENTICATION, {
+      ...defaultPolicy,
+      retentionDays: 365,
+    });
+    this.retentionPolicies.set(AuditCategory.AUTHORIZATION, {
+      ...defaultPolicy,
+      retentionDays: 365,
+    });
+    this.retentionPolicies.set(AuditCategory.DANGEROUS_OPERATIONS, {
+      ...defaultPolicy,
+      retentionDays: 2555,
+      encryptionRequired: true,
+    }); // 7 years
+    this.retentionPolicies.set(AuditCategory.SECURITY_EVENTS, {
+      ...defaultPolicy,
+      retentionDays: 1095,
+    }); // 3 years
+    this.retentionPolicies.set(AuditCategory.SYSTEM_CHANGES, {
+      ...defaultPolicy,
+      retentionDays: 730,
+    }); // 2 years
+    this.retentionPolicies.set(AuditCategory.RESOURCE_ACCESS, {
+      ...defaultPolicy,
+      retentionDays: 180,
+    });
+    this.retentionPolicies.set(AuditCategory.DATA_ACCESS, {
+      ...defaultPolicy,
+      retentionDays: 365,
+      encryptionRequired: true,
+    });
+    this.retentionPolicies.set(AuditCategory.USER_MANAGEMENT, {
+      ...defaultPolicy,
+      retentionDays: 365,
+    });
+    this.retentionPolicies.set(AuditCategory.CONFIGURATION, {
+      ...defaultPolicy,
+      retentionDays: 365,
+    });
+    this.retentionPolicies.set(AuditCategory.COMPLIANCE, {
+      ...defaultPolicy,
+      retentionDays: 2555,
+      encryptionRequired: true,
+    });
   }
 
   private async ensureAuditDirectory(): Promise<void> {
@@ -480,7 +538,10 @@ export class ComprehensiveAuditLogger extends EventEmitter {
   private startPeriodicFlush(): void {
     setInterval(async () => {
       if (this.auditBuffer.length > 0) {
-        const entriesToFlush = this.auditBuffer.splice(0, Math.min(100, this.auditBuffer.length));
+        const entriesToFlush = this.auditBuffer.splice(
+          0,
+          Math.min(100, this.auditBuffer.length)
+        );
         for (const entry of entriesToFlush) {
           await this.persistAuditEntry(entry);
         }
@@ -489,46 +550,64 @@ export class ComprehensiveAuditLogger extends EventEmitter {
   }
 
   private startLogRotation(): void {
-    setInterval(() => {
-      // Check if current log file should be rotated
-      // This is a simplified version - in production, you'd check file size
-      const currentDate = new Date().toISOString().split('T')[0];
-      const currentLogDate = this.currentLogFile.split('-').pop()?.split('.')[0];
-      
-      if (currentLogDate !== currentDate) {
-        this.currentLogFile = this.generateLogFileName();
-      }
-    }, 60 * 60 * 1000); // Check every hour
+    setInterval(
+      () => {
+        // Check if current log file should be rotated
+        // This is a simplified version - in production, you'd check file size
+        const currentDate = new Date().toISOString().split('T')[0];
+        const currentLogDate = this.currentLogFile
+          .split('-')
+          .pop()
+          ?.split('.')[0];
+
+        if (currentLogDate !== currentDate) {
+          this.currentLogFile = this.generateLogFileName();
+        }
+      },
+      60 * 60 * 1000
+    ); // Check every hour
   }
 
-  private getLogLevel(severity: SecurityLevel): 'info' | 'warn' | 'error' | 'critical' {
+  private getLogLevel(
+    severity: SecurityLevel
+  ): 'info' | 'warn' | 'error' | 'critical' {
     switch (severity) {
-      case SecurityLevel.SAFE: return 'info';
-      case SecurityLevel.MODERATE: return 'warn';
-      case SecurityLevel.DANGEROUS: return 'error';
-      case SecurityLevel.CRITICAL: return 'critical';
-      default: return 'info';
+      case SecurityLevel.SAFE:
+        return 'info';
+      case SecurityLevel.MODERATE:
+        return 'warn';
+      case SecurityLevel.DANGEROUS:
+        return 'error';
+      case SecurityLevel.CRITICAL:
+        return 'critical';
+      default:
+        return 'info';
     }
   }
 
   private getSecurityLevelFromLogLevel(level: string): SecurityLevel {
     switch (level) {
-      case 'info': return SecurityLevel.SAFE;
-      case 'warn': return SecurityLevel.MODERATE;
-      case 'error': return SecurityLevel.DANGEROUS;
-      case 'critical': return SecurityLevel.CRITICAL;
-      default: return SecurityLevel.SAFE;
+      case 'info':
+        return SecurityLevel.SAFE;
+      case 'warn':
+        return SecurityLevel.MODERATE;
+      case 'error':
+        return SecurityLevel.DANGEROUS;
+      case 'critical':
+        return SecurityLevel.CRITICAL;
+      default:
+        return SecurityLevel.SAFE;
     }
   }
 
   private mapActionToEventType(action: string): SecurityEventType {
     const mapping: Record<string, SecurityEventType> = {
-      'login': SecurityEventType.LOGIN,
-      'logout': SecurityEventType.LOGOUT,
-      'access_denied': SecurityEventType.ACCESS_DENIED,
-      'permission_check': SecurityEventType.ACCESS_GRANTED,
-      'dangerous_command': SecurityEventType.DANGEROUS_COMMAND_EXECUTED,
-      'system_change': SecurityEventType.CONFIGURATION_CHANGED,
+      login: SecurityEventType.LOGIN,
+      logout: SecurityEventType.LOGOUT,
+      access_denied: SecurityEventType.ACCESS_DENIED,
+      permission_check: SecurityEventType.ACCESS_GRANTED,
+      dangerous_command: SecurityEventType.DANGEROUS_COMMAND_EXECUTED,
+      system_change: SecurityEventType.CONFIGURATION_CHANGED,
     };
 
     return mapping[action] || SecurityEventType.RESOURCE_ACCESS;
@@ -538,7 +617,10 @@ export class ComprehensiveAuditLogger extends EventEmitter {
     return `${event.action} on ${event.resourceType}${event.resourceId ? ':' + event.resourceId : ''} - ${event.outcome}`;
   }
 
-  private getResourceAccessSeverity(action: string, outcome: string): SecurityLevel {
+  private getResourceAccessSeverity(
+    action: string,
+    outcome: string
+  ): SecurityLevel {
     if (outcome === 'failure' || outcome === 'error') {
       return SecurityLevel.MODERATE;
     }
@@ -549,12 +631,29 @@ export class ComprehensiveAuditLogger extends EventEmitter {
   }
 
   private isResourceSensitive(resourceType: string): boolean {
-    const sensitiveTypes = ['user', 'password', 'token', 'key', 'secret', 'config'];
-    return sensitiveTypes.some(type => resourceType.toLowerCase().includes(type));
+    const sensitiveTypes = [
+      'user',
+      'password',
+      'token',
+      'key',
+      'secret',
+      'config',
+    ];
+    return sensitiveTypes.some(type =>
+      resourceType.toLowerCase().includes(type)
+    );
   }
 
   private exportAsCSV(logs: SecurityAuditLog[]): string {
-    const headers = ['timestamp', 'category', 'action', 'resourceType', 'userId', 'outcome', 'severity'];
+    const headers = [
+      'timestamp',
+      'category',
+      'action',
+      'resourceType',
+      'userId',
+      'outcome',
+      'severity',
+    ];
     const rows = logs.map(log => [
       log.timestamp.toISOString(),
       log.category,
@@ -569,7 +668,9 @@ export class ComprehensiveAuditLogger extends EventEmitter {
   }
 
   private exportAsXML(logs: SecurityAuditLog[]): string {
-    const xmlLogs = logs.map(log => `
+    const xmlLogs = logs
+      .map(
+        log => `
     <audit-entry id="${log.id}">
       <timestamp>${log.timestamp.toISOString()}</timestamp>
       <category>${log.category}</category>
@@ -579,7 +680,9 @@ export class ComprehensiveAuditLogger extends EventEmitter {
       <outcome>${log.data.outcome}</outcome>
       <severity>${log.level}</severity>
       <message>${log.message}</message>
-    </audit-entry>`).join('');
+    </audit-entry>`
+      )
+      .join('');
 
     return `<?xml version="1.0" encoding="UTF-8"?>
 <audit-log>
@@ -590,47 +693,70 @@ export class ComprehensiveAuditLogger extends EventEmitter {
   }
 
   private exportAsSyslog(logs: SecurityAuditLog[]): string {
-    return logs.map(log => {
-      const priority = this.getSyslogPriority(log.level);
-      const facility = 16; // local0
-      const prival = facility * 8 + priority;
-      
-      return `<${prival}>${log.timestamp.toISOString()} vibe-code audit: ${log.message}`;
-    }).join('\n');
+    return logs
+      .map(log => {
+        const priority = this.getSyslogPriority(log.level);
+        const facility = 16; // local0
+        const prival = facility * 8 + priority;
+
+        return `<${prival}>${log.timestamp.toISOString()} vibe-code audit: ${log.message}`;
+      })
+      .join('\n');
   }
 
   private getSyslogPriority(level: string): number {
     switch (level) {
-      case 'critical': return 2;
-      case 'error': return 3;
-      case 'warn': return 4;
-      case 'info': return 6;
-      default: return 6;
+      case 'critical':
+        return 2;
+      case 'error':
+        return 3;
+      case 'warn':
+        return 4;
+      case 'info':
+        return 6;
+      default:
+        return 6;
     }
   }
 
-  private async archiveLogs(logs: SecurityAuditLog[], policy: AuditRetentionPolicy): Promise<void> {
+  private async archiveLogs(
+    logs: SecurityAuditLog[],
+    policy: AuditRetentionPolicy
+  ): Promise<void> {
     // In a real implementation, this would compress and archive logs
-    console.log(`Archiving ${logs.length} logs for category ${policy.category}`);
+    console.log(
+      `Archiving ${logs.length} logs for category ${policy.category}`
+    );
   }
 
-  private generateRecommendations(framework: ComplianceFramework, logs: SecurityAuditLog[]): string[] {
+  private generateRecommendations(
+    framework: ComplianceFramework,
+    logs: SecurityAuditLog[]
+  ): string[] {
     const recommendations: string[] = [];
-    
-    const failedLogins = logs.filter(log => 
-      log.category === AuditCategory.AUTHENTICATION && log.data.outcome === 'failure'
+
+    const failedLogins = logs.filter(
+      log =>
+        log.category === AuditCategory.AUTHENTICATION &&
+        log.data.outcome === 'failure'
     ).length;
-    
+
     if (failedLogins > 100) {
-      recommendations.push('High number of failed login attempts detected. Consider implementing stronger authentication controls.');
+      recommendations.push(
+        'High number of failed login attempts detected. Consider implementing stronger authentication controls.'
+      );
     }
 
-    const privilegeEscalations = logs.filter(log => 
-      log.category === AuditCategory.AUTHORIZATION && log.data.action === 'role_change'
+    const privilegeEscalations = logs.filter(
+      log =>
+        log.category === AuditCategory.AUTHORIZATION &&
+        log.data.action === 'role_change'
     ).length;
 
     if (privilegeEscalations > 10) {
-      recommendations.push('Multiple privilege escalations detected. Review user access controls and approval processes.');
+      recommendations.push(
+        'Multiple privilege escalations detected. Review user access controls and approval processes.'
+      );
     }
 
     return recommendations;

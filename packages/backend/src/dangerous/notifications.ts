@@ -1,6 +1,9 @@
 import { EventEmitter } from 'events';
 import { SecurityLevel, SecurityEventType } from '../security/types.js';
-import { comprehensiveAuditLogger, AuditCategory } from '../security/audit-logger.js';
+import {
+  comprehensiveAuditLogger,
+  AuditCategory,
+} from '../security/audit-logger.js';
 import { DangerousModeSession } from './controller.js';
 import { MonitoringAlert } from './monitoring.js';
 import { AutoDisableEvent } from './auto-disable.js';
@@ -18,19 +21,19 @@ export enum NotificationType {
   DANGEROUS_MODE_ENABLED = 'dangerous_mode_enabled',
   DANGEROUS_MODE_DISABLED = 'dangerous_mode_disabled',
   COMMAND_BLOCKED = 'command_blocked',
-  SYSTEM_OVERLOAD = 'system_overload'
+  SYSTEM_OVERLOAD = 'system_overload',
 }
 
 // Notification delivery methods
 export enum DeliveryMethod {
-  REAL_TIME = 'real_time',        // WebSocket/SSE
-  EMAIL = 'email',                // Email notifications
-  SMS = 'sms',                    // SMS alerts
-  SLACK = 'slack',                // Slack integration
-  WEBHOOK = 'webhook',            // Custom webhook
-  IN_APP = 'in_app',             // In-application notifications
-  DESKTOP = 'desktop',            // Desktop notifications
-  PUSH = 'push'                   // Push notifications
+  REAL_TIME = 'real_time', // WebSocket/SSE
+  EMAIL = 'email', // Email notifications
+  SMS = 'sms', // SMS alerts
+  SLACK = 'slack', // Slack integration
+  WEBHOOK = 'webhook', // Custom webhook
+  IN_APP = 'in_app', // In-application notifications
+  DESKTOP = 'desktop', // Desktop notifications
+  PUSH = 'push', // Push notifications
 }
 
 // Notification priority levels
@@ -39,7 +42,7 @@ export enum NotificationPriority {
   MEDIUM = 'medium',
   HIGH = 'high',
   CRITICAL = 'critical',
-  EMERGENCY = 'emergency'
+  EMERGENCY = 'emergency',
 }
 
 // Notification configuration
@@ -71,7 +74,10 @@ export interface NotificationMessage {
   acknowledgedAt?: Date;
   acknowledgedBy?: string;
   deliveryMethods: DeliveryMethod[];
-  deliveryStatus: Record<DeliveryMethod, 'pending' | 'sent' | 'delivered' | 'failed'>;
+  deliveryStatus: Record<
+    DeliveryMethod,
+    'pending' | 'sent' | 'delivered' | 'failed'
+  >;
   escalated: boolean;
   escalatedAt?: Date;
   expiresAt?: Date;
@@ -106,7 +112,10 @@ export interface NotificationTemplate {
   variables: string[];
 }
 
-const DEFAULT_CONFIGS: Record<NotificationType, Omit<NotificationConfig, 'type'>> = {
+const DEFAULT_CONFIGS: Record<
+  NotificationType,
+  Omit<NotificationConfig, 'type'>
+> = {
   [NotificationType.SECURITY_ALERT]: {
     enabled: true,
     deliveryMethods: [DeliveryMethod.REAL_TIME, DeliveryMethod.EMAIL],
@@ -125,7 +134,11 @@ const DEFAULT_CONFIGS: Record<NotificationType, Omit<NotificationConfig, 'type'>
   },
   [NotificationType.AUTO_DISABLE]: {
     enabled: true,
-    deliveryMethods: [DeliveryMethod.REAL_TIME, DeliveryMethod.EMAIL, DeliveryMethod.SLACK],
+    deliveryMethods: [
+      DeliveryMethod.REAL_TIME,
+      DeliveryMethod.EMAIL,
+      DeliveryMethod.SLACK,
+    ],
     priority: NotificationPriority.HIGH,
     throttleMs: 10000, // 10 seconds
     escalationDelayMs: 3 * 60 * 1000, // 3 minutes
@@ -133,7 +146,12 @@ const DEFAULT_CONFIGS: Record<NotificationType, Omit<NotificationConfig, 'type'>
   },
   [NotificationType.EMERGENCY_DISABLE]: {
     enabled: true,
-    deliveryMethods: [DeliveryMethod.REAL_TIME, DeliveryMethod.EMAIL, DeliveryMethod.SMS, DeliveryMethod.SLACK],
+    deliveryMethods: [
+      DeliveryMethod.REAL_TIME,
+      DeliveryMethod.EMAIL,
+      DeliveryMethod.SMS,
+      DeliveryMethod.SLACK,
+    ],
     priority: NotificationPriority.EMERGENCY,
     throttleMs: 0, // No throttling for emergencies
     escalationDelayMs: 1 * 60 * 1000, // 1 minute
@@ -189,7 +207,11 @@ const DEFAULT_CONFIGS: Record<NotificationType, Omit<NotificationConfig, 'type'>
   },
   [NotificationType.SYSTEM_OVERLOAD]: {
     enabled: true,
-    deliveryMethods: [DeliveryMethod.REAL_TIME, DeliveryMethod.EMAIL, DeliveryMethod.SMS],
+    deliveryMethods: [
+      DeliveryMethod.REAL_TIME,
+      DeliveryMethod.EMAIL,
+      DeliveryMethod.SMS,
+    ],
     priority: NotificationPriority.CRITICAL,
     throttleMs: 120000, // 2 minutes
     escalationDelayMs: 5 * 60 * 1000, // 5 minutes
@@ -204,7 +226,13 @@ export class SecurityNotificationService extends EventEmitter {
   private templates: Map<NotificationType, NotificationTemplate> = new Map();
   private throttleTracker: Map<string, Date> = new Map();
   private escalationTimers: Map<string, NodeJS.Timeout> = new Map();
-  private deliveryHandlers: Map<DeliveryMethod, (message: NotificationMessage, recipient?: NotificationRecipient) => Promise<boolean>> = new Map();
+  private deliveryHandlers: Map<
+    DeliveryMethod,
+    (
+      message: NotificationMessage,
+      recipient?: NotificationRecipient
+    ) => Promise<boolean>
+  > = new Map();
 
   constructor() {
     super();
@@ -289,7 +317,10 @@ export class SecurityNotificationService extends EventEmitter {
   /**
    * Send an emergency disable notification
    */
-  async sendEmergencyDisableNotification(reason: string, affectedSessions: string[]): Promise<void> {
+  async sendEmergencyDisableNotification(
+    reason: string,
+    affectedSessions: string[]
+  ): Promise<void> {
     const notification = await this.createNotification({
       type: NotificationType.EMERGENCY_DISABLE,
       title: '🚨 EMERGENCY: All Dangerous Mode Sessions Disabled',
@@ -304,8 +335,9 @@ export class SecurityNotificationService extends EventEmitter {
     });
 
     // Send to all admin users
-    const adminRecipients = Array.from(this.recipients.values())
-      .filter(r => r.roles.includes('admin') && r.isActive);
+    const adminRecipients = Array.from(this.recipients.values()).filter(
+      r => r.roles.includes('admin') && r.isActive
+    );
 
     for (const recipient of adminRecipients) {
       await this.deliverToRecipient(notification, recipient);
@@ -316,16 +348,20 @@ export class SecurityNotificationService extends EventEmitter {
    * Send a dangerous mode session change notification
    */
   async sendSessionChangeNotification(
-    type: NotificationType.DANGEROUS_MODE_ENABLED | NotificationType.DANGEROUS_MODE_DISABLED,
+    type:
+      | NotificationType.DANGEROUS_MODE_ENABLED
+      | NotificationType.DANGEROUS_MODE_DISABLED,
     session: DangerousModeSession,
     details: Record<string, any> = {}
   ): Promise<void> {
     const isEnabled = type === NotificationType.DANGEROUS_MODE_ENABLED;
-    
+
     const notification = await this.createNotification({
       type,
-      title: isEnabled ? '🔓 Dangerous Mode Enabled' : '🔒 Dangerous Mode Disabled',
-      message: isEnabled 
+      title: isEnabled
+        ? '🔓 Dangerous Mode Enabled'
+        : '🔒 Dangerous Mode Disabled',
+      message: isEnabled
         ? `Dangerous mode enabled for session ${session.sessionId}`
         : `Dangerous mode disabled for session ${session.sessionId}`,
       details: {
@@ -376,7 +412,10 @@ export class SecurityNotificationService extends EventEmitter {
   /**
    * Acknowledge a notification
    */
-  async acknowledgeNotification(notificationId: string, acknowledgedBy: string): Promise<boolean> {
+  async acknowledgeNotification(
+    notificationId: string,
+    acknowledgedBy: string
+  ): Promise<boolean> {
     const notification = this.notifications.get(notificationId);
     if (!notification || notification.acknowledged) {
       return false;
@@ -431,8 +470,9 @@ export class SecurityNotificationService extends EventEmitter {
       types,
     } = options;
 
-    let notifications = Array.from(this.notifications.values())
-      .filter(n => n.userId === userId || !n.userId); // Include global notifications
+    let notifications = Array.from(this.notifications.values()).filter(
+      n => n.userId === userId || !n.userId
+    ); // Include global notifications
 
     if (!includeAcknowledged) {
       notifications = notifications.filter(n => !n.acknowledged);
@@ -455,10 +495,11 @@ export class SecurityNotificationService extends EventEmitter {
         [NotificationPriority.MEDIUM]: 2,
         [NotificationPriority.LOW]: 1,
       };
-      
-      const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority];
+
+      const priorityDiff =
+        priorityOrder[b.priority] - priorityOrder[a.priority];
       if (priorityDiff !== 0) return priorityDiff;
-      
+
       return b.timestamp.getTime() - a.timestamp.getTime();
     });
 
@@ -478,15 +519,23 @@ export class SecurityNotificationService extends EventEmitter {
     const notifications = Array.from(this.notifications.values());
     const recent24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-    const byType = Object.values(NotificationType).reduce((acc, type) => {
-      acc[type] = notifications.filter(n => n.type === type).length;
-      return acc;
-    }, {} as Record<NotificationType, number>);
+    const byType = Object.values(NotificationType).reduce(
+      (acc, type) => {
+        acc[type] = notifications.filter(n => n.type === type).length;
+        return acc;
+      },
+      {} as Record<NotificationType, number>
+    );
 
-    const byPriority = Object.values(NotificationPriority).reduce((acc, priority) => {
-      acc[priority] = notifications.filter(n => n.priority === priority).length;
-      return acc;
-    }, {} as Record<NotificationPriority, number>);
+    const byPriority = Object.values(NotificationPriority).reduce(
+      (acc, priority) => {
+        acc[priority] = notifications.filter(
+          n => n.priority === priority
+        ).length;
+        return acc;
+      },
+      {} as Record<NotificationPriority, number>
+    );
 
     return {
       total: notifications.length,
@@ -507,7 +556,10 @@ export class SecurityNotificationService extends EventEmitter {
   /**
    * Update notification configuration
    */
-  updateConfiguration(type: NotificationType, config: Partial<NotificationConfig>): void {
+  updateConfiguration(
+    type: NotificationType,
+    config: Partial<NotificationConfig>
+  ): void {
     const existing = this.configurations.get(type);
     if (existing) {
       this.configurations.set(type, { ...existing, ...config });
@@ -528,11 +580,14 @@ export class SecurityNotificationService extends EventEmitter {
   }): Promise<NotificationMessage> {
     const config = this.configurations.get(params.type)!;
     const notificationId = `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     // Check throttling
     const throttleKey = `${params.type}_${params.userId || 'global'}`;
     const lastNotification = this.throttleTracker.get(throttleKey);
-    if (lastNotification && Date.now() - lastNotification.getTime() < config.throttleMs) {
+    if (
+      lastNotification &&
+      Date.now() - lastNotification.getTime() < config.throttleMs
+    ) {
       throw new Error(`Notification throttled: ${params.type}`);
     }
 
@@ -549,10 +604,16 @@ export class SecurityNotificationService extends EventEmitter {
       sessionId: params.sessionId,
       acknowledged: false,
       deliveryMethods: config.deliveryMethods,
-      deliveryStatus: config.deliveryMethods.reduce((acc, method) => {
-        acc[method] = 'pending';
-        return acc;
-      }, {} as Record<DeliveryMethod, 'pending' | 'sent' | 'delivered' | 'failed'>),
+      deliveryStatus: config.deliveryMethods.reduce(
+        (acc, method) => {
+          acc[method] = 'pending';
+          return acc;
+        },
+        {} as Record<
+          DeliveryMethod,
+          'pending' | 'sent' | 'delivered' | 'failed'
+        >
+      ),
       escalated: false,
       expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
     };
@@ -565,7 +626,7 @@ export class SecurityNotificationService extends EventEmitter {
       const escalationTimer = setTimeout(() => {
         this.escalateNotification(notification);
       }, config.escalationDelayMs);
-      
+
       this.escalationTimers.set(notificationId, escalationTimer);
     } else if (config.autoAcknowledge) {
       // Auto-acknowledge after a short delay
@@ -577,44 +638,57 @@ export class SecurityNotificationService extends EventEmitter {
     return notification;
   }
 
-  private async deliverNotification(notification: NotificationMessage): Promise<void> {
+  private async deliverNotification(
+    notification: NotificationMessage
+  ): Promise<void> {
     // Find relevant recipients
-    const recipients = Array.from(this.recipients.values()).filter(recipient => {
-      if (!recipient.isActive) return false;
-      
-      // Check if recipient wants this type of notification
-      if (!recipient.deliveryPreferences.types.includes(notification.type)) return false;
-      
-      // Check minimum priority
-      const priorityOrder = {
-        [NotificationPriority.LOW]: 1,
-        [NotificationPriority.MEDIUM]: 2,
-        [NotificationPriority.HIGH]: 3,
-        [NotificationPriority.CRITICAL]: 4,
-        [NotificationPriority.EMERGENCY]: 5,
-      };
-      
-      const notificationPriorityLevel = priorityOrder[notification.priority];
-      const recipientMinPriority = priorityOrder[recipient.deliveryPreferences.minPriority];
-      
-      if (notificationPriorityLevel < recipientMinPriority) return false;
-      
-      // Check quiet hours
-      if (recipient.deliveryPreferences.quietHours) {
-        const now = new Date();
-        const currentHour = now.getHours();
-        const quietStart = parseInt(recipient.deliveryPreferences.quietHours.start);
-        const quietEnd = parseInt(recipient.deliveryPreferences.quietHours.end);
-        
-        // Skip quiet hours for non-emergency notifications
-        if (notification.priority !== NotificationPriority.EMERGENCY && 
-            currentHour >= quietStart && currentHour < quietEnd) {
+    const recipients = Array.from(this.recipients.values()).filter(
+      recipient => {
+        if (!recipient.isActive) return false;
+
+        // Check if recipient wants this type of notification
+        if (!recipient.deliveryPreferences.types.includes(notification.type))
           return false;
+
+        // Check minimum priority
+        const priorityOrder = {
+          [NotificationPriority.LOW]: 1,
+          [NotificationPriority.MEDIUM]: 2,
+          [NotificationPriority.HIGH]: 3,
+          [NotificationPriority.CRITICAL]: 4,
+          [NotificationPriority.EMERGENCY]: 5,
+        };
+
+        const notificationPriorityLevel = priorityOrder[notification.priority];
+        const recipientMinPriority =
+          priorityOrder[recipient.deliveryPreferences.minPriority];
+
+        if (notificationPriorityLevel < recipientMinPriority) return false;
+
+        // Check quiet hours
+        if (recipient.deliveryPreferences.quietHours) {
+          const now = new Date();
+          const currentHour = now.getHours();
+          const quietStart = parseInt(
+            recipient.deliveryPreferences.quietHours.start
+          );
+          const quietEnd = parseInt(
+            recipient.deliveryPreferences.quietHours.end
+          );
+
+          // Skip quiet hours for non-emergency notifications
+          if (
+            notification.priority !== NotificationPriority.EMERGENCY &&
+            currentHour >= quietStart &&
+            currentHour < quietEnd
+          ) {
+            return false;
+          }
         }
+
+        return true;
       }
-      
-      return true;
-    });
+    );
 
     // Deliver to specific user if notification is user-specific
     if (notification.userId) {
@@ -633,7 +707,10 @@ export class SecurityNotificationService extends EventEmitter {
     await this.deliverRealTime(notification);
   }
 
-  private async deliverToRecipient(notification: NotificationMessage, recipient: NotificationRecipient): Promise<void> {
+  private async deliverToRecipient(
+    notification: NotificationMessage,
+    recipient: NotificationRecipient
+  ): Promise<void> {
     const relevantMethods = notification.deliveryMethods.filter(method =>
       recipient.deliveryPreferences.methods.includes(method)
     );
@@ -643,7 +720,9 @@ export class SecurityNotificationService extends EventEmitter {
       if (handler) {
         try {
           const success = await handler(notification, recipient);
-          notification.deliveryStatus[method] = success ? 'delivered' : 'failed';
+          notification.deliveryStatus[method] = success
+            ? 'delivered'
+            : 'failed';
         } catch (error) {
           console.error(`Failed to deliver notification via ${method}:`, error);
           notification.deliveryStatus[method] = 'failed';
@@ -652,13 +731,17 @@ export class SecurityNotificationService extends EventEmitter {
     }
   }
 
-  private async deliverRealTime(notification: NotificationMessage): Promise<void> {
+  private async deliverRealTime(
+    notification: NotificationMessage
+  ): Promise<void> {
     // Emit for real-time listeners (WebSocket/SSE)
     this.emit('realTimeNotification', notification);
     notification.deliveryStatus[DeliveryMethod.REAL_TIME] = 'delivered';
   }
 
-  private async escalateNotification(notification: NotificationMessage): Promise<void> {
+  private async escalateNotification(
+    notification: NotificationMessage
+  ): Promise<void> {
     if (notification.acknowledged || notification.escalated) return;
 
     notification.escalated = true;
@@ -686,11 +769,16 @@ export class SecurityNotificationService extends EventEmitter {
 
   private mapSeverityToPriority(severity: SecurityLevel): NotificationPriority {
     switch (severity) {
-      case SecurityLevel.SAFE: return NotificationPriority.LOW;
-      case SecurityLevel.MODERATE: return NotificationPriority.MEDIUM;
-      case SecurityLevel.DANGEROUS: return NotificationPriority.HIGH;
-      case SecurityLevel.CRITICAL: return NotificationPriority.CRITICAL;
-      default: return NotificationPriority.MEDIUM;
+      case SecurityLevel.SAFE:
+        return NotificationPriority.LOW;
+      case SecurityLevel.MODERATE:
+        return NotificationPriority.MEDIUM;
+      case SecurityLevel.DANGEROUS:
+        return NotificationPriority.HIGH;
+      case SecurityLevel.CRITICAL:
+        return NotificationPriority.CRITICAL;
+      default:
+        return NotificationPriority.MEDIUM;
     }
   }
 
@@ -710,13 +798,15 @@ export class SecurityNotificationService extends EventEmitter {
       {
         type: NotificationType.SECURITY_ALERT,
         title: 'Security Alert: {{alertType}}',
-        messageTemplate: 'A security alert was triggered: {{message}}. Session: {{sessionId}}',
+        messageTemplate:
+          'A security alert was triggered: {{message}}. Session: {{sessionId}}',
         variables: ['alertType', 'message', 'sessionId', 'userId'],
       },
       {
         type: NotificationType.TIMEOUT_WARNING,
         title: 'Session Timeout Warning',
-        messageTemplate: 'Your dangerous mode session will expire in {{remainingTime}} minutes.',
+        messageTemplate:
+          'Your dangerous mode session will expire in {{remainingTime}} minutes.',
         variables: ['remainingTime', 'sessionId'],
       },
       // Add more templates as needed
@@ -729,73 +819,96 @@ export class SecurityNotificationService extends EventEmitter {
 
   private setupDeliveryHandlers(): void {
     // Real-time delivery (handled by emit)
-    this.deliveryHandlers.set(DeliveryMethod.REAL_TIME, async (notification) => {
+    this.deliveryHandlers.set(DeliveryMethod.REAL_TIME, async notification => {
       this.emit('realTimeNotification', notification);
       return true;
     });
 
     // In-app delivery (stored for UI pickup)
-    this.deliveryHandlers.set(DeliveryMethod.IN_APP, async (notification) => {
+    this.deliveryHandlers.set(DeliveryMethod.IN_APP, async notification => {
       this.emit('inAppNotification', notification);
       return true;
     });
 
     // Email delivery (mock implementation)
-    this.deliveryHandlers.set(DeliveryMethod.EMAIL, async (notification, recipient) => {
-      console.log(`📧 Email notification sent to ${recipient?.email}: ${notification.title}`);
-      return true;
-    });
+    this.deliveryHandlers.set(
+      DeliveryMethod.EMAIL,
+      async (notification, recipient) => {
+        console.log(
+          `📧 Email notification sent to ${recipient?.email}: ${notification.title}`
+        );
+        return true;
+      }
+    );
 
     // SMS delivery (mock implementation)
-    this.deliveryHandlers.set(DeliveryMethod.SMS, async (notification, recipient) => {
-      console.log(`📱 SMS notification sent to ${recipient?.phone}: ${notification.title}`);
-      return true;
-    });
+    this.deliveryHandlers.set(
+      DeliveryMethod.SMS,
+      async (notification, recipient) => {
+        console.log(
+          `📱 SMS notification sent to ${recipient?.phone}: ${notification.title}`
+        );
+        return true;
+      }
+    );
 
     // Slack delivery (mock implementation)
-    this.deliveryHandlers.set(DeliveryMethod.SLACK, async (notification, recipient) => {
-      console.log(`💬 Slack notification sent to ${recipient?.slackUserId}: ${notification.title}`);
-      return true;
-    });
+    this.deliveryHandlers.set(
+      DeliveryMethod.SLACK,
+      async (notification, recipient) => {
+        console.log(
+          `💬 Slack notification sent to ${recipient?.slackUserId}: ${notification.title}`
+        );
+        return true;
+      }
+    );
 
     // Webhook delivery (mock implementation)
-    this.deliveryHandlers.set(DeliveryMethod.WEBHOOK, async (notification, recipient) => {
-      console.log(`🔗 Webhook notification sent to ${recipient?.webhookUrl}: ${notification.title}`);
-      return true;
-    });
+    this.deliveryHandlers.set(
+      DeliveryMethod.WEBHOOK,
+      async (notification, recipient) => {
+        console.log(
+          `🔗 Webhook notification sent to ${recipient?.webhookUrl}: ${notification.title}`
+        );
+        return true;
+      }
+    );
   }
 
   private startCleanupProcess(): void {
     // Clean up old notifications every hour
-    setInterval(() => {
-      const now = new Date();
-      const notificationsToDelete: string[] = [];
+    setInterval(
+      () => {
+        const now = new Date();
+        const notificationsToDelete: string[] = [];
 
-      for (const [id, notification] of this.notifications.entries()) {
-        if (notification.expiresAt && notification.expiresAt < now) {
-          notificationsToDelete.push(id);
+        for (const [id, notification] of this.notifications.entries()) {
+          if (notification.expiresAt && notification.expiresAt < now) {
+            notificationsToDelete.push(id);
+          }
         }
-      }
 
-      for (const id of notificationsToDelete) {
-        this.notifications.delete(id);
-        
-        // Clean up escalation timer
-        const timer = this.escalationTimers.get(id);
-        if (timer) {
-          clearTimeout(timer);
-          this.escalationTimers.delete(id);
-        }
-      }
+        for (const id of notificationsToDelete) {
+          this.notifications.delete(id);
 
-      // Clean up old throttle entries
-      const throttleCutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-      for (const [key, timestamp] of this.throttleTracker.entries()) {
-        if (timestamp < throttleCutoff) {
-          this.throttleTracker.delete(key);
+          // Clean up escalation timer
+          const timer = this.escalationTimers.get(id);
+          if (timer) {
+            clearTimeout(timer);
+            this.escalationTimers.delete(id);
+          }
         }
-      }
-    }, 60 * 60 * 1000); // Every hour
+
+        // Clean up old throttle entries
+        const throttleCutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        for (const [key, timestamp] of this.throttleTracker.entries()) {
+          if (timestamp < throttleCutoff) {
+            this.throttleTracker.delete(key);
+          }
+        }
+      },
+      60 * 60 * 1000
+    ); // Every hour
   }
 }
 

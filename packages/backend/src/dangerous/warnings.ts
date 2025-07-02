@@ -11,7 +11,7 @@ export enum WarningType {
   SECURITY_BYPASS = 'security_bypass',
   TIMEOUT_WARNING = 'timeout_warning',
   RISK_THRESHOLD = 'risk_threshold',
-  SUSPICIOUS_PATTERN = 'suspicious_pattern'
+  SUSPICIOUS_PATTERN = 'suspicious_pattern',
 }
 
 // Confirmation dialog configuration
@@ -32,7 +32,7 @@ export interface ConfirmationDialog {
   color: string;
 }
 
-// Security warning configuration  
+// Security warning configuration
 export interface SecurityWarning {
   id: string;
   type: WarningType;
@@ -46,12 +46,16 @@ export interface SecurityWarning {
 
 export interface SecurityWarningAction {
   label: string;
-  action: 'dismiss' | 'disable_dangerous' | 'view_logs' | 'contact_admin' | 'learn_more';
+  action:
+    | 'dismiss'
+    | 'disable_dangerous'
+    | 'view_logs'
+    | 'contact_admin'
+    | 'learn_more';
   style: 'primary' | 'secondary' | 'danger';
 }
 
 export class SecurityWarningService {
-  
   /**
    * Generate confirmation dialog for dangerous mode enablement
    */
@@ -114,11 +118,11 @@ export class SecurityWarningService {
     potentialImpact: string[];
   }): ConfirmationDialog {
     const fullCommand = [context.command, ...context.args].join(' ');
-    
+
     let title = '⚠️ Dangerous Command';
     let requiresTyping: string | undefined;
     let countdown = 0;
-    
+
     if (context.risk === CommandRisk.CRITICAL) {
       title = '🚨 CRITICAL: Extremely Dangerous Command';
       requiresTyping = 'I ACCEPT FULL RESPONSIBILITY';
@@ -161,7 +165,7 @@ export class SecurityWarningService {
     riskScore: number;
   }): SecurityWarning {
     const minutes = Math.ceil(context.remainingTime / 60000);
-    
+
     return {
       id: `timeout_warning_${Date.now()}`,
       type: WarningType.TIMEOUT_WARNING,
@@ -242,7 +246,9 @@ export class SecurityWarningService {
       id: `sys_mod_${Date.now()}`,
       type: WarningType.SYSTEM_MODIFICATION,
       message: `System modification detected: ${context.modification} on ${context.target}. ${context.reversible ? 'This change may be reversible.' : 'This change is likely IRREVERSIBLE.'}`,
-      severity: context.reversible ? SecurityLevel.MODERATE : SecurityLevel.DANGEROUS,
+      severity: context.reversible
+        ? SecurityLevel.MODERATE
+        : SecurityLevel.DANGEROUS,
       dismissible: true,
       autoExpire: 60000, // 1 minute
       actions: [
@@ -363,7 +369,8 @@ export class SecurityWarningService {
         'System administrators may revoke dangerous mode access at any time.',
         'Emergency disable mechanisms are in place to protect system integrity.',
       ],
-      acknowledgment: 'I have read and understand the security implications of enabling Dangerous Mode.',
+      acknowledgment:
+        'I have read and understand the security implications of enabling Dangerous Mode.',
     };
   }
 
@@ -419,43 +426,48 @@ export class SecurityWarningService {
 
   private static mapRiskToSeverity(risk: CommandRisk): SecurityLevel {
     switch (risk) {
-      case CommandRisk.SAFE: return SecurityLevel.SAFE;
-      case CommandRisk.MODERATE: return SecurityLevel.MODERATE;
-      case CommandRisk.DANGEROUS: return SecurityLevel.DANGEROUS;
-      case CommandRisk.CRITICAL: return SecurityLevel.CRITICAL;
-      default: return SecurityLevel.SAFE;
+      case CommandRisk.SAFE:
+        return SecurityLevel.SAFE;
+      case CommandRisk.MODERATE:
+        return SecurityLevel.MODERATE;
+      case CommandRisk.DANGEROUS:
+        return SecurityLevel.DANGEROUS;
+      case CommandRisk.CRITICAL:
+        return SecurityLevel.CRITICAL;
+      default:
+        return SecurityLevel.SAFE;
     }
   }
 
   private static getSaferAlternatives(command: string): string[] {
     const alternatives: Record<string, string[]> = {
-      'rm': [
+      rm: [
         'Use trash/recycle bin instead of permanent deletion',
         'Create backup before deleting files',
         'Use mv to move files to backup location',
         'Use specific file paths instead of wildcards',
       ],
-      'chmod': [
+      chmod: [
         'Use specific permissions (e.g., 644, 755) instead of 777',
         'Apply permissions to specific files, not recursively',
         'Check current permissions first with ls -la',
       ],
-      'chown': [
+      chown: [
         'Verify the correct user/group before changing ownership',
         'Use sudo only when necessary',
         'Test on a single file first',
       ],
-      'dd': [
+      dd: [
         'Use cp for regular file copying',
         'Use rsync for synchronization',
         'Verify source and destination paths carefully',
       ],
-      'mount': [
+      mount: [
         'Check available mount points first',
         'Use read-only mounts when possible',
         'Verify filesystem type before mounting',
       ],
-      'iptables': [
+      iptables: [
         'Test rules in a non-production environment first',
         'Keep a backup of current rules',
         'Use specific IP ranges instead of broad rules',
@@ -482,7 +494,8 @@ export class SecurityWarningService {
 export const WARNING_TEMPLATES = {
   DANGEROUS_MODE_FIRST_TIME: {
     title: 'First Time Using Dangerous Mode',
-    message: 'This appears to be your first time enabling Dangerous Mode. Please review the security guidelines carefully.',
+    message:
+      'This appears to be your first time enabling Dangerous Mode. Please review the security guidelines carefully.',
     tips: [
       'Start with low-risk commands to familiarize yourself',
       'Keep sessions as short as possible',
@@ -493,7 +506,8 @@ export const WARNING_TEMPLATES = {
 
   MULTIPLE_ACTIVATIONS: {
     title: 'Multiple Dangerous Mode Activations',
-    message: 'You have activated Dangerous Mode multiple times today. Consider if all these activations are necessary.',
+    message:
+      'You have activated Dangerous Mode multiple times today. Consider if all these activations are necessary.',
     tips: [
       'Batch related operations into single sessions',
       'Use regular mode for safe operations',
@@ -503,7 +517,8 @@ export const WARNING_TEMPLATES = {
 
   HIGH_COMMAND_FREQUENCY: {
     title: 'High Command Execution Rate',
-    message: 'You are executing commands at a high rate. Please slow down and carefully review each command.',
+    message:
+      'You are executing commands at a high rate. Please slow down and carefully review each command.',
     tips: [
       'Take time to review each command before execution',
       'Use command history to avoid retyping',
@@ -513,7 +528,8 @@ export const WARNING_TEMPLATES = {
 
   APPROACHING_TIMEOUT: {
     title: 'Session Expiring Soon',
-    message: 'Your dangerous mode session will expire soon. Plan your remaining operations accordingly.',
+    message:
+      'Your dangerous mode session will expire soon. Plan your remaining operations accordingly.',
     tips: [
       'Complete critical operations first',
       'Save your work before session expires',

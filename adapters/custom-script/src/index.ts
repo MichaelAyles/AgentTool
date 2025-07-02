@@ -49,7 +49,7 @@ export const SCRIPT_CONFIGS: Record<string, ScriptConfig> = {
     maxOutputSize: 1024 * 1024,
     sanitizeOutput: true,
   },
-  
+
   // Programming languages
   python: {
     interpreter: 'python3',
@@ -135,7 +135,7 @@ export const SCRIPT_CONFIGS: Record<string, ScriptConfig> = {
     maxOutputSize: 2 * 1024 * 1024,
     sanitizeOutput: true,
   },
-  
+
   // Data processing
   jq: {
     interpreter: 'jq',
@@ -164,7 +164,7 @@ export const SCRIPT_CONFIGS: Record<string, ScriptConfig> = {
     maxOutputSize: 1024 * 1024,
     sanitizeOutput: true,
   },
-  
+
   // Custom interpreters
   custom: {
     interpreter: '', // Must be specified
@@ -206,7 +206,8 @@ export interface ExecutionResult {
 export class CustomScriptAdapter extends BaseAdapter {
   public readonly name = 'custom-script';
   public readonly version = '1.0.0';
-  public readonly description = 'Flexible adapter for executing custom scripts and commands';
+  public readonly description =
+    'Flexible adapter for executing custom scripts and commands';
   public readonly capabilities: AdapterCapabilities = {
     execute: true,
     stream: true,
@@ -233,11 +234,14 @@ export class CustomScriptAdapter extends BaseAdapter {
   ): Promise<string> {
     const sessionId = uuidv4();
     const result = await this.executeScript(command, { ...options, sessionId });
-    
+
     if (!result.success) {
-      throw new Error(result.error || `Script execution failed with exit code ${result.exitCode}`);
+      throw new Error(
+        result.error ||
+          `Script execution failed with exit code ${result.exitCode}`
+      );
     }
-    
+
     return result.stdout;
   }
 
@@ -250,29 +254,36 @@ export class CustomScriptAdapter extends BaseAdapter {
   ): Promise<ExecutionResult> {
     const sessionId = options.sessionId || uuidv4();
     const startTime = Date.now();
-    
+
     try {
       // Determine script configuration
       const scriptType = options.scriptType || 'bash';
       const baseConfig = SCRIPT_CONFIGS[scriptType] || SCRIPT_CONFIGS.bash;
       const config: ScriptConfig = { ...baseConfig, ...options.customConfig };
-      
+
       // Validate interpreter
       if (!config.interpreter) {
-        throw new Error(`No interpreter specified for script type: ${scriptType}`);
+        throw new Error(
+          `No interpreter specified for script type: ${scriptType}`
+        );
       }
-      
+
       // Prepare script execution
-      const { scriptPath, shouldCleanup } = await this.prepareScript(script, config, options);
-      
+      const { scriptPath, shouldCleanup } = await this.prepareScript(
+        script,
+        config,
+        options
+      );
+
       // Set up execution environment
-      const workingDir = options.workingDirectory || config.workingDirectory || process.cwd();
+      const workingDir =
+        options.workingDirectory || config.workingDirectory || process.cwd();
       const environment = {
         ...process.env,
         ...config.environmentVariables,
         ...options.environment,
       };
-      
+
       // Execute script
       const result = await this.runScript(
         config,
@@ -286,7 +297,7 @@ export class CustomScriptAdapter extends BaseAdapter {
         },
         sessionId
       );
-      
+
       // Cleanup temporary files if needed
       if (shouldCleanup && !options.saveScript) {
         try {
@@ -297,13 +308,12 @@ export class CustomScriptAdapter extends BaseAdapter {
           // Ignore cleanup errors
         }
       }
-      
+
       return {
         ...result,
         executionTime: Date.now() - startTime,
         scriptPath: options.saveScript ? scriptPath : undefined,
       };
-      
     } catch (error) {
       return {
         success: false,
@@ -361,9 +371,9 @@ export class CustomScriptAdapter extends BaseAdapter {
    * Check if an interpreter is available
    */
   async checkInterpreter(interpreter: string): Promise<boolean> {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       const process = spawn('which', [interpreter], { stdio: 'ignore' });
-      process.on('close', (code) => {
+      process.on('close', code => {
         resolve(code === 0);
       });
       process.on('error', () => {
@@ -378,7 +388,11 @@ export class CustomScriptAdapter extends BaseAdapter {
   async getInterpreterVersion(interpreter: string): Promise<string | null> {
     try {
       const versionArgs = this.getVersionArgs(interpreter);
-      const result = await this.executeSimpleCommand(interpreter, versionArgs, 5000);
+      const result = await this.executeSimpleCommand(
+        interpreter,
+        versionArgs,
+        5000
+      );
       return result.stdout.trim().split('\n')[0];
     } catch (error) {
       return null;
@@ -421,35 +435,40 @@ export class CustomScriptAdapter extends BaseAdapter {
     config: ScriptConfig,
     options: ExecutionOptions
   ): Promise<{ scriptPath: string; shouldCleanup: boolean }> {
-    
     // If it's a direct command (not a script file), write to temp file
-    if (!script.includes('\n') && !script.includes(';') && options.scriptType !== 'custom') {
+    if (
+      !script.includes('\n') &&
+      !script.includes(';') &&
+      options.scriptType !== 'custom'
+    ) {
       // Treat as direct command
       return { scriptPath: script, shouldCleanup: false };
     }
-    
+
     // Generate script file path
-    const scriptName = options.scriptName || `script_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+    const scriptName =
+      options.scriptName ||
+      `script_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     const scriptPath = join(this.tempDir, scriptName + config.fileExtension);
-    
+
     // Ensure directory exists
     const scriptDir = dirname(scriptPath);
     if (!existsSync(scriptDir)) {
       mkdirSync(scriptDir, { recursive: true });
     }
-    
+
     // Write script to file
     let scriptContent = script;
-    
+
     // Add shebang for shell scripts
     if (config.fileExtension === '.sh' && !script.startsWith('#!')) {
       scriptContent = `#!/bin/bash\n${script}`;
     } else if (config.fileExtension === '.zsh' && !script.startsWith('#!')) {
       scriptContent = `#!/bin/zsh\n${script}`;
     }
-    
+
     writeFileSync(scriptPath, scriptContent, 'utf8');
-    
+
     // Make script executable for shell scripts
     if (['.sh', '.zsh'].includes(config.fileExtension)) {
       try {
@@ -458,7 +477,7 @@ export class CustomScriptAdapter extends BaseAdapter {
         // Ignore chmod errors
       }
     }
-    
+
     return { scriptPath, shouldCleanup: true };
   }
 
@@ -474,13 +493,12 @@ export class CustomScriptAdapter extends BaseAdapter {
     },
     sessionId: string
   ): Promise<Omit<ExecutionResult, 'executionTime'>> {
-    
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       let stdout = '';
       let stderr = '';
       let killed = false;
       let timedOut = false;
-      
+
       // Prepare command arguments
       let args: string[];
       if (scriptPath === script && config.interpreterArgs.includes('-c')) {
@@ -494,23 +512,23 @@ export class CustomScriptAdapter extends BaseAdapter {
         // File-based execution
         args = [...config.interpreterArgs, scriptPath, ...execOptions.args];
       }
-      
+
       // Spawn process
       const childProcess = spawn(config.interpreter, args, {
         cwd: execOptions.workingDirectory,
         env: execOptions.environment,
         stdio: ['pipe', 'pipe', 'pipe'],
       });
-      
+
       // Store process for potential cleanup
       this.processes.set(sessionId, childProcess);
-      
+
       // Set up timeout
       const timeout = setTimeout(() => {
         timedOut = true;
         killed = true;
         childProcess.kill('SIGTERM');
-        
+
         // Force kill after 5 seconds
         setTimeout(() => {
           if (!childProcess.killed) {
@@ -518,13 +536,13 @@ export class CustomScriptAdapter extends BaseAdapter {
           }
         }, 5000);
       }, execOptions.timeout);
-      
+
       // Handle stdout
       if (childProcess.stdout) {
-        childProcess.stdout.on('data', (data) => {
+        childProcess.stdout.on('data', data => {
           const chunk = data.toString();
           stdout += chunk;
-          
+
           // Check output size limit
           if (config.maxOutputSize && stdout.length > config.maxOutputSize) {
             killed = true;
@@ -532,13 +550,13 @@ export class CustomScriptAdapter extends BaseAdapter {
           }
         });
       }
-      
+
       // Handle stderr
       if (childProcess.stderr) {
-        childProcess.stderr.on('data', (data) => {
+        childProcess.stderr.on('data', data => {
           const chunk = data.toString();
           stderr += chunk;
-          
+
           // Check output size limit
           if (config.maxOutputSize && stderr.length > config.maxOutputSize) {
             killed = true;
@@ -546,18 +564,18 @@ export class CustomScriptAdapter extends BaseAdapter {
           }
         });
       }
-      
+
       // Handle process completion
-      childProcess.on('close', (exitCode) => {
+      childProcess.on('close', exitCode => {
         clearTimeout(timeout);
         this.processes.delete(sessionId);
-        
+
         // Sanitize output if requested
         if (config.sanitizeOutput) {
           stdout = this.sanitizeOutput(stdout);
           stderr = this.sanitizeOutput(stderr);
         }
-        
+
         resolve({
           success: exitCode === 0 && !killed,
           exitCode,
@@ -567,12 +585,12 @@ export class CustomScriptAdapter extends BaseAdapter {
           timedOut,
         });
       });
-      
+
       // Handle process errors
-      childProcess.on('error', (error) => {
+      childProcess.on('error', error => {
         clearTimeout(timeout);
         this.processes.delete(sessionId);
-        
+
         resolve({
           success: false,
           exitCode: null,
@@ -583,7 +601,7 @@ export class CustomScriptAdapter extends BaseAdapter {
           timedOut,
         });
       });
-      
+
       // Send stdin if provided
       if (execOptions.stdin && childProcess.stdin) {
         childProcess.stdin.write(execOptions.stdin);
@@ -597,35 +615,34 @@ export class CustomScriptAdapter extends BaseAdapter {
     args: string[],
     timeout: number
   ): Promise<{ stdout: string; stderr: string; exitCode: number | null }> {
-    
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       let stdout = '';
       let stderr = '';
-      
+
       const process = spawn(command, args, { stdio: 'pipe' });
-      
+
       const timeoutHandle = setTimeout(() => {
         process.kill('SIGTERM');
       }, timeout);
-      
+
       if (process.stdout) {
-        process.stdout.on('data', (data) => {
+        process.stdout.on('data', data => {
           stdout += data.toString();
         });
       }
-      
+
       if (process.stderr) {
-        process.stderr.on('data', (data) => {
+        process.stderr.on('data', data => {
           stderr += data.toString();
         });
       }
-      
-      process.on('close', (exitCode) => {
+
+      process.on('close', exitCode => {
         clearTimeout(timeoutHandle);
         resolve({ stdout, stderr, exitCode });
       });
-      
-      process.on('error', (error) => {
+
+      process.on('error', error => {
         clearTimeout(timeoutHandle);
         resolve({ stdout, stderr: error.message, exitCode: null });
       });
@@ -656,7 +673,7 @@ export class CustomScriptAdapter extends BaseAdapter {
       awk: ['--version'],
       sed: ['--version'],
     };
-    
+
     return versionArgs[interpreter] || ['--version'];
   }
 
@@ -679,7 +696,7 @@ export class CustomScriptAdapter extends BaseAdapter {
       sed: 'Stream editor',
       custom: 'Custom interpreter',
     };
-    
+
     return descriptions[type] || 'Custom script type';
   }
 }

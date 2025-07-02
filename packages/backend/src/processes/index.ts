@@ -46,7 +46,7 @@ export class ProcessManager extends EventEmitter {
   async createSession(options: SessionOptions): Promise<ManagedSession> {
     const session = new ManagedSession(options, this.adapterRegistry);
     this.sessions.set(session.id, session);
-    
+
     // Initialize metrics
     this.metrics.set(session.id, {
       cpuUsage: 0,
@@ -56,13 +56,16 @@ export class ProcessManager extends EventEmitter {
       commandsExecuted: 0,
       lastActivity: Date.now(),
     });
-    
+
     session.on('state-change', (state: SessionState) => {
       this.emit('session-state', session.id, state);
     });
 
     session.on('command-executed', () => {
-      this.updateMetrics(session.id, { commandsExecuted: 1, lastActivity: Date.now() });
+      this.updateMetrics(session.id, {
+        commandsExecuted: 1,
+        lastActivity: Date.now(),
+      });
     });
 
     session.on('process-started', (process: ProcessHandle) => {
@@ -105,7 +108,7 @@ export class ProcessManager extends EventEmitter {
         try {
           // Get process stats (this would require process monitoring libraries in production)
           const stats = await this.getProcessStats(process.pid);
-          
+
           this.metrics.set(sessionId, {
             ...metrics,
             cpuUsage: stats.cpuUsage,
@@ -113,13 +116,18 @@ export class ProcessManager extends EventEmitter {
             runtime: performance.now() - metrics.startTime,
           });
         } catch (error) {
-          console.warn(`Failed to get stats for process ${process.pid}:`, error);
+          console.warn(
+            `Failed to get stats for process ${process.pid}:`,
+            error
+          );
         }
       }
     }
   }
 
-  private async getProcessStats(pid: number): Promise<{ cpuUsage: number; memoryUsage: number }> {
+  private async getProcessStats(
+    pid: number
+  ): Promise<{ cpuUsage: number; memoryUsage: number }> {
     // In a real implementation, this would use libraries like 'pidusage' or system calls
     // For now, return mock data
     return {
@@ -180,12 +188,17 @@ export class ProcessManager extends EventEmitter {
     }
   }
 
-  private async handleResourceViolation(sessionId: string, type: string): Promise<void> {
+  private async handleResourceViolation(
+    sessionId: string,
+    type: string
+  ): Promise<void> {
     const session = this.sessions.get(sessionId);
     if (!session) return;
 
-    console.warn(`Resource violation detected for session ${sessionId}: ${type}`);
-    
+    console.warn(
+      `Resource violation detected for session ${sessionId}: ${type}`
+    );
+
     // Emit warning first
     this.emit('session-warning', {
       sessionId,
@@ -199,21 +212,25 @@ export class ProcessManager extends EventEmitter {
     }, 2000);
   }
 
-  private updateMetrics(sessionId: string, updates: Partial<ProcessMetrics>): void {
+  private updateMetrics(
+    sessionId: string,
+    updates: Partial<ProcessMetrics>
+  ): void {
     const metrics = this.metrics.get(sessionId);
     if (!metrics) return;
 
     this.metrics.set(sessionId, {
       ...metrics,
       ...updates,
-      commandsExecuted: metrics.commandsExecuted + (updates.commandsExecuted || 0),
+      commandsExecuted:
+        metrics.commandsExecuted + (updates.commandsExecuted || 0),
     });
   }
 
   // Public API methods
   getAllMetrics(): SessionMetrics[] {
     const result: SessionMetrics[] = [];
-    
+
     for (const [sessionId, session] of this.sessions) {
       const metrics = this.metrics.get(sessionId);
       if (metrics) {
@@ -226,16 +243,16 @@ export class ProcessManager extends EventEmitter {
         });
       }
     }
-    
+
     return result;
   }
 
   getSessionMetrics(sessionId: string): SessionMetrics | null {
     const session = this.sessions.get(sessionId);
     const metrics = this.metrics.get(sessionId);
-    
+
     if (!session || !metrics) return null;
-    
+
     return {
       ...metrics,
       sessionId,
@@ -271,16 +288,19 @@ export class ProcessManager extends EventEmitter {
     averageCpuUsage: number;
   } {
     const metrics = Array.from(this.metrics.values());
-    const avgMemory = metrics.length > 0 
-      ? metrics.reduce((sum, m) => sum + m.memoryUsage, 0) / metrics.length 
-      : 0;
-    const avgCpu = metrics.length > 0 
-      ? metrics.reduce((sum, m) => sum + m.cpuUsage, 0) / metrics.length 
-      : 0;
+    const avgMemory =
+      metrics.length > 0
+        ? metrics.reduce((sum, m) => sum + m.memoryUsage, 0) / metrics.length
+        : 0;
+    const avgCpu =
+      metrics.length > 0
+        ? metrics.reduce((sum, m) => sum + m.cpuUsage, 0) / metrics.length
+        : 0;
 
     return {
-      healthy: avgMemory < this.resourceLimits.maxMemoryMB * 0.8 && 
-               avgCpu < this.resourceLimits.maxCpuPercent * 0.8,
+      healthy:
+        avgMemory < this.resourceLimits.maxMemoryMB * 0.8 &&
+        avgCpu < this.resourceLimits.maxCpuPercent * 0.8,
       activeSessions: this.sessions.size,
       totalProcesses: this.processes.size,
       averageMemoryUsage: avgMemory,
@@ -293,7 +313,7 @@ export class ProcessManager extends EventEmitter {
     if (this.monitoringInterval) {
       clearInterval(this.monitoringInterval);
     }
-    
+
     // Terminate all sessions
     for (const [sessionId] of this.sessions) {
       this.terminateSession(sessionId);
@@ -312,7 +332,11 @@ class ManagedSession extends EventEmitter {
   public readonly id: string;
   private state: SessionState = 'pending';
   private currentProcess?: ProcessHandle;
-  private commandHistory: Array<{ command: string; timestamp: number; exitCode?: number }> = [];
+  private commandHistory: Array<{
+    command: string;
+    timestamp: number;
+    exitCode?: number;
+  }> = [];
 
   constructor(
     private options: SessionOptions,
@@ -336,7 +360,7 @@ class ManagedSession extends EventEmitter {
 
     this.setState('running');
     this.emit('command-executed');
-    
+
     try {
       this.currentProcess = await adapter.execute(command, {
         workingDirectory: this.options.workingDirectory,
@@ -388,7 +412,11 @@ class ManagedSession extends EventEmitter {
     return this.options.adapter;
   }
 
-  getCommandHistory(): Array<{ command: string; timestamp: number; exitCode?: number }> {
+  getCommandHistory(): Array<{
+    command: string;
+    timestamp: number;
+    exitCode?: number;
+  }> {
     return [...this.commandHistory];
   }
 

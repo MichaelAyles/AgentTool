@@ -1,26 +1,28 @@
 # Security Model Specification
 
 ## Overview
+
 This document defines the security architecture for Vibe Code, including safe/dangerous mode, authentication, authorization, and sandboxing.
 
 ## Security Modes
 
 ### Safe Mode (Default)
+
 ```typescript
 interface SafeModeRestrictions {
   // File system
   allowedPaths: string[];
   deniedPaths: string[];
   readOnlyPaths: string[];
-  
+
   // Network
   allowedHosts: string[];
   blockedPorts: number[];
-  
+
   // Commands
   allowedCommands: string[];
   blockedCommands: string[];
-  
+
   // Resources
   maxMemory: number;
   maxCPU: number;
@@ -30,6 +32,7 @@ interface SafeModeRestrictions {
 ```
 
 ### Dangerous Mode
+
 ```typescript
 interface DangerousModeConfig {
   enabled: boolean;
@@ -44,19 +47,20 @@ interface DangerousModeConfig {
 ## Authentication & Authorization
 
 ### Authentication System
+
 ```typescript
 export class AuthenticationService {
   private providers: Map<string, AuthProvider> = new Map();
-  
+
   async authenticate(method: string, credentials: any): Promise<User> {
     const provider = this.providers.get(method);
     if (!provider) {
       throw new AuthError('Unsupported auth method');
     }
-    
+
     return await provider.authenticate(credentials);
   }
-  
+
   async validateToken(token: string): Promise<User | null> {
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET!);
@@ -77,22 +81,22 @@ interface AuthProvider {
 // Built-in providers
 export class LocalAuthProvider implements AuthProvider {
   name = 'local';
-  
+
   async authenticate(credentials: LoginCredentials): Promise<User> {
     const user = await this.findUser(credentials.username);
     const valid = await bcrypt.compare(credentials.password, user.passwordHash);
-    
+
     if (!valid) {
       throw new AuthError('Invalid credentials');
     }
-    
+
     return user;
   }
 }
 
 export class OAuthProvider implements AuthProvider {
   name = 'oauth';
-  
+
   async authenticate(credentials: OAuthCredentials): Promise<User> {
     // OAuth flow implementation
     const userInfo = await this.exchangeCodeForUserInfo(credentials.code);
@@ -102,20 +106,21 @@ export class OAuthProvider implements AuthProvider {
 ```
 
 ### Role-Based Access Control
+
 ```typescript
 enum Permission {
   PROJECT_CREATE = 'project:create',
   PROJECT_READ = 'project:read',
   PROJECT_WRITE = 'project:write',
   PROJECT_DELETE = 'project:delete',
-  
+
   SESSION_CREATE = 'session:create',
   SESSION_EXECUTE = 'session:execute',
   SESSION_DANGEROUS = 'session:dangerous',
-  
+
   ADAPTER_INSTALL = 'adapter:install',
   ADAPTER_CONFIGURE = 'adapter:configure',
-  
+
   SYSTEM_ADMIN = 'system:admin',
 }
 
@@ -127,18 +132,18 @@ interface Role {
 
 export class AuthorizationService {
   private roles: Map<string, Role> = new Map();
-  
+
   async hasPermission(user: User, permission: Permission): Promise<boolean> {
     const userRoles = await this.getUserRoles(user.id);
     return this.checkPermission(userRoles, permission);
   }
-  
+
   private checkPermission(roles: Role[], permission: Permission): boolean {
     for (const role of roles) {
       if (role.permissions.includes(permission)) {
         return true;
       }
-      
+
       // Check inherited roles
       if (role.inherits) {
         const inheritedRoles = role.inherits.map(name => this.roles.get(name)!);
@@ -147,7 +152,7 @@ export class AuthorizationService {
         }
       }
     }
-    
+
     return false;
   }
 }
@@ -156,14 +161,15 @@ export class AuthorizationService {
 ## Sandboxing
 
 ### Process Sandboxing
+
 ```typescript
 export class ProcessSandbox {
   private config: SandboxConfig;
-  
+
   constructor(config: SandboxConfig) {
     this.config = config;
   }
-  
+
   async createSandbox(options: SandboxOptions): Promise<Sandbox> {
     // Create isolated environment
     const sandbox = new Sandbox({
@@ -171,25 +177,25 @@ export class ProcessSandbox {
       environment: this.buildSafeEnvironment(options),
       limits: this.config.resourceLimits,
     });
-    
+
     // Apply restrictions
     await this.applyFileSystemRestrictions(sandbox);
     await this.applyNetworkRestrictions(sandbox);
     await this.applyCommandRestrictions(sandbox);
-    
+
     return sandbox;
   }
-  
+
   private async applyFileSystemRestrictions(sandbox: Sandbox): Promise<void> {
     // Mount allowed paths as read-only or read-write
     for (const path of this.config.allowedPaths) {
       await sandbox.mount(path, { readonly: false });
     }
-    
+
     for (const path of this.config.readOnlyPaths) {
       await sandbox.mount(path, { readonly: true });
     }
-    
+
     // Block access to sensitive paths
     for (const path of this.config.deniedPaths) {
       await sandbox.block(path);
@@ -200,7 +206,7 @@ export class ProcessSandbox {
 // Container-based sandboxing
 export class DockerSandbox implements Sandbox {
   private container?: Docker.Container;
-  
+
   async spawn(command: string, args: string[]): Promise<ProcessHandle> {
     this.container = await docker.createContainer({
       Image: 'vibecode-sandbox',
@@ -214,7 +220,7 @@ export class DockerSandbox implements Sandbox {
         Binds: this.buildBindMounts(),
       },
     });
-    
+
     await this.container.start();
     return this.createProcessHandle();
   }
@@ -222,6 +228,7 @@ export class DockerSandbox implements Sandbox {
 ```
 
 ### Network Security
+
 ```typescript
 export class NetworkSecurityManager {
   async validateOutboundConnection(
@@ -233,20 +240,20 @@ export class NetworkSecurityManager {
     if (this.isBlocked(host, port)) {
       return false;
     }
-    
+
     // Check user permissions
-    if (!await this.hasNetworkAccess(user)) {
+    if (!(await this.hasNetworkAccess(user))) {
       return false;
     }
-    
+
     // Additional checks for dangerous mode
     if (this.isDangerousHost(host) && !user.dangerousModeEnabled) {
       return false;
     }
-    
+
     return true;
   }
-  
+
   private isBlocked(host: string, port: number): boolean {
     // Block private networks in safe mode
     const privateRanges = [
@@ -255,7 +262,7 @@ export class NetworkSecurityManager {
       /^172\.(1[6-9]|2[0-9]|3[01])\./, // private class B
       /^192\.168\./, // private class C
     ];
-    
+
     return privateRanges.some(range => range.test(host));
   }
 }
@@ -264,24 +271,35 @@ export class NetworkSecurityManager {
 ## Command Validation
 
 ### Command Filtering
+
 ```typescript
 export class CommandValidator {
   private dangerousCommands = new Set([
-    'rm', 'rmdir', 'del', 'format',
-    'sudo', 'su', 'passwd',
-    'chmod', 'chown', 'chgrp',
-    'iptables', 'netsh',
-    'systemctl', 'service',
-    'crontab', 'at',
+    'rm',
+    'rmdir',
+    'del',
+    'format',
+    'sudo',
+    'su',
+    'passwd',
+    'chmod',
+    'chown',
+    'chgrp',
+    'iptables',
+    'netsh',
+    'systemctl',
+    'service',
+    'crontab',
+    'at',
   ]);
-  
+
   async validateCommand(
     command: string,
     user: User,
     securityContext: SecurityContext
   ): Promise<ValidationResult> {
     const parsed = this.parseCommand(command);
-    
+
     // Check if command is allowed
     if (!this.isCommandAllowed(parsed.command, securityContext)) {
       return {
@@ -290,7 +308,7 @@ export class CommandValidator {
         severity: 'high',
       };
     }
-    
+
     // Check for dangerous operations
     if (this.isDangerous(parsed) && !securityContext.dangerousMode) {
       return {
@@ -299,16 +317,16 @@ export class CommandValidator {
         severity: 'critical',
       };
     }
-    
+
     // Validate arguments
     const argValidation = await this.validateArguments(parsed, securityContext);
     if (!argValidation.valid) {
       return argValidation;
     }
-    
+
     return { valid: true };
   }
-  
+
   private parseCommand(command: string): ParsedCommand {
     // Sophisticated command parsing
     // Handle pipes, redirects, subcommands, etc.
@@ -319,6 +337,7 @@ export class CommandValidator {
 ## Audit Logging
 
 ### Security Audit System
+
 ```typescript
 export class SecurityAuditLogger {
   async logSecurityEvent(event: SecurityEvent): Promise<void> {
@@ -334,19 +353,17 @@ export class SecurityAuditLogger {
       dangerousMode: event.dangerousMode,
       severity: this.calculateSeverity(event),
     };
-    
+
     // Write to audit log
     await this.writeAuditEntry(auditEntry);
-    
+
     // Alert if critical
     if (auditEntry.severity === 'critical') {
       await this.sendSecurityAlert(auditEntry);
     }
   }
-  
-  async getAuditTrail(
-    filters: AuditFilters
-  ): Promise<AuditEntry[]> {
+
+  async getAuditTrail(filters: AuditFilters): Promise<AuditEntry[]> {
     return await this.queryAuditLog(filters);
   }
 }
@@ -375,10 +392,11 @@ enum SecurityAction {
 ## Session Security
 
 ### Secure Session Management
+
 ```typescript
 export class SecureSessionManager {
   private sessions = new Map<string, SecureSession>();
-  
+
   async createSession(
     user: User,
     options: SessionOptions
@@ -390,15 +408,15 @@ export class SecureSessionManager {
       securityContext: await this.createSecurityContext(user, options),
       expiresAt: this.calculateExpiry(options),
     });
-    
+
     this.sessions.set(session.id, session);
-    
+
     // Set up session monitoring
     this.startSessionMonitoring(session);
-    
+
     return session;
   }
-  
+
   private async createSecurityContext(
     user: User,
     options: SessionOptions
@@ -411,7 +429,7 @@ export class SecureSessionManager {
       auditEnabled: true,
     };
   }
-  
+
   private startSessionMonitoring(session: SecureSession): void {
     // Monitor for suspicious activity
     setInterval(async () => {
@@ -425,6 +443,7 @@ export class SecureSessionManager {
 ## Dangerous Mode Implementation
 
 ### Dangerous Mode Controller
+
 ```typescript
 export class DangerousModeController {
   async enableDangerousMode(
@@ -433,10 +452,10 @@ export class DangerousModeController {
     justification: string
   ): Promise<DangerousModeResult> {
     // Check if user has permission
-    if (!await this.hasPermission(user, Permission.SESSION_DANGEROUS)) {
+    if (!(await this.hasPermission(user, Permission.SESSION_DANGEROUS))) {
       throw new SecurityError('User not authorized for dangerous mode');
     }
-    
+
     // Log the request
     await this.auditLogger.logSecurityEvent({
       userId: user.id,
@@ -446,45 +465,45 @@ export class DangerousModeController {
       result: 'requested',
       metadata: { justification },
     });
-    
+
     // Require confirmation
     const confirmation = await this.requestConfirmation(user, {
       message: 'Are you sure you want to enable dangerous mode?',
       risks: this.getDangerousModeRisks(),
       timeoutMinutes: 5,
     });
-    
+
     if (!confirmation.confirmed) {
       return { enabled: false, reason: 'User declined confirmation' };
     }
-    
+
     // Enable dangerous mode
     const session = this.sessions.get(sessionId);
     session.securityContext.dangerousMode = true;
     session.dangerousModeEnabledAt = new Date();
     session.dangerousModeTimeout = this.calculateTimeout();
-    
+
     // Set up automatic disable
     this.scheduleDangerousModeDisable(session);
-    
+
     await this.auditLogger.logSecurityEvent({
       userId: user.id,
       sessionId,
       action: SecurityAction.DANGEROUS_MODE_ENABLE,
       resource: 'session',
       result: 'allowed',
-      metadata: { 
+      metadata: {
         justification,
         timeoutAt: session.dangerousModeTimeout,
       },
     });
-    
+
     return { enabled: true };
   }
-  
+
   private scheduleDangerousModeDisable(session: SecureSession): void {
     const timeout = session.dangerousModeTimeout!.getTime() - Date.now();
-    
+
     setTimeout(async () => {
       await this.disableDangerousMode(session.id, 'timeout');
     }, timeout);
@@ -495,10 +514,11 @@ export class DangerousModeController {
 ## Security Monitoring
 
 ### Real-time Security Monitoring
+
 ```typescript
 export class SecurityMonitor {
   private alerts = new Map<string, SecurityAlert>();
-  
+
   async monitorSecurity(): Promise<void> {
     // Monitor for suspicious patterns
     setInterval(async () => {
@@ -508,13 +528,13 @@ export class SecurityMonitor {
       await this.checkDangerousModeUsage();
     }, 10000);
   }
-  
+
   private async checkFailedLogins(): Promise<void> {
     const recentFailures = await this.getRecentFailedLogins();
-    
+
     // Group by IP address
     const byIP = groupBy(recentFailures, 'ipAddress');
-    
+
     for (const [ip, failures] of Object.entries(byIP)) {
       if (failures.length > 5) {
         await this.createAlert({
@@ -526,10 +546,10 @@ export class SecurityMonitor {
       }
     }
   }
-  
+
   private async checkUnusualActivity(session: SecureSession): Promise<void> {
     const activity = await this.getSessionActivity(session.id);
-    
+
     // Check for rapid command execution
     if (activity.commandsPerMinute > 60) {
       await this.createAlert({
@@ -539,12 +559,12 @@ export class SecurityMonitor {
         sessionId: session.id,
       });
     }
-    
+
     // Check for file system traversal attempts
-    const traversalAttempts = activity.commands.filter(cmd =>
-      cmd.includes('..') || cmd.includes('~')
+    const traversalAttempts = activity.commands.filter(
+      cmd => cmd.includes('..') || cmd.includes('~')
     );
-    
+
     if (traversalAttempts.length > 3) {
       await this.createAlert({
         type: 'directory_traversal',
@@ -560,23 +580,27 @@ export class SecurityMonitor {
 ## Encryption & Data Protection
 
 ### Data Encryption
+
 ```typescript
 export class EncryptionService {
   private algorithm = 'aes-256-gcm';
   private keyDerivation = 'pbkdf2';
-  
-  async encryptSensitiveData(data: string, context: string): Promise<EncryptedData> {
+
+  async encryptSensitiveData(
+    data: string,
+    context: string
+  ): Promise<EncryptedData> {
     const key = await this.deriveKey(context);
     const iv = crypto.randomBytes(16);
-    
+
     const cipher = crypto.createCipher(this.algorithm, key);
     cipher.setAAD(Buffer.from(context));
-    
+
     let encrypted = cipher.update(data, 'utf8', 'hex');
     encrypted += cipher.final('hex');
-    
+
     const authTag = cipher.getAuthTag();
-    
+
     return {
       data: encrypted,
       iv: iv.toString('hex'),
@@ -584,20 +608,20 @@ export class EncryptionService {
       algorithm: this.algorithm,
     };
   }
-  
+
   async decryptSensitiveData(
     encrypted: EncryptedData,
     context: string
   ): Promise<string> {
     const key = await this.deriveKey(context);
-    
+
     const decipher = crypto.createDecipher(encrypted.algorithm, key);
     decipher.setAAD(Buffer.from(context));
     decipher.setAuthTag(Buffer.from(encrypted.authTag, 'hex'));
-    
+
     let decrypted = decipher.update(encrypted.data, 'hex', 'utf8');
     decrypted += decipher.final('utf8');
-    
+
     return decrypted;
   }
 }
@@ -606,6 +630,7 @@ export class EncryptionService {
 ## Security Configuration
 
 ### Security Configuration Schema
+
 ```typescript
 interface SecurityConfig {
   authentication: {
@@ -614,32 +639,32 @@ interface SecurityConfig {
     refreshTokenExpiry: number;
     requireMFA: boolean;
   };
-  
+
   authorization: {
     defaultRole: string;
     roles: Role[];
   };
-  
+
   sandboxing: {
     enabled: boolean;
     containerRuntime: 'docker' | 'podman';
     defaultRestrictions: SafeModeRestrictions;
   };
-  
+
   dangerousMode: {
     enabled: boolean;
     defaultTimeout: number;
     requiresApproval: boolean;
     autoDisableOnSuspiciousActivity: boolean;
   };
-  
+
   audit: {
     enabled: boolean;
     logLevel: 'minimal' | 'standard' | 'verbose';
     retentionDays: number;
     alertOnCritical: boolean;
   };
-  
+
   monitoring: {
     enabled: boolean;
     checkInterval: number;

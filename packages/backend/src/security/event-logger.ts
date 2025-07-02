@@ -1,10 +1,10 @@
-import { 
-  SecurityEvent, 
-  SecurityEventType, 
-  SecurityLevel, 
+import {
+  SecurityEvent,
+  SecurityEventType,
+  SecurityLevel,
   SecurityAuditLog,
   SecurityAlert,
-  SecurityAlertAction 
+  SecurityAlertAction,
 } from './types.js';
 import { structuredLogger } from '../middleware/logging.js';
 import { EventEmitter } from 'events';
@@ -12,7 +12,8 @@ import { EventEmitter } from 'events';
 export class SecurityEventLogger extends EventEmitter {
   private auditLog: SecurityAuditLog[] = [];
   private alerts: Map<string, SecurityAlert> = new Map();
-  private alertCounters: Map<string, { count: number; windowStart: Date }> = new Map();
+  private alertCounters: Map<string, { count: number; windowStart: Date }> =
+    new Map();
   private eventBuffer: SecurityEvent[] = [];
   private bufferSize = 1000;
   private flushInterval = 5000; // 5 seconds
@@ -46,7 +47,9 @@ export class SecurityEventLogger extends EventEmitter {
 
     // Log to console for debugging in development
     if (process.env.NODE_ENV === 'development') {
-      console.log(`[SECURITY] ${event.type}: ${event.outcome} - User: ${event.userId}, IP: ${event.ipAddress}`);
+      console.log(
+        `[SECURITY] ${event.type}: ${event.outcome} - User: ${event.userId}, IP: ${event.ipAddress}`
+      );
     }
   }
 
@@ -62,12 +65,15 @@ export class SecurityEventLogger extends EventEmitter {
   /**
    * Get recent security events
    */
-  getRecentEvents(limit: number = 100, filter?: {
-    userId?: string;
-    eventType?: SecurityEventType;
-    severity?: SecurityLevel;
-    since?: Date;
-  }): SecurityEvent[] {
+  getRecentEvents(
+    limit: number = 100,
+    filter?: {
+      userId?: string;
+      eventType?: SecurityEventType;
+      severity?: SecurityLevel;
+      since?: Date;
+    }
+  ): SecurityEvent[] {
     let events = [...this.eventBuffer];
 
     if (filter) {
@@ -88,12 +94,15 @@ export class SecurityEventLogger extends EventEmitter {
   /**
    * Get audit log entries
    */
-  getAuditLog(limit: number = 100, filter?: {
-    userId?: string;
-    category?: string;
-    level?: string;
-    since?: Date;
-  }): SecurityAuditLog[] {
+  getAuditLog(
+    limit: number = 100,
+    filter?: {
+      userId?: string;
+      category?: string;
+      level?: string;
+      since?: Date;
+    }
+  ): SecurityAuditLog[] {
     let entries = [...this.auditLog];
 
     if (filter) {
@@ -140,8 +149,10 @@ export class SecurityEventLogger extends EventEmitter {
   } {
     const now = new Date();
     const windowStart = new Date(now.getTime() - timeWindow * 60 * 60 * 1000);
-    
-    const recentEvents = this.eventBuffer.filter(event => event.timestamp >= windowStart);
+
+    const recentEvents = this.eventBuffer.filter(
+      event => event.timestamp >= windowStart
+    );
 
     // Count events by type
     const eventsByType = {} as Record<SecurityEventType, number>;
@@ -152,7 +163,9 @@ export class SecurityEventLogger extends EventEmitter {
     // Count events by severity
     const eventsBySeverity = {} as Record<SecurityLevel, number>;
     for (const severity of Object.values(SecurityLevel)) {
-      eventsBySeverity[severity] = recentEvents.filter(e => e.severity === severity).length;
+      eventsBySeverity[severity] = recentEvents.filter(
+        e => e.severity === severity
+      ).length;
     }
 
     // Top users by event count
@@ -188,17 +201,21 @@ export class SecurityEventLogger extends EventEmitter {
   /**
    * Export security logs for analysis
    */
-  exportLogs(format: 'json' | 'csv' = 'json', filter?: {
-    startDate?: Date;
-    endDate?: Date;
-    userId?: string;
-    severity?: SecurityLevel;
-  }): string {
+  exportLogs(
+    format: 'json' | 'csv' = 'json',
+    filter?: {
+      startDate?: Date;
+      endDate?: Date;
+      userId?: string;
+      severity?: SecurityLevel;
+    }
+  ): string {
     let events = [...this.eventBuffer];
 
     if (filter) {
       events = events.filter(event => {
-        if (filter.startDate && event.timestamp < filter.startDate) return false;
+        if (filter.startDate && event.timestamp < filter.startDate)
+          return false;
         if (filter.endDate && event.timestamp > filter.endDate) return false;
         if (filter.userId && event.userId !== filter.userId) return false;
         if (filter.severity && event.severity !== filter.severity) return false;
@@ -210,7 +227,17 @@ export class SecurityEventLogger extends EventEmitter {
       return JSON.stringify(events, null, 2);
     } else {
       // CSV format
-      const headers = ['timestamp', 'type', 'severity', 'userId', 'sessionId', 'ipAddress', 'resource', 'action', 'outcome'];
+      const headers = [
+        'timestamp',
+        'type',
+        'severity',
+        'userId',
+        'sessionId',
+        'ipAddress',
+        'resource',
+        'action',
+        'outcome',
+      ];
       const rows = events.map(event => [
         event.timestamp.toISOString(),
         event.type,
@@ -234,7 +261,8 @@ export class SecurityEventLogger extends EventEmitter {
     this.addAlert({
       id: 'failed-login-attempts',
       name: 'Multiple Failed Login Attempts',
-      description: 'User has multiple failed login attempts in a short time window',
+      description:
+        'User has multiple failed login attempts in a short time window',
       severity: SecurityLevel.MODERATE,
       enabled: true,
       eventTypes: [SecurityEventType.LOGIN_FAILED],
@@ -320,7 +348,7 @@ export class SecurityEventLogger extends EventEmitter {
       // Check if threshold is reached
       if (counter.count >= alert.threshold) {
         this.triggerAlert(alert, event, counter.count);
-        
+
         // Reset counter after triggering
         counter.count = 0;
         counter.windowStart = now;
@@ -328,7 +356,11 @@ export class SecurityEventLogger extends EventEmitter {
     }
   }
 
-  private triggerAlert(alert: SecurityAlert, triggeringEvent: SecurityEvent, count: number): void {
+  private triggerAlert(
+    alert: SecurityAlert,
+    triggeringEvent: SecurityEvent,
+    count: number
+  ): void {
     const alertData = {
       alert,
       triggeringEvent,
@@ -363,15 +395,21 @@ export class SecurityEventLogger extends EventEmitter {
     this.emit('alertTriggered', alertData);
   }
 
-  private executeAlertAction(action: SecurityAlertAction, alertData: any): void {
+  private executeAlertAction(
+    action: SecurityAlertAction,
+    alertData: any
+  ): void {
     switch (action.type) {
       case 'log':
         const level = action.config.level || 'info';
-        structuredLogger[level as keyof typeof structuredLogger]('Security alert triggered', {
-          alert: alertData.alert.name,
-          count: alertData.count,
-          event: alertData.triggeringEvent,
-        });
+        structuredLogger[level as keyof typeof structuredLogger](
+          'Security alert triggered',
+          {
+            alert: alertData.alert.name,
+            count: alertData.count,
+            event: alertData.triggeringEvent,
+          }
+        );
         break;
 
       case 'email':
@@ -438,27 +476,55 @@ export class SecurityEventLogger extends EventEmitter {
     }
   }
 
-  private getLogLevel(severity: SecurityLevel): 'info' | 'warn' | 'error' | 'critical' {
+  private getLogLevel(
+    severity: SecurityLevel
+  ): 'info' | 'warn' | 'error' | 'critical' {
     switch (severity) {
-      case SecurityLevel.SAFE: return 'info';
-      case SecurityLevel.MODERATE: return 'warn';
-      case SecurityLevel.DANGEROUS: return 'error';
-      case SecurityLevel.CRITICAL: return 'critical';
-      default: return 'info';
+      case SecurityLevel.SAFE:
+        return 'info';
+      case SecurityLevel.MODERATE:
+        return 'warn';
+      case SecurityLevel.DANGEROUS:
+        return 'error';
+      case SecurityLevel.CRITICAL:
+        return 'critical';
+      default:
+        return 'info';
     }
   }
 
   private getEventCategory(eventType: SecurityEventType): string {
-    if ([SecurityEventType.LOGIN, SecurityEventType.LOGOUT, SecurityEventType.LOGIN_FAILED].includes(eventType)) {
+    if (
+      [
+        SecurityEventType.LOGIN,
+        SecurityEventType.LOGOUT,
+        SecurityEventType.LOGIN_FAILED,
+      ].includes(eventType)
+    ) {
       return 'auth';
     }
-    if ([SecurityEventType.ACCESS_GRANTED, SecurityEventType.ACCESS_DENIED].includes(eventType)) {
+    if (
+      [
+        SecurityEventType.ACCESS_GRANTED,
+        SecurityEventType.ACCESS_DENIED,
+      ].includes(eventType)
+    ) {
       return 'access';
     }
-    if ([SecurityEventType.RESOURCE_ACCESS, SecurityEventType.RESOURCE_MODIFIED].includes(eventType)) {
+    if (
+      [
+        SecurityEventType.RESOURCE_ACCESS,
+        SecurityEventType.RESOURCE_MODIFIED,
+      ].includes(eventType)
+    ) {
       return 'resource';
     }
-    if ([SecurityEventType.SECURITY_VIOLATION, SecurityEventType.SUSPICIOUS_ACTIVITY].includes(eventType)) {
+    if (
+      [
+        SecurityEventType.SECURITY_VIOLATION,
+        SecurityEventType.SUSPICIOUS_ACTIVITY,
+      ].includes(eventType)
+    ) {
       return 'violation';
     }
     return 'system';
@@ -469,16 +535,19 @@ export class SecurityEventLogger extends EventEmitter {
   }
 
   private getTriggeredAlertsCount(since: Date): number {
-    return this.auditLog.filter(entry => 
-      entry.timestamp >= since && 
-      entry.message.includes('alert triggered')
+    return this.auditLog.filter(
+      entry =>
+        entry.timestamp >= since && entry.message.includes('alert triggered')
     ).length;
   }
 
   private startEventFlushing(): void {
     setInterval(() => {
       if (this.eventBuffer.length > 0) {
-        const eventsToFlush = this.eventBuffer.splice(0, Math.min(100, this.eventBuffer.length));
+        const eventsToFlush = this.eventBuffer.splice(
+          0,
+          Math.min(100, this.eventBuffer.length)
+        );
         for (const event of eventsToFlush) {
           this.logToPersistentStorage(event);
         }

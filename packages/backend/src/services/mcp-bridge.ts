@@ -2,7 +2,10 @@ import { EventEmitter } from 'events';
 import { spawn, ChildProcess } from 'child_process';
 import { join } from 'path';
 import { v4 as uuidv4 } from 'uuid';
-import { comprehensiveAuditLogger, AuditCategory } from '../security/audit-logger.js';
+import {
+  comprehensiveAuditLogger,
+  AuditCategory,
+} from '../security/audit-logger.js';
 import { SecurityLevel } from '../security/types.js';
 
 // MCP Protocol Types
@@ -101,12 +104,15 @@ export interface MCPResponse {
 export class MCPBridgeService extends EventEmitter {
   private static instance: MCPBridgeService;
   private servers: Map<string, MCPServerInstance> = new Map();
-  private pendingRequests: Map<string, {
-    resolve: (value: any) => void;
-    reject: (reason: any) => void;
-    timeout: NodeJS.Timeout;
-    timestamp: Date;
-  }> = new Map();
+  private pendingRequests: Map<
+    string,
+    {
+      resolve: (value: any) => void;
+      reject: (reason: any) => void;
+      timeout: NodeJS.Timeout;
+      timestamp: Date;
+    }
+  > = new Map();
   private initialized = false;
   private healthCheckInterval?: NodeJS.Timeout;
 
@@ -130,16 +136,16 @@ export class MCPBridgeService extends EventEmitter {
     try {
       // Load server configurations
       await this.loadServerConfigurations();
-      
+
       // Start enabled servers
       await this.startEnabledServers();
-      
+
       // Start health check monitoring
       this.startHealthChecking();
-      
+
       this.initialized = true;
       this.emit('initialized');
-      
+
       console.log('✅ MCP bridge service initialized');
     } catch (error) {
       console.error('❌ Failed to initialize MCP bridge service:', error);
@@ -150,11 +156,14 @@ export class MCPBridgeService extends EventEmitter {
   /**
    * Register a new MCP server
    */
-  async registerServer(config: MCPServerConfig, userId: string): Promise<MCPServerInstance> {
+  async registerServer(
+    config: MCPServerConfig,
+    userId: string
+  ): Promise<MCPServerInstance> {
     try {
       // Validate configuration
       this.validateServerConfig(config);
-      
+
       // Create server instance
       const instance: MCPServerInstance = {
         id: config.id,
@@ -162,16 +171,16 @@ export class MCPBridgeService extends EventEmitter {
         state: 'stopped',
         restartCount: 0,
       };
-      
+
       this.servers.set(config.id, instance);
-      
+
       // Start server if enabled
       if (config.enabled) {
         await this.startServer(config.id, userId);
       }
-      
+
       this.emit('serverRegistered', instance);
-      
+
       await comprehensiveAuditLogger.logAuditEvent({
         category: AuditCategory.SYSTEM_CHANGES,
         action: 'mcp_server_registered',
@@ -186,7 +195,7 @@ export class MCPBridgeService extends EventEmitter {
           enabled: config.enabled,
         },
       });
-      
+
       return instance;
     } catch (error) {
       await comprehensiveAuditLogger.logAuditEvent({
@@ -219,26 +228,30 @@ export class MCPBridgeService extends EventEmitter {
     try {
       instance.state = 'starting';
       this.emit('serverStarting', instance);
-      
+
       // Spawn the MCP server process
-      const process = spawn(instance.config.command, instance.config.args || [], {
-        env: { ...process.env, ...instance.config.env },
-        cwd: instance.config.workingDirectory || process.cwd(),
-        stdio: ['pipe', 'pipe', 'pipe'],
-      });
-      
+      const process = spawn(
+        instance.config.command,
+        instance.config.args || [],
+        {
+          env: { ...process.env, ...instance.config.env },
+          cwd: instance.config.workingDirectory || process.cwd(),
+          stdio: ['pipe', 'pipe', 'pipe'],
+        }
+      );
+
       instance.process = process;
       instance.startedAt = new Date();
-      
+
       // Set up process event handlers
       this.setupProcessHandlers(instance);
-      
+
       // Initialize the MCP protocol handshake
       await this.initializeServer(instance);
-      
+
       instance.state = 'running';
       this.emit('serverStarted', instance);
-      
+
       await comprehensiveAuditLogger.logAuditEvent({
         category: AuditCategory.SYSTEM_CHANGES,
         action: 'mcp_server_started',
@@ -252,12 +265,11 @@ export class MCPBridgeService extends EventEmitter {
           pid: process.pid,
         },
       });
-      
     } catch (error) {
       instance.state = 'error';
       instance.error = (error as Error).message;
       this.emit('serverError', instance, error);
-      
+
       await comprehensiveAuditLogger.logAuditEvent({
         category: AuditCategory.SYSTEM_CHANGES,
         action: 'mcp_server_start_failed',
@@ -268,7 +280,7 @@ export class MCPBridgeService extends EventEmitter {
         severity: SecurityLevel.MODERATE,
         details: { error: (error as Error).message },
       });
-      
+
       throw error;
     }
   }
@@ -289,11 +301,11 @@ export class MCPBridgeService extends EventEmitter {
     try {
       instance.state = 'stopping';
       this.emit('serverStopping', instance);
-      
+
       if (instance.process) {
         // Graceful shutdown
         instance.process.kill('SIGTERM');
-        
+
         // Force kill after timeout
         setTimeout(() => {
           if (instance.process && !instance.process.killed) {
@@ -301,11 +313,11 @@ export class MCPBridgeService extends EventEmitter {
           }
         }, 5000);
       }
-      
+
       instance.state = 'stopped';
       instance.process = undefined;
       this.emit('serverStopped', instance);
-      
+
       await comprehensiveAuditLogger.logAuditEvent({
         category: AuditCategory.SYSTEM_CHANGES,
         action: 'mcp_server_stopped',
@@ -318,7 +330,6 @@ export class MCPBridgeService extends EventEmitter {
           serverName: instance.config.name,
         },
       });
-      
     } catch (error) {
       await comprehensiveAuditLogger.logAuditEvent({
         category: AuditCategory.SYSTEM_CHANGES,
@@ -352,7 +363,7 @@ export class MCPBridgeService extends EventEmitter {
     }
 
     const startTime = Date.now();
-    
+
     try {
       // Create MCP message
       const mcpMessage: MCPMessage = {
@@ -361,10 +372,10 @@ export class MCPBridgeService extends EventEmitter {
         method: request.method,
         params: request.params,
       };
-      
+
       // Send request and wait for response
       const result = await this.sendMCPMessage(instance, mcpMessage);
-      
+
       const response: MCPResponse = {
         requestId: request.id,
         success: true,
@@ -372,7 +383,7 @@ export class MCPBridgeService extends EventEmitter {
         timestamp: new Date(),
         executionTime: Date.now() - startTime,
       };
-      
+
       await comprehensiveAuditLogger.logAuditEvent({
         category: AuditCategory.SYSTEM_ACCESS,
         action: 'mcp_request_executed',
@@ -387,9 +398,8 @@ export class MCPBridgeService extends EventEmitter {
           sessionId: request.sessionId,
         },
       });
-      
+
       return response;
-      
     } catch (error) {
       const response: MCPResponse = {
         requestId: request.id,
@@ -401,7 +411,7 @@ export class MCPBridgeService extends EventEmitter {
         timestamp: new Date(),
         executionTime: Date.now() - startTime,
       };
-      
+
       await comprehensiveAuditLogger.logAuditEvent({
         category: AuditCategory.SYSTEM_ACCESS,
         action: 'mcp_request_failed',
@@ -416,7 +426,7 @@ export class MCPBridgeService extends EventEmitter {
           sessionId: request.sessionId,
         },
       });
-      
+
       return response;
     }
   }
@@ -424,7 +434,9 @@ export class MCPBridgeService extends EventEmitter {
   /**
    * Get server capabilities
    */
-  getServerCapabilities(serverId: string): MCPServerInstance['capabilities'] | null {
+  getServerCapabilities(
+    serverId: string
+  ): MCPServerInstance['capabilities'] | null {
     const instance = this.servers.get(serverId);
     return instance?.capabilities || null;
   }
@@ -466,9 +478,9 @@ export class MCPBridgeService extends EventEmitter {
 
     // Remove from registry
     this.servers.delete(serverId);
-    
+
     this.emit('serverUnregistered', instance);
-    
+
     await comprehensiveAuditLogger.logAuditEvent({
       category: AuditCategory.SYSTEM_CHANGES,
       action: 'mcp_server_unregistered',
@@ -491,14 +503,14 @@ export class MCPBridgeService extends EventEmitter {
     if (this.healthCheckInterval) {
       clearInterval(this.healthCheckInterval);
     }
-    
+
     // Stop all servers
     for (const instance of this.servers.values()) {
       if (instance.process && !instance.process.killed) {
         instance.process.kill('SIGTERM');
       }
     }
-    
+
     // Clear pending requests
     for (const [id, pending] of this.pendingRequests) {
       clearTimeout(pending.timeout);
@@ -512,7 +524,7 @@ export class MCPBridgeService extends EventEmitter {
   private async loadServerConfigurations(): Promise<void> {
     // In a real implementation, this would load from database or config files
     // For now, we'll register some example servers
-    
+
     // File system MCP server example
     const fileSystemServer: MCPServerConfig = {
       id: 'filesystem',
@@ -523,7 +535,7 @@ export class MCPBridgeService extends EventEmitter {
       enabled: false, // Disabled by default for security
       tags: ['filesystem', 'builtin'],
     };
-    
+
     // Git MCP server example
     const gitServer: MCPServerConfig = {
       id: 'git',
@@ -534,7 +546,7 @@ export class MCPBridgeService extends EventEmitter {
       enabled: false,
       tags: ['git', 'builtin'],
     };
-    
+
     // Store example configurations
     this.servers.set(fileSystemServer.id, {
       id: fileSystemServer.id,
@@ -542,7 +554,7 @@ export class MCPBridgeService extends EventEmitter {
       state: 'stopped',
       restartCount: 0,
     });
-    
+
     this.servers.set(gitServer.id, {
       id: gitServer.id,
       config: gitServer,
@@ -557,7 +569,10 @@ export class MCPBridgeService extends EventEmitter {
         try {
           await this.startServer(instance.id, 'system');
         } catch (error) {
-          console.warn(`Failed to start MCP server ${instance.id}:`, (error as Error).message);
+          console.warn(
+            `Failed to start MCP server ${instance.id}:`,
+            (error as Error).message
+          );
         }
       }
     }
@@ -576,16 +591,25 @@ export class MCPBridgeService extends EventEmitter {
           await this.pingServer(instance);
           instance.lastPing = new Date();
         } catch (error) {
-          console.warn(`Health check failed for MCP server ${instance.id}:`, (error as Error).message);
-          
+          console.warn(
+            `Health check failed for MCP server ${instance.id}:`,
+            (error as Error).message
+          );
+
           // Consider restarting if auto-restart is enabled
-          if (instance.config.autoRestart && instance.restartCount! < (instance.config.maxRestarts || 3)) {
+          if (
+            instance.config.autoRestart &&
+            instance.restartCount! < (instance.config.maxRestarts || 3)
+          ) {
             instance.restartCount = (instance.restartCount || 0) + 1;
             try {
               await this.stopServer(instance.id, 'system');
               await this.startServer(instance.id, 'system');
             } catch (restartError) {
-              console.error(`Failed to restart MCP server ${instance.id}:`, (restartError as Error).message);
+              console.error(
+                `Failed to restart MCP server ${instance.id}:`,
+                (restartError as Error).message
+              );
             }
           }
         }
@@ -595,22 +619,22 @@ export class MCPBridgeService extends EventEmitter {
 
   private async pingServer(instance: MCPServerInstance): Promise<void> {
     if (!instance.process) return;
-    
+
     const pingMessage: MCPMessage = {
       jsonrpc: '2.0',
       id: uuidv4(),
       method: 'ping',
     };
-    
+
     await this.sendMCPMessage(instance, pingMessage, 5000);
   }
 
   private setupProcessHandlers(instance: MCPServerInstance): void {
     if (!instance.process) return;
-    
+
     const process = instance.process;
-    
-    process.on('close', (code) => {
+
+    process.on('close', code => {
       if (instance.state === 'stopping') {
         instance.state = 'stopped';
         this.emit('serverStopped', instance);
@@ -620,22 +644,22 @@ export class MCPBridgeService extends EventEmitter {
         this.emit('serverCrashed', instance);
       }
     });
-    
-    process.on('error', (error) => {
+
+    process.on('error', error => {
       instance.state = 'error';
       instance.error = error.message;
       this.emit('serverError', instance, error);
     });
-    
+
     // Handle stdout/stderr for logging
     if (process.stdout) {
-      process.stdout.on('data', (data) => {
+      process.stdout.on('data', data => {
         this.handleServerOutput(instance, data.toString());
       });
     }
-    
+
     if (process.stderr) {
-      process.stderr.on('data', (data) => {
+      process.stderr.on('data', data => {
         this.handleServerError(instance, data.toString());
       });
     }
@@ -643,7 +667,7 @@ export class MCPBridgeService extends EventEmitter {
 
   private async initializeServer(instance: MCPServerInstance): Promise<void> {
     if (!instance.process) return;
-    
+
     // Send initialize request
     const initMessage: MCPMessage = {
       jsonrpc: '2.0',
@@ -661,35 +685,39 @@ export class MCPBridgeService extends EventEmitter {
         },
       },
     };
-    
+
     const response = await this.sendMCPMessage(instance, initMessage);
-    
+
     // Store server capabilities
     instance.capabilities = response.capabilities || {};
-    
+
     // Send initialized notification
     const initializedMessage: MCPMessage = {
       jsonrpc: '2.0',
       method: 'notifications/initialized',
     };
-    
+
     await this.sendMCPMessage(instance, initializedMessage);
   }
 
-  private async sendMCPMessage(instance: MCPServerInstance, message: MCPMessage, timeout = 30000): Promise<any> {
+  private async sendMCPMessage(
+    instance: MCPServerInstance,
+    message: MCPMessage,
+    timeout = 30000
+  ): Promise<any> {
     if (!instance.process || !instance.process.stdin) {
       throw new Error('Server process not available');
     }
 
     return new Promise((resolve, reject) => {
       const messageId = message.id || uuidv4();
-      
+
       // Set up timeout
       const timeoutHandle = setTimeout(() => {
         this.pendingRequests.delete(messageId.toString());
         reject(new Error('Request timeout'));
       }, timeout);
-      
+
       // Store pending request
       if (message.id) {
         this.pendingRequests.set(messageId.toString(), {
@@ -699,10 +727,10 @@ export class MCPBridgeService extends EventEmitter {
           timestamp: new Date(),
         });
       }
-      
+
       // Send message
       const messageData = JSON.stringify(message) + '\n';
-      instance.process!.stdin!.write(messageData, (error) => {
+      instance.process!.stdin!.write(messageData, error => {
         if (error) {
           this.pendingRequests.delete(messageId.toString());
           clearTimeout(timeoutHandle);
@@ -719,17 +747,17 @@ export class MCPBridgeService extends EventEmitter {
   private handleServerOutput(instance: MCPServerInstance, data: string): void {
     // Parse JSON-RPC messages
     const lines = data.split('\n').filter(line => line.trim());
-    
+
     for (const line of lines) {
       try {
         const message: MCPMessage = JSON.parse(line);
-        
+
         if (message.id && this.pendingRequests.has(message.id.toString())) {
           // Response to our request
           const pending = this.pendingRequests.get(message.id.toString())!;
           this.pendingRequests.delete(message.id.toString());
           clearTimeout(pending.timeout);
-          
+
           if (message.error) {
             pending.reject(new Error(message.error.message));
           } else {
@@ -754,7 +782,7 @@ export class MCPBridgeService extends EventEmitter {
     if (!config.id || !config.name || !config.command) {
       throw new Error('Server configuration must have id, name, and command');
     }
-    
+
     if (this.servers.has(config.id)) {
       throw new Error(`Server with id ${config.id} already exists`);
     }

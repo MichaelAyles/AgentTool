@@ -17,11 +17,11 @@ export function useSocket(): Socket | null {
         console.log('Socket connected:', socket?.id);
       });
 
-      socket.on('disconnect', (reason) => {
+      socket.on('disconnect', reason => {
         console.log('Socket disconnected:', reason);
       });
 
-      socket.on('error', (error) => {
+      socket.on('error', error => {
         console.error('Socket error:', error);
       });
     }

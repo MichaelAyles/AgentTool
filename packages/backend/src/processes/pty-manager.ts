@@ -33,7 +33,7 @@ export class PTYManager extends EventEmitter {
 
   createPTY(options: PTYOptions): PTYSession {
     const id = options.id || generateId();
-    
+
     // Mock PTY implementation - replace with real node-pty later
     const pty: MockPty = {
       write: (data: string) => {
@@ -52,7 +52,7 @@ export class PTYManager extends EventEmitter {
       },
       onExit: (callback: (exitCode: any) => void) => {
         // Will be called by kill()
-      }
+      },
     };
 
     const session: PTYSession = {
@@ -65,12 +65,12 @@ export class PTYManager extends EventEmitter {
     this.sessions.set(id, session);
 
     // Set up event handlers
-    pty.onData((data) => {
+    pty.onData(data => {
       session.lastActivity = new Date();
       this.emit('data', id, data);
     });
 
-    pty.onExit((exitCode) => {
+    pty.onExit(exitCode => {
       this.emit('exit', id, exitCode);
       this.sessions.delete(id);
     });

@@ -1,20 +1,24 @@
-import type { OutputChunk, ProcessHandle, SecurityContext } from '@vibecode/shared';
+import type {
+  OutputChunk,
+  ProcessHandle,
+  SecurityContext,
+} from '@vibecode/shared';
 
 export interface CLIAdapter {
   name: string;
   version: string;
   description?: string;
   capabilities: CLICapabilities;
-  
+
   initialize(config: AdapterConfig): Promise<void>;
   dispose(): Promise<void>;
   execute(command: string, options: ExecuteOptions): Promise<ProcessHandle>;
   streamOutput(handle: ProcessHandle): AsyncIterable<OutputChunk>;
   interrupt(handle: ProcessHandle): Promise<void>;
-  
+
   createProject?(path: string, template?: string): Promise<void>;
   openProject?(path: string): Promise<void>;
-  
+
   getConfigSchema(): JSONSchema;
   validateConfig(config: unknown): config is AdapterConfig;
 }

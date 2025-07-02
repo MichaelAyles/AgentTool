@@ -1,7 +1,10 @@
 import { EventEmitter } from 'events';
 import { Socket } from 'socket.io';
 import { structuredLogger } from '../middleware/logging.js';
-import { comprehensiveAuditLogger, AuditCategory } from '../security/audit-logger.js';
+import {
+  comprehensiveAuditLogger,
+  AuditCategory,
+} from '../security/audit-logger.js';
 import { SecurityLevel } from '../security/types.js';
 
 // Connection metadata
@@ -29,14 +32,14 @@ export enum ConnectionQuality {
   GOOD = 'good',
   FAIR = 'fair',
   POOR = 'poor',
-  DEGRADED = 'degraded'
+  DEGRADED = 'degraded',
 }
 
 // Connection type
 export enum ConnectionType {
   WEBSOCKET = 'websocket',
   POLLING = 'polling',
-  TRANSPORT_UNKNOWN = 'unknown'
+  TRANSPORT_UNKNOWN = 'unknown',
 }
 
 // Pool configuration
@@ -238,7 +241,10 @@ export class WebSocketConnectionPool extends EventEmitter {
   /**
    * Remove a connection from the pool
    */
-  async removeConnection(socketId: string, reason: string = 'disconnect'): Promise<boolean> {
+  async removeConnection(
+    socketId: string,
+    reason: string = 'disconnect'
+  ): Promise<boolean> {
     const metadata = this.connections.get(socketId);
     if (!metadata) {
       return false;
@@ -317,12 +323,15 @@ export class WebSocketConnectionPool extends EventEmitter {
     // Check user connection limit
     const userConnectionCount = this.userConnections.get(userId)?.size || 0;
     if (userConnectionCount >= this.config.maxConnectionsPerUser) {
-      structuredLogger.warn('Authentication rejected - user connection limit exceeded', {
-        socketId,
-        userId,
-        currentConnections: userConnectionCount,
-        maxConnectionsPerUser: this.config.maxConnectionsPerUser,
-      });
+      structuredLogger.warn(
+        'Authentication rejected - user connection limit exceeded',
+        {
+          socketId,
+          userId,
+          currentConnections: userConnectionCount,
+          maxConnectionsPerUser: this.config.maxConnectionsPerUser,
+        }
+      );
       return false;
     }
 
@@ -353,7 +362,7 @@ export class WebSocketConnectionPool extends EventEmitter {
   joinRoom(socketId: string, roomName: string): boolean {
     const socket = this.sockets.get(socketId);
     const metadata = this.connections.get(socketId);
-    
+
     if (!socket || !metadata) {
       return false;
     }
@@ -377,7 +386,7 @@ export class WebSocketConnectionPool extends EventEmitter {
   leaveRoom(socketId: string, roomName: string): boolean {
     const socket = this.sockets.get(socketId);
     const metadata = this.connections.get(socketId);
-    
+
     if (!socket || !metadata) {
       return false;
     }
@@ -410,13 +419,17 @@ export class WebSocketConnectionPool extends EventEmitter {
     try {
       messageSize = JSON.stringify(data).length;
     } catch (error) {
-      structuredLogger.error('Failed to serialize broadcast data', error as Error);
+      structuredLogger.error(
+        'Failed to serialize broadcast data',
+        error as Error
+      );
       return false;
     }
 
     // Apply compression if enabled and message is large enough
-    const shouldCompress = this.config.enableCompression && 
-                          messageSize > this.config.compressionThreshold;
+    const shouldCompress =
+      this.config.enableCompression &&
+      messageSize > this.config.compressionThreshold;
 
     const broadcastOptions = shouldCompress ? { compress: true } : {};
 
@@ -424,14 +437,19 @@ export class WebSocketConnectionPool extends EventEmitter {
     for (const socketId of roomConnections) {
       const socket = this.sockets.get(socketId);
       const metadata = this.connections.get(socketId);
-      
+
       if (socket && metadata) {
         socket.emit(event, data, broadcastOptions);
         this.updateConnectionActivity(socketId, messageSize);
       }
     }
 
-    this.emit('roomBroadcast', { roomName, event, messageSize, connectionCount: roomConnections.size });
+    this.emit('roomBroadcast', {
+      roomName,
+      event,
+      messageSize,
+      connectionCount: roomConnections.size,
+    });
     return true;
   }
 
@@ -441,21 +459,31 @@ export class WebSocketConnectionPool extends EventEmitter {
   getStatistics(): PoolStatistics {
     const now = Date.now();
     const uptime = now - this.poolStartTime.getTime();
-    
+
     // Calculate averages and counts
     const connections = Array.from(this.connections.values());
-    const totalPingLatency = connections.reduce((sum, conn) => sum + conn.pingLatency, 0);
-    const averagePingLatency = connections.length > 0 ? totalPingLatency / connections.length : 0;
+    const totalPingLatency = connections.reduce(
+      (sum, conn) => sum + conn.pingLatency,
+      0
+    );
+    const averagePingLatency =
+      connections.length > 0 ? totalPingLatency / connections.length : 0;
 
-    const connectionsByType = connections.reduce((acc, conn) => {
-      acc[conn.connectionType] = (acc[conn.connectionType] || 0) + 1;
-      return acc;
-    }, {} as Record<ConnectionType, number>);
+    const connectionsByType = connections.reduce(
+      (acc, conn) => {
+        acc[conn.connectionType] = (acc[conn.connectionType] || 0) + 1;
+        return acc;
+      },
+      {} as Record<ConnectionType, number>
+    );
 
-    const connectionsByQuality = connections.reduce((acc, conn) => {
-      acc[conn.connectionQuality] = (acc[conn.connectionQuality] || 0) + 1;
-      return acc;
-    }, {} as Record<ConnectionQuality, number>);
+    const connectionsByQuality = connections.reduce(
+      (acc, conn) => {
+        acc[conn.connectionQuality] = (acc[conn.connectionQuality] || 0) + 1;
+        return acc;
+      },
+      {} as Record<ConnectionQuality, number>
+    );
 
     const connectionsPerUser: Record<string, number> = {};
     for (const [userId, socketIds] of this.userConnections) {
@@ -472,12 +500,14 @@ export class WebSocketConnectionPool extends EventEmitter {
 
     // Calculate messages per second
     const uptimeSeconds = uptime / 1000;
-    const messagesPerSecond = uptimeSeconds > 0 ? this.totalMessagesProcessed / uptimeSeconds : 0;
+    const messagesPerSecond =
+      uptimeSeconds > 0 ? this.totalMessagesProcessed / uptimeSeconds : 0;
 
     return {
       totalConnections: this.connections.size,
       activeConnections: connections.filter(c => c.isAuthenticated).length,
-      authenticatedConnections: connections.filter(c => c.isAuthenticated).length,
+      authenticatedConnections: connections.filter(c => c.isAuthenticated)
+        .length,
       connectionsByType,
       connectionsByQuality,
       averagePingLatency,
@@ -551,15 +581,21 @@ export class WebSocketConnectionPool extends EventEmitter {
   private setupEventHandlers(): void {
     this.on('connectionAdded', this.handleConnectionAdded.bind(this));
     this.on('connectionRemoved', this.handleConnectionRemoved.bind(this));
-    this.on('messageRateLimitExceeded', this.handleRateLimitExceeded.bind(this));
+    this.on(
+      'messageRateLimitExceeded',
+      this.handleRateLimitExceeded.bind(this)
+    );
   }
 
-  private setupSocketHandlers(socket: Socket, metadata: ConnectionMetadata): void {
-    socket.on('disconnect', (reason) => {
+  private setupSocketHandlers(
+    socket: Socket,
+    metadata: ConnectionMetadata
+  ): void {
+    socket.on('disconnect', reason => {
       this.removeConnection(socket.id, reason);
     });
 
-    socket.on('error', (error) => {
+    socket.on('error', error => {
       structuredLogger.error('Socket error', error, { socketId: socket.id });
       this.updateConnectionQuality(socket.id, ConnectionQuality.POOR);
     });
@@ -569,7 +605,10 @@ export class WebSocketConnectionPool extends EventEmitter {
       if (this.config.enableRateLimiting) {
         const allowed = this.checkMessageRate(socket.id);
         if (!allowed) {
-          this.emit('messageRateLimitExceeded', { socketId: socket.id, metadata });
+          this.emit('messageRateLimitExceeded', {
+            socketId: socket.id,
+            metadata,
+          });
           return; // Don't call next(), effectively dropping the message
         }
       }
@@ -592,10 +631,12 @@ export class WebSocketConnectionPool extends EventEmitter {
   }
 
   private extractIPAddress(socket: Socket): string {
-    return socket.handshake.address || 
-           socket.conn.remoteAddress || 
-           socket.request.socket.remoteAddress || 
-           'unknown';
+    return (
+      socket.handshake.address ||
+      socket.conn.remoteAddress ||
+      socket.request.socket.remoteAddress ||
+      'unknown'
+    );
   }
 
   private getConnectionType(socket: Socket): ConnectionType {
@@ -610,7 +651,10 @@ export class WebSocketConnectionPool extends EventEmitter {
     }
   }
 
-  private updateConnectionActivity(socketId: string, messageSize: number): void {
+  private updateConnectionActivity(
+    socketId: string,
+    messageSize: number
+  ): void {
     const metadata = this.connections.get(socketId);
     if (metadata) {
       metadata.lastActivity = new Date();
@@ -625,7 +669,7 @@ export class WebSocketConnectionPool extends EventEmitter {
     const metadata = this.connections.get(socketId);
     if (metadata) {
       metadata.pingLatency = latency;
-      
+
       // Update connection quality based on latency
       if (latency < 50) {
         metadata.connectionQuality = ConnectionQuality.EXCELLENT;
@@ -641,7 +685,10 @@ export class WebSocketConnectionPool extends EventEmitter {
     }
   }
 
-  private updateConnectionQuality(socketId: string, quality: ConnectionQuality): void {
+  private updateConnectionQuality(
+    socketId: string,
+    quality: ConnectionQuality
+  ): void {
     const metadata = this.connections.get(socketId);
     if (metadata) {
       metadata.connectionQuality = quality;
@@ -651,7 +698,7 @@ export class WebSocketConnectionPool extends EventEmitter {
   private checkMessageRate(socketId: string): boolean {
     const now = new Date();
     let tracker = this.messageRates.get(socketId);
-    
+
     if (!tracker) {
       tracker = { count: 0, lastReset: now, violations: 0 };
       this.messageRates.set(socketId, tracker);
@@ -720,7 +767,10 @@ export class WebSocketConnectionPool extends EventEmitter {
     });
   }
 
-  private cleanupConnectionRooms(socketId: string, metadata: ConnectionMetadata): void {
+  private cleanupConnectionRooms(
+    socketId: string,
+    metadata: ConnectionMetadata
+  ): void {
     // Remove from all rooms
     for (const roomName of metadata.roomsJoined) {
       if (this.rooms.has(roomName)) {
@@ -772,18 +822,22 @@ export class WebSocketConnectionPool extends EventEmitter {
 // Export singleton instance factory
 let connectionPoolInstance: WebSocketConnectionPool | null = null;
 
-export function createConnectionPool(config?: Partial<PoolConfig>): WebSocketConnectionPool {
+export function createConnectionPool(
+  config?: Partial<PoolConfig>
+): WebSocketConnectionPool {
   if (connectionPoolInstance) {
     return connectionPoolInstance;
   }
-  
+
   connectionPoolInstance = new WebSocketConnectionPool(config);
   return connectionPoolInstance;
 }
 
 export function getConnectionPool(): WebSocketConnectionPool {
   if (!connectionPoolInstance) {
-    throw new Error('Connection pool not initialized. Call createConnectionPool first.');
+    throw new Error(
+      'Connection pool not initialized. Call createConnectionPool first.'
+    );
   }
   return connectionPoolInstance;
 }

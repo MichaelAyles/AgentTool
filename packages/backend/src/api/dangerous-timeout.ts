@@ -12,7 +12,10 @@ const sanitizeInput = (input: string): string => {
 };
 import { dangerousTimeoutManager } from '../dangerous/timeout-manager.js';
 import { autoDisableService } from '../dangerous/auto-disable.js';
-import { comprehensiveAuditLogger, AuditCategory } from '../security/audit-logger.js';
+import {
+  comprehensiveAuditLogger,
+  AuditCategory,
+} from '../security/audit-logger.js';
 import { SecurityLevel } from '../security/types.js';
 
 const router = Router();
@@ -23,9 +26,9 @@ const router = Router();
 router.get('/status', authenticate, async (req, res) => {
   try {
     const sessionId = req.session?.id || req.sessionID;
-    
+
     const timeoutStatus = dangerousTimeoutManager.getTimeoutStatus(sessionId);
-    
+
     if (!timeoutStatus) {
       return res.json({
         hasTimeout: false,
@@ -60,7 +63,11 @@ router.post('/extend', authenticate, async (req, res) => {
     const sanitizedReason = sanitizeInput(reason || '');
     const requestedDuration = parseInt(duration) * 60 * 1000; // Convert minutes to milliseconds
 
-    if (!requestedDuration || requestedDuration <= 0 || requestedDuration > 60 * 60 * 1000) {
+    if (
+      !requestedDuration ||
+      requestedDuration <= 0 ||
+      requestedDuration > 60 * 60 * 1000
+    ) {
       return res.status(400).json({
         success: false,
         message: 'Invalid duration. Must be between 1 and 60 minutes.',
@@ -106,176 +113,198 @@ router.post('/extend', authenticate, async (req, res) => {
 /**
  * Grant extension (admin only)
  */
-router.post('/grant-extension', authenticate, requireAdmin(), async (req, res) => {
-  try {
-    const { sessionId, duration, reason, userId } = req.body;
-    const adminUserId = req.user?.id;
+router.post(
+  '/grant-extension',
+  authenticate,
+  requireAdmin(),
+  async (req, res) => {
+    try {
+      const { sessionId, duration, reason, userId } = req.body;
+      const adminUserId = req.user?.id;
 
-    // Validate inputs
-    const sanitizedReason = sanitizeInput(reason || '');
-    const requestedDuration = parseInt(duration) * 60 * 1000;
+      // Validate inputs
+      const sanitizedReason = sanitizeInput(reason || '');
+      const requestedDuration = parseInt(duration) * 60 * 1000;
 
-    if (!sessionId || !userId || !requestedDuration) {
-      return res.status(400).json({
-        success: false,
-        message: 'Missing required fields',
-      });
-    }
+      if (!sessionId || !userId || !requestedDuration) {
+        return res.status(400).json({
+          success: false,
+          message: 'Missing required fields',
+        });
+      }
 
-    const result = await dangerousTimeoutManager.grantExtension({
-      sessionId: sanitizeInput(sessionId),
-      userId: sanitizeInput(userId),
-      requestedDuration,
-      reason: sanitizedReason,
-      userRole: 'admin',
-    });
-
-    await comprehensiveAuditLogger.logAuditEvent({
-      category: AuditCategory.DANGEROUS_OPERATIONS,
-      action: 'extension_granted',
-      resourceType: 'dangerous_session',
-      resourceId: sessionId,
-      userId: adminUserId,
-      sessionId: req.session?.id || req.sessionID,
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent'),
-      outcome: result.success ? 'success' : 'failure',
-      severity: SecurityLevel.MODERATE,
-      details: {
-        targetSessionId: sessionId,
-        targetUserId: userId,
+      const result = await dangerousTimeoutManager.grantExtension({
+        sessionId: sanitizeInput(sessionId),
+        userId: sanitizeInput(userId),
         requestedDuration,
         reason: sanitizedReason,
-      },
-    });
+        userRole: 'admin',
+      });
 
-    res.json(result);
-  } catch (error) {
-    console.error('Error granting extension:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to grant extension',
-    });
+      await comprehensiveAuditLogger.logAuditEvent({
+        category: AuditCategory.DANGEROUS_OPERATIONS,
+        action: 'extension_granted',
+        resourceType: 'dangerous_session',
+        resourceId: sessionId,
+        userId: adminUserId,
+        sessionId: req.session?.id || req.sessionID,
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+        outcome: result.success ? 'success' : 'failure',
+        severity: SecurityLevel.MODERATE,
+        details: {
+          targetSessionId: sessionId,
+          targetUserId: userId,
+          requestedDuration,
+          reason: sanitizedReason,
+        },
+      });
+
+      res.json(result);
+    } catch (error) {
+      console.error('Error granting extension:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to grant extension',
+      });
+    }
   }
-});
+);
 
 /**
  * Emergency disable all sessions (admin only)
  */
-router.post('/emergency-disable', authenticate, requireAdmin(), async (req, res) => {
-  try {
-    const { reason } = req.body;
-    const adminUserId = req.user?.id;
+router.post(
+  '/emergency-disable',
+  authenticate,
+  requireAdmin(),
+  async (req, res) => {
+    try {
+      const { reason } = req.body;
+      const adminUserId = req.user?.id;
 
-    const sanitizedReason = sanitizeInput(reason || 'Emergency disable by admin');
+      const sanitizedReason = sanitizeInput(
+        reason || 'Emergency disable by admin'
+      );
 
-    await dangerousTimeoutManager.emergencyDisableAll(sanitizedReason);
+      await dangerousTimeoutManager.emergencyDisableAll(sanitizedReason);
 
-    await comprehensiveAuditLogger.logAuditEvent({
-      category: AuditCategory.SYSTEM_CHANGES,
-      action: 'emergency_disable_all',
-      resourceType: 'dangerous_mode_system',
-      userId: adminUserId,
-      sessionId: req.session?.id || req.sessionID,
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent'),
-      outcome: 'success',
-      severity: SecurityLevel.CRITICAL,
-      details: {
-        reason: sanitizedReason,
-        triggeredBy: 'admin',
-      },
-    });
+      await comprehensiveAuditLogger.logAuditEvent({
+        category: AuditCategory.SYSTEM_CHANGES,
+        action: 'emergency_disable_all',
+        resourceType: 'dangerous_mode_system',
+        userId: adminUserId,
+        sessionId: req.session?.id || req.sessionID,
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+        outcome: 'success',
+        severity: SecurityLevel.CRITICAL,
+        details: {
+          reason: sanitizedReason,
+          triggeredBy: 'admin',
+        },
+      });
 
-    res.json({
-      success: true,
-      message: 'Emergency disable triggered for all sessions',
-    });
-  } catch (error) {
-    console.error('Error triggering emergency disable:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to trigger emergency disable',
-    });
+      res.json({
+        success: true,
+        message: 'Emergency disable triggered for all sessions',
+      });
+    } catch (error) {
+      console.error('Error triggering emergency disable:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to trigger emergency disable',
+      });
+    }
   }
-});
+);
 
 /**
  * Get auto-disable statistics (admin only)
  */
-router.get('/auto-disable/stats', authenticate, requireAdmin(), async (req, res) => {
-  try {
-    const stats = autoDisableService.getAutoDisableStats();
+router.get(
+  '/auto-disable/stats',
+  authenticate,
+  requireAdmin(),
+  async (req, res) => {
+    try {
+      const stats = autoDisableService.getAutoDisableStats();
 
-    res.json({
-      success: true,
-      stats,
-    });
-  } catch (error) {
-    console.error('Error getting auto-disable stats:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get auto-disable statistics',
-    });
+      res.json({
+        success: true,
+        stats,
+      });
+    } catch (error) {
+      console.error('Error getting auto-disable stats:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to get auto-disable statistics',
+      });
+    }
   }
-});
+);
 
 /**
  * Force auto-disable for a session (admin only)
  */
-router.post('/auto-disable/force', authenticate, requireAdmin(), async (req, res) => {
-  try {
-    const { sessionId, trigger, evidence, reason } = req.body;
-    const adminUserId = req.user?.id;
+router.post(
+  '/auto-disable/force',
+  authenticate,
+  requireAdmin(),
+  async (req, res) => {
+    try {
+      const { sessionId, trigger, evidence, reason } = req.body;
+      const adminUserId = req.user?.id;
 
-    if (!sessionId || !trigger) {
-      return res.status(400).json({
+      if (!sessionId || !trigger) {
+        return res.status(400).json({
+          success: false,
+          message: 'Session ID and trigger are required',
+        });
+      }
+
+      await autoDisableService.forceAutoDisable(
+        sanitizeInput(sessionId),
+        trigger,
+        {
+          ...(evidence || {}),
+          adminReason: sanitizeInput(reason || ''),
+        },
+        adminUserId
+      );
+
+      await comprehensiveAuditLogger.logAuditEvent({
+        category: AuditCategory.DANGEROUS_OPERATIONS,
+        action: 'force_auto_disable',
+        resourceType: 'dangerous_session',
+        resourceId: sessionId,
+        userId: adminUserId,
+        sessionId: req.session?.id || req.sessionID,
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+        outcome: 'success',
+        severity: SecurityLevel.DANGEROUS,
+        details: {
+          targetSessionId: sessionId,
+          trigger,
+          evidence,
+          reason,
+        },
+      });
+
+      res.json({
+        success: true,
+        message: 'Auto-disable forced successfully',
+      });
+    } catch (error) {
+      console.error('Error forcing auto-disable:', error);
+      res.status(500).json({
         success: false,
-        message: 'Session ID and trigger are required',
+        message: 'Failed to force auto-disable',
       });
     }
-
-    await autoDisableService.forceAutoDisable(
-      sanitizeInput(sessionId),
-      trigger,
-      {
-        ...(evidence || {}),
-        adminReason: sanitizeInput(reason || ''),
-      },
-      adminUserId
-    );
-
-    await comprehensiveAuditLogger.logAuditEvent({
-      category: AuditCategory.DANGEROUS_OPERATIONS,
-      action: 'force_auto_disable',
-      resourceType: 'dangerous_session',
-      resourceId: sessionId,
-      userId: adminUserId,
-      sessionId: req.session?.id || req.sessionID,
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent'),
-      outcome: 'success',
-      severity: SecurityLevel.DANGEROUS,
-      details: {
-        targetSessionId: sessionId,
-        trigger,
-        evidence,
-        reason,
-      },
-    });
-
-    res.json({
-      success: true,
-      message: 'Auto-disable forced successfully',
-    });
-  } catch (error) {
-    console.error('Error forcing auto-disable:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to force auto-disable',
-    });
   }
-});
+);
 
 /**
  * Analyze user behavior for current session
@@ -283,7 +312,7 @@ router.post('/auto-disable/force', authenticate, requireAdmin(), async (req, res
 router.get('/behavior-analysis', authenticate, async (req, res) => {
   try {
     const sessionId = req.session?.id || req.sessionID;
-    
+
     const analysis = await autoDisableService.analyzeUserBehavior(sessionId);
 
     res.json({
@@ -316,7 +345,9 @@ router.post('/config', authenticate, requireAdmin(), async (req, res) => {
     }
 
     // Create new timeout manager with updated config
-    const newTimeoutManager = new (await import('../dangerous/timeout-manager.js')).DangerousTimeoutManager(config);
+    const newTimeoutManager = new (
+      await import('../dangerous/timeout-manager.js')
+    ).DangerousTimeoutManager(config);
 
     await comprehensiveAuditLogger.logAuditEvent({
       category: AuditCategory.CONFIGURATION,

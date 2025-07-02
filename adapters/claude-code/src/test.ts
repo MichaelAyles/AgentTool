@@ -1,7 +1,11 @@
 #!/usr/bin/env node
 
 import { ClaudeCodeAdapter } from './index.js';
-import { AdapterTester, createBasicTestSuite, createExecutionTestSuite } from '@vibecode/adapter-sdk';
+import {
+  AdapterTester,
+  createBasicTestSuite,
+  createExecutionTestSuite,
+} from '@vibecode/adapter-sdk';
 
 async function runTests() {
   console.log('🧪 Running Claude Code Adapter Tests...\n');
@@ -30,8 +34,10 @@ async function runTests() {
 
     // Check if all tests passed
     const results = tester.getTestResults();
-    const failedTests = Array.from(results.entries()).filter(([_, result]) => !result.passed);
-    
+    const failedTests = Array.from(results.entries()).filter(
+      ([_, result]) => !result.passed
+    );
+
     if (failedTests.length === 0) {
       console.log('✅ All tests passed!');
       process.exit(0);
@@ -42,7 +48,6 @@ async function runTests() {
       });
       process.exit(1);
     }
-
   } catch (error) {
     console.error('💥 Test runner failed:', error);
     process.exit(1);

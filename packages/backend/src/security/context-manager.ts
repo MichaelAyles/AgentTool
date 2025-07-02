@@ -1,10 +1,10 @@
-import { 
-  SecurityContext, 
-  SecurityEvent, 
-  SecurityEventType, 
-  SecurityLevel, 
+import {
+  SecurityContext,
+  SecurityEvent,
+  SecurityEventType,
+  SecurityLevel,
   SecurityPolicy,
-  SecurityAuditLog
+  SecurityAuditLog,
 } from './types.js';
 import { UserRole } from '../auth/types.js';
 import { structuredLogger } from '../middleware/logging.js';
@@ -60,8 +60,13 @@ export class SecurityContextManager extends EventEmitter {
       createdAt: new Date(),
       lastActivity: new Date(),
       dangerousModeEnabled: params.dangerousModeEnabled || false,
-      dangerousModeEnabledAt: params.dangerousModeEnabled ? new Date() : undefined,
-      securityLevel: this.calculateSecurityLevel(params.role, params.dangerousModeEnabled),
+      dangerousModeEnabledAt: params.dangerousModeEnabled
+        ? new Date()
+        : undefined,
+      securityLevel: this.calculateSecurityLevel(
+        params.role,
+        params.dangerousModeEnabled
+      ),
       activeProjects: [],
       activeSessions: [],
       grantedPermissions: [],
@@ -115,7 +120,10 @@ export class SecurityContextManager extends EventEmitter {
   /**
    * Enable dangerous mode for a user
    */
-  enableDangerousMode(sessionId: string, confirmation: boolean = false): boolean {
+  enableDangerousMode(
+    sessionId: string,
+    confirmation: boolean = false
+  ): boolean {
     const context = this.contexts.get(sessionId);
     if (!context) return false;
 
@@ -182,22 +190,28 @@ export class SecurityContextManager extends EventEmitter {
   /**
    * Record a security violation
    */
-  recordViolation(sessionId: string, violation: {
-    type: SecurityEventType;
-    severity: SecurityLevel;
-    resource?: string;
-    action?: string;
-    metadata?: Record<string, any>;
-  }): void {
+  recordViolation(
+    sessionId: string,
+    violation: {
+      type: SecurityEventType;
+      severity: SecurityLevel;
+      resource?: string;
+      action?: string;
+      metadata?: Record<string, any>;
+    }
+  ): void {
     const context = this.contexts.get(sessionId);
     if (!context) return;
 
     context.violationCount++;
     context.lastViolation = new Date();
-    
+
     // Increase risk score based on severity
     const riskIncrease = this.getRiskScoreIncrease(violation.severity);
-    context.riskScore = Math.min(context.riskScore + riskIncrease, this.policy.maxRiskScore);
+    context.riskScore = Math.min(
+      context.riskScore + riskIncrease,
+      this.policy.maxRiskScore
+    );
 
     this.logSecurityEvent({
       type: violation.type,
@@ -240,7 +254,7 @@ export class SecurityContextManager extends EventEmitter {
 
     if (!context.activeProjects.includes(projectId)) {
       context.activeProjects.push(projectId);
-      
+
       this.logSecurityEvent({
         type: SecurityEventType.RESOURCE_ACCESS,
         severity: SecurityLevel.SAFE,
@@ -279,7 +293,8 @@ export class SecurityContextManager extends EventEmitter {
 
     const now = new Date();
     const windowStart = context.requestWindowStart;
-    const minutesSinceWindowStart = (now.getTime() - windowStart.getTime()) / (1000 * 60);
+    const minutesSinceWindowStart =
+      (now.getTime() - windowStart.getTime()) / (1000 * 60);
 
     // Reset window if more than an hour has passed
     if (minutesSinceWindowStart > 60) {
@@ -289,7 +304,10 @@ export class SecurityContextManager extends EventEmitter {
     }
 
     // Check per-minute limit
-    if (minutesSinceWindowStart < 1 && context.requestCount >= this.policy.maxRequestsPerMinute) {
+    if (
+      minutesSinceWindowStart < 1 &&
+      context.requestCount >= this.policy.maxRequestsPerMinute
+    ) {
       this.recordViolation(sessionId, {
         type: SecurityEventType.SECURITY_VIOLATION,
         severity: SecurityLevel.MODERATE,
@@ -319,17 +337,21 @@ export class SecurityContextManager extends EventEmitter {
   getSecurityMetrics(): any {
     const now = new Date();
     const activeContexts = Array.from(this.contexts.values());
-    
+
     return {
       timestamp: now,
       activeUsers: new Set(activeContexts.map(c => c.userId)).size,
       activeSessions: activeContexts.length,
-      averageRiskScore: activeContexts.reduce((sum, c) => sum + c.riskScore, 0) / activeContexts.length || 0,
-      dangerousModeSessions: activeContexts.filter(c => c.dangerousModeEnabled).length,
+      averageRiskScore:
+        activeContexts.reduce((sum, c) => sum + c.riskScore, 0) /
+          activeContexts.length || 0,
+      dangerousModeSessions: activeContexts.filter(c => c.dangerousModeEnabled)
+        .length,
       highRiskSessions: activeContexts.filter(c => c.riskScore > 50).length,
-      recentViolations: this.eventHistory.filter(e => 
-        e.outcome === 'failure' && 
-        now.getTime() - e.timestamp.getTime() < 60 * 60 * 1000 // last hour
+      recentViolations: this.eventHistory.filter(
+        e =>
+          e.outcome === 'failure' &&
+          now.getTime() - e.timestamp.getTime() < 60 * 60 * 1000 // last hour
       ).length,
     };
   }
@@ -357,7 +379,10 @@ export class SecurityContextManager extends EventEmitter {
 
   // Private helper methods
 
-  private calculateSecurityLevel(role: UserRole, dangerousMode: boolean): SecurityLevel {
+  private calculateSecurityLevel(
+    role: UserRole,
+    dangerousMode: boolean
+  ): SecurityLevel {
     if (dangerousMode) return SecurityLevel.DANGEROUS;
     if (role === UserRole.ADMIN) return SecurityLevel.MODERATE;
     return SecurityLevel.SAFE;
@@ -365,22 +390,28 @@ export class SecurityContextManager extends EventEmitter {
 
   private getRiskScoreIncrease(severity: SecurityLevel): number {
     switch (severity) {
-      case SecurityLevel.SAFE: return 1;
-      case SecurityLevel.MODERATE: return 5;
-      case SecurityLevel.DANGEROUS: return 15;
-      case SecurityLevel.CRITICAL: return 30;
-      default: return 1;
+      case SecurityLevel.SAFE:
+        return 1;
+      case SecurityLevel.MODERATE:
+        return 5;
+      case SecurityLevel.DANGEROUS:
+        return 15;
+      case SecurityLevel.CRITICAL:
+        return 30;
+      default:
+        return 1;
     }
   }
 
   private shouldLockoutUser(context: SecurityContext): boolean {
     const now = new Date();
     const hourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-    
-    const recentViolations = this.eventHistory.filter(e => 
-      e.userId === context.userId &&
-      e.outcome === 'failure' &&
-      e.timestamp > hourAgo
+
+    const recentViolations = this.eventHistory.filter(
+      e =>
+        e.userId === context.userId &&
+        e.outcome === 'failure' &&
+        e.timestamp > hourAgo
     ).length;
 
     return recentViolations >= this.policy.maxViolationsPerHour;
@@ -410,7 +441,8 @@ export class SecurityContextManager extends EventEmitter {
 
   private incrementRequestCount(context: SecurityContext): void {
     const now = new Date();
-    const minutesSinceWindowStart = (now.getTime() - context.requestWindowStart.getTime()) / (1000 * 60);
+    const minutesSinceWindowStart =
+      (now.getTime() - context.requestWindowStart.getTime()) / (1000 * 60);
 
     if (minutesSinceWindowStart >= 60) {
       context.requestCount = 1;
@@ -420,7 +452,9 @@ export class SecurityContextManager extends EventEmitter {
     }
   }
 
-  private logSecurityEvent(event: Omit<SecurityEvent, 'id' | 'timestamp'>): void {
+  private logSecurityEvent(
+    event: Omit<SecurityEvent, 'id' | 'timestamp'>
+  ): void {
     const securityEvent: SecurityEvent = {
       id: `evt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       timestamp: new Date(),
@@ -428,7 +462,7 @@ export class SecurityContextManager extends EventEmitter {
     };
 
     this.eventHistory.push(securityEvent);
-    
+
     // Keep only last 10000 events in memory
     if (this.eventHistory.length > 10000) {
       this.eventHistory = this.eventHistory.slice(-5000);
@@ -447,39 +481,48 @@ export class SecurityContextManager extends EventEmitter {
     setInterval(() => {
       for (const context of this.contexts.values()) {
         if (context.riskScore > 0) {
-          context.riskScore = Math.max(0, context.riskScore - this.policy.riskScoreDecayRate);
+          context.riskScore = Math.max(
+            0,
+            context.riskScore - this.policy.riskScoreDecayRate
+          );
         }
       }
     }, 60 * 1000); // Every minute
   }
 
   private startSessionCleanup(): void {
-    setInterval(() => {
-      const now = new Date();
-      const expiredSessions: string[] = [];
+    setInterval(
+      () => {
+        const now = new Date();
+        const expiredSessions: string[] = [];
 
-      for (const [sessionId, context] of this.contexts.entries()) {
-        const sessionAge = now.getTime() - context.createdAt.getTime();
-        const inactivityTime = now.getTime() - context.lastActivity.getTime();
+        for (const [sessionId, context] of this.contexts.entries()) {
+          const sessionAge = now.getTime() - context.createdAt.getTime();
+          const inactivityTime = now.getTime() - context.lastActivity.getTime();
 
-        if (sessionAge > this.policy.maxSessionDuration || inactivityTime > 2 * 60 * 60 * 1000) {
-          expiredSessions.push(sessionId);
+          if (
+            sessionAge > this.policy.maxSessionDuration ||
+            inactivityTime > 2 * 60 * 60 * 1000
+          ) {
+            expiredSessions.push(sessionId);
+          }
         }
-      }
 
-      for (const sessionId of expiredSessions) {
-        this.logSecurityEvent({
-          type: SecurityEventType.SESSION_EXPIRED,
-          severity: SecurityLevel.SAFE,
-          userId: this.contexts.get(sessionId)!.userId,
-          sessionId: sessionId,
-          ipAddress: this.contexts.get(sessionId)!.ipAddress,
-          outcome: 'success',
-          metadata: {},
-        });
-        this.destroyContext(sessionId);
-      }
-    }, 15 * 60 * 1000); // Every 15 minutes
+        for (const sessionId of expiredSessions) {
+          this.logSecurityEvent({
+            type: SecurityEventType.SESSION_EXPIRED,
+            severity: SecurityLevel.SAFE,
+            userId: this.contexts.get(sessionId)!.userId,
+            sessionId: sessionId,
+            ipAddress: this.contexts.get(sessionId)!.ipAddress,
+            outcome: 'success',
+            metadata: {},
+          });
+          this.destroyContext(sessionId);
+        }
+      },
+      15 * 60 * 1000
+    ); // Every 15 minutes
   }
 }
 

@@ -75,15 +75,13 @@ vibecode/
 ## Key Configuration Files
 
 ### Root package.json
+
 ```json
 {
   "name": "vibecode",
   "version": "1.0.0",
   "private": true,
-  "workspaces": [
-    "packages/*",
-    "adapters/*"
-  ],
+  "workspaces": ["packages/*", "adapters/*"],
   "scripts": {
     "dev": "pnpm run --parallel dev",
     "build": "pnpm run --recursive build",
@@ -104,6 +102,7 @@ vibecode/
 ```
 
 ### Backend package.json
+
 ```json
 {
   "name": "@vibecode/backend",
@@ -128,6 +127,7 @@ vibecode/
 ```
 
 ### Frontend package.json
+
 ```json
 {
   "name": "@vibecode/frontend",
@@ -158,6 +158,7 @@ vibecode/
 ## Backend Structure Details
 
 ### API Routes
+
 ```typescript
 // packages/backend/src/api/routes/index.ts
 export const setupRoutes = (app: Express) => {
@@ -171,6 +172,7 @@ export const setupRoutes = (app: Express) => {
 ```
 
 ### Service Layer
+
 ```typescript
 // packages/backend/src/services/index.ts
 export * from './project.service';
@@ -184,6 +186,7 @@ export * from './mcp.service';
 ## Frontend Structure Details
 
 ### Component Organization
+
 ```
 components/
 ├── common/
@@ -213,6 +216,7 @@ components/
 ```
 
 ### Store Structure
+
 ```typescript
 // packages/frontend/src/stores/index.ts
 export { useProjectStore } from './project.store';
@@ -235,6 +239,7 @@ export * from './mcp.types';
 ## Development Workflow
 
 ### Initial Setup
+
 ```bash
 # Install dependencies
 pnpm install
@@ -247,6 +252,7 @@ pnpm dev
 ```
 
 ### Adding a New Adapter
+
 ```bash
 # Use the adapter template
 cp -r adapters/template adapters/my-new-adapter
@@ -260,6 +266,7 @@ pnpm link
 ```
 
 ### Testing Strategy
+
 ```
 tests/
 ├── unit/
@@ -277,6 +284,7 @@ tests/
 ## Build & Deployment
 
 ### Docker Compose
+
 ```yaml
 version: '3.8'
 
@@ -286,7 +294,7 @@ services:
       context: .
       dockerfile: docker/Dockerfile.backend
     ports:
-      - "3000:3000"
+      - '3000:3000'
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://postgres:password@db:5432/vibecode
@@ -302,7 +310,7 @@ services:
       context: .
       dockerfile: docker/Dockerfile.frontend
     ports:
-      - "5173:80"
+      - '5173:80'
     depends_on:
       - backend
 
@@ -326,6 +334,7 @@ volumes:
 ```
 
 ### Production Build
+
 ```bash
 # Build all packages
 pnpm build

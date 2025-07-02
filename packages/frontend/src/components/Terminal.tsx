@@ -10,7 +10,7 @@ export function Terminal() {
   const [searchParams] = useSearchParams();
   const projectId = searchParams.get('projectId') || 'default-project';
   const adapter = searchParams.get('adapter') || 'claude-code';
-  
+
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<XTerm>();
   const fitAddonRef = useRef<FitAddon>();
@@ -21,7 +21,7 @@ export function Terminal() {
     adapter,
     onConnect: () => setConnected(true),
     onDisconnect: () => setConnected(false),
-    onError: (error) => {
+    onError: error => {
       console.error('Terminal error:', error);
       if (xtermRef.current) {
         xtermRef.current.writeln(`\r\nError: ${error}`);
@@ -71,7 +71,7 @@ export function Terminal() {
     });
 
     // Handle user input
-    xterm.onData((data) => {
+    xterm.onData(data => {
       terminal.sendInput(data);
     });
 
@@ -97,7 +97,9 @@ export function Terminal() {
   useEffect(() => {
     if (xtermRef.current) {
       if (connected) {
-        xtermRef.current.writeln('✅ Connected! Ready to code with AI assistance.');
+        xtermRef.current.writeln(
+          '✅ Connected! Ready to code with AI assistance.'
+        );
         xtermRef.current.write('\r\n$ ');
       } else {
         xtermRef.current.writeln('❌ Disconnected from server.');
@@ -113,38 +115,40 @@ export function Terminal() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-900">
+    <div className='h-full flex flex-col bg-gray-900'>
       {/* Terminal Header */}
-      <div className="bg-gray-800 border-b border-gray-700 px-4 py-2 flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2">
-            <div className={`w-3 h-3 rounded-full ${connected ? 'bg-green-400' : 'bg-red-400'}`} />
-            <span className="text-sm text-gray-300">
+      <div className='bg-gray-800 border-b border-gray-700 px-4 py-2 flex items-center justify-between'>
+        <div className='flex items-center space-x-4'>
+          <div className='flex items-center space-x-2'>
+            <div
+              className={`w-3 h-3 rounded-full ${connected ? 'bg-green-400' : 'bg-red-400'}`}
+            />
+            <span className='text-sm text-gray-300'>
               {connected ? 'Connected' : 'Disconnected'}
             </span>
           </div>
-          <div className="text-sm text-gray-400">
+          <div className='text-sm text-gray-400'>
             {projectId} • {adapter}
           </div>
         </div>
-        
+
         {/* Quick Actions */}
-        <div className="flex items-center space-x-2">
+        <div className='flex items-center space-x-2'>
           <button
             onClick={() => handleQuickCommand('help')}
-            className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded"
+            className='text-xs bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded'
           >
             Help
           </button>
           <button
             onClick={() => handleQuickCommand('ls')}
-            className="text-xs bg-gray-600 hover:bg-gray-700 text-white px-2 py-1 rounded"
+            className='text-xs bg-gray-600 hover:bg-gray-700 text-white px-2 py-1 rounded'
           >
             List Files
           </button>
           <button
             onClick={() => terminal.kill()}
-            className="text-xs bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded"
+            className='text-xs bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded'
           >
             Kill Session
           </button>
@@ -152,20 +156,18 @@ export function Terminal() {
       </div>
 
       {/* Terminal Content */}
-      <div className="flex-1 p-4">
+      <div className='flex-1 p-4'>
         <div
           ref={terminalRef}
-          className="h-full w-full bg-gray-900 rounded-lg border border-gray-700 focus-within:border-blue-500 transition-colors"
+          className='h-full w-full bg-gray-900 rounded-lg border border-gray-700 focus-within:border-blue-500 transition-colors'
         />
       </div>
 
       {/* Terminal Footer */}
-      <div className="bg-gray-800 border-t border-gray-700 px-4 py-2">
-        <div className="flex items-center justify-between text-xs text-gray-400">
-          <div>
-            Session: {terminal.session.id || 'Not connected'}
-          </div>
-          <div className="flex items-center space-x-4">
+      <div className='bg-gray-800 border-t border-gray-700 px-4 py-2'>
+        <div className='flex items-center justify-between text-xs text-gray-400'>
+          <div>Session: {terminal.session.id || 'Not connected'}</div>
+          <div className='flex items-center space-x-4'>
             <span>Ctrl+C to interrupt</span>
             <span>Type 'help' for assistance</span>
           </div>

@@ -13,7 +13,12 @@ export class AppError extends Error {
   public details?: any;
   public isOperational: boolean;
 
-  constructor(message: string, statusCode = 500, code = 'INTERNAL_ERROR', details?: any) {
+  constructor(
+    message: string,
+    statusCode = 500,
+    code = 'INTERNAL_ERROR',
+    details?: any
+  ) {
     super(message);
     this.statusCode = statusCode;
     this.code = code;
@@ -127,7 +132,11 @@ export const errorHandler = (
   res.status(statusCode).json(errorResponse);
 };
 
-export const notFoundHandler = (req: Request, res: Response, next: NextFunction): void => {
+export const notFoundHandler = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
   const error = new NotFoundError(`Route ${req.method} ${req.originalUrl}`);
   next(error);
 };

@@ -2,10 +2,14 @@ import type { CLIAdapter, ValidationResult } from '../types/index.js';
 
 export function createLogger(name: string) {
   return {
-    info: (message: string, ...args: any[]) => console.log(`[${name}] ${message}`, ...args),
-    error: (message: string, ...args: any[]) => console.error(`[${name}] ${message}`, ...args),
-    warn: (message: string, ...args: any[]) => console.warn(`[${name}] ${message}`, ...args),
-    debug: (message: string, ...args: any[]) => console.debug(`[${name}] ${message}`, ...args),
+    info: (message: string, ...args: any[]) =>
+      console.log(`[${name}] ${message}`, ...args),
+    error: (message: string, ...args: any[]) =>
+      console.error(`[${name}] ${message}`, ...args),
+    warn: (message: string, ...args: any[]) =>
+      console.warn(`[${name}] ${message}`, ...args),
+    debug: (message: string, ...args: any[]) =>
+      console.debug(`[${name}] ${message}`, ...args),
   };
 }
 
@@ -17,7 +21,7 @@ export class AdapterRegistry {
     if (!validation.valid) {
       throw new Error(`Invalid adapter: ${validation.errors?.join(', ')}`);
     }
-    
+
     this.adapters.set(adapter.name, adapter);
   }
 
@@ -29,7 +33,9 @@ export class AdapterRegistry {
     return Array.from(this.adapters.values());
   }
 
-  private async validateAdapter(adapter: CLIAdapter): Promise<ValidationResult> {
+  private async validateAdapter(
+    adapter: CLIAdapter
+  ): Promise<ValidationResult> {
     const errors: string[] = [];
 
     if (!adapter.name) errors.push('Adapter name is required');

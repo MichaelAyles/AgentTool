@@ -13,7 +13,7 @@ export enum ProcessState {
   STOPPED = 'stopped',
   ERROR = 'error',
   CLEANUP = 'cleanup',
-  TERMINATED = 'terminated'
+  TERMINATED = 'terminated',
 }
 
 // Process events
@@ -27,7 +27,7 @@ export enum ProcessEvent {
   ERROR = 'error',
   TIMEOUT = 'timeout',
   CLEANUP = 'cleanup',
-  RESET = 'reset'
+  RESET = 'reset',
 }
 
 // Transition validation result
@@ -146,7 +146,13 @@ export class ProcessStateMachine extends EventEmitter {
     this.retryCounters.set(context.sessionId, new Map());
     this.lifecycleHistory.set(context.sessionId, []);
 
-    this.logLifecycleEvent(context.sessionId, ProcessState.IDLE, ProcessState.IDLE, ProcessEvent.INITIALIZE, true);
+    this.logLifecycleEvent(
+      context.sessionId,
+      ProcessState.IDLE,
+      ProcessState.IDLE,
+      ProcessEvent.INITIALIZE,
+      true
+    );
 
     structuredLogger.info('Process created', {
       sessionId: context.sessionId,
@@ -154,19 +160,30 @@ export class ProcessStateMachine extends EventEmitter {
       adapterName: context.adapterName,
     });
 
-    this.emit('processCreated', { sessionId: context.sessionId, context: processContext });
+    this.emit('processCreated', {
+      sessionId: context.sessionId,
+      context: processContext,
+    });
     return context.sessionId;
   }
 
   /**
    * Trigger a process event
    */
-  async triggerEvent(sessionId: string, event: ProcessEvent, metadata: Record<string, any> = {}): Promise<boolean> {
+  async triggerEvent(
+    sessionId: string,
+    event: ProcessEvent,
+    metadata: Record<string, any> = {}
+  ): Promise<boolean> {
     const currentState = this.states.get(sessionId);
     const context = this.processes.get(sessionId);
 
     if (!currentState || !context) {
-      structuredLogger.error('Process not found', new Error('Process not found'), { sessionId, event });
+      structuredLogger.error(
+        'Process not found',
+        new Error('Process not found'),
+        { sessionId, event }
+      );
       return false;
     }
 
@@ -203,7 +220,7 @@ export class ProcessStateMachine extends EventEmitter {
 
       // Update state
       this.states.set(sessionId, transition.to);
-      
+
       // Update context metadata
       context.metadata = { ...context.metadata, ...metadata };
 
@@ -221,7 +238,14 @@ export class ProcessStateMachine extends EventEmitter {
       }
 
       const duration = Date.now() - startTime;
-      this.logLifecycleEvent(sessionId, previousState, transition.to, event, true, duration);
+      this.logLifecycleEvent(
+        sessionId,
+        previousState,
+        transition.to,
+        event,
+        true,
+        duration
+      );
 
       structuredLogger.info('State transition completed', {
         sessionId,
@@ -241,7 +265,10 @@ export class ProcessStateMachine extends EventEmitter {
       });
 
       // Auto-cleanup if enabled
-      if (this.config.autoCleanup && transition.to === ProcessState.TERMINATED) {
+      if (
+        this.config.autoCleanup &&
+        transition.to === ProcessState.TERMINATED
+      ) {
         setTimeout(() => {
           this.cleanup(sessionId);
         }, this.config.cleanupDelay);
@@ -250,7 +277,15 @@ export class ProcessStateMachine extends EventEmitter {
       return true;
     } catch (error) {
       const duration = Date.now() - startTime;
-      this.logLifecycleEvent(sessionId, previousState, currentState, event, false, duration, error as Error);
+      this.logLifecycleEvent(
+        sessionId,
+        previousState,
+        currentState,
+        event,
+        false,
+        duration,
+        error as Error
+      );
 
       // Handle retry logic
       const shouldRetry = this.handleRetry(sessionId, event);
@@ -268,7 +303,7 @@ export class ProcessStateMachine extends EventEmitter {
         // Transition to error state
         this.states.set(sessionId, ProcessState.ERROR);
         context.error = error as Error;
-        
+
         this.emit('stateError', {
           sessionId,
           previousState,
@@ -340,10 +375,15 @@ export class ProcessStateMachine extends EventEmitter {
    * Get system-wide state statistics
    */
   getStateStatistics(): Record<ProcessState, number> {
-    const stats: Record<ProcessState, number> = Object.values(ProcessState).reduce((acc, state) => {
-      acc[state] = 0;
-      return acc;
-    }, {} as Record<ProcessState, number>);
+    const stats: Record<ProcessState, number> = Object.values(
+      ProcessState
+    ).reduce(
+      (acc, state) => {
+        acc[state] = 0;
+        return acc;
+      },
+      {} as Record<ProcessState, number>
+    );
 
     for (const state of this.states.values()) {
       stats[state]++;
@@ -368,20 +408,23 @@ export class ProcessStateMachine extends EventEmitter {
     this.processes.delete(sessionId);
     this.states.delete(sessionId);
     this.retryCounters.delete(sessionId);
-    
+
     // Keep lifecycle history for audit purposes
     // this.lifecycleHistory.delete(sessionId);
 
     structuredLogger.info('Process cleaned up', { sessionId });
     this.emit('processCleanedUp', { sessionId, context });
-    
+
     return true;
   }
 
   /**
    * Force terminate a process
    */
-  async forceTerminate(sessionId: string, reason: string = 'forced'): Promise<boolean> {
+  async forceTerminate(
+    sessionId: string,
+    reason: string = 'forced'
+  ): Promise<boolean> {
     const currentState = this.states.get(sessionId);
     if (!currentState) {
       return false;
@@ -389,14 +432,20 @@ export class ProcessStateMachine extends EventEmitter {
 
     // Set state to terminated regardless of current state
     this.states.set(sessionId, ProcessState.TERMINATED);
-    
+
     const context = this.processes.get(sessionId);
     if (context) {
       context.metadata.terminationReason = reason;
       context.endTime = new Date();
     }
 
-    this.logLifecycleEvent(sessionId, currentState, ProcessState.TERMINATED, ProcessEvent.TERMINATE, true);
+    this.logLifecycleEvent(
+      sessionId,
+      currentState,
+      ProcessState.TERMINATED,
+      ProcessEvent.TERMINATE,
+      true
+    );
 
     structuredLogger.warn('Process force terminated', {
       sessionId,
@@ -404,8 +453,12 @@ export class ProcessStateMachine extends EventEmitter {
       reason,
     });
 
-    this.emit('processForceTerminated', { sessionId, previousState: currentState, reason });
-    
+    this.emit('processForceTerminated', {
+      sessionId,
+      previousState: currentState,
+      reason,
+    });
+
     // Schedule cleanup
     if (this.config.autoCleanup) {
       setTimeout(() => {
@@ -421,57 +474,175 @@ export class ProcessStateMachine extends EventEmitter {
   private setupStateTransitions(): void {
     this.transitions = [
       // From IDLE
-      { from: ProcessState.IDLE, to: ProcessState.INITIALIZING, event: ProcessEvent.INITIALIZE },
-      
+      {
+        from: ProcessState.IDLE,
+        to: ProcessState.INITIALIZING,
+        event: ProcessEvent.INITIALIZE,
+      },
+
       // From INITIALIZING
-      { from: ProcessState.INITIALIZING, to: ProcessState.STARTING, event: ProcessEvent.START },
-      { from: ProcessState.INITIALIZING, to: ProcessState.ERROR, event: ProcessEvent.ERROR },
-      { from: ProcessState.INITIALIZING, to: ProcessState.TERMINATED, event: ProcessEvent.TERMINATE },
-      
+      {
+        from: ProcessState.INITIALIZING,
+        to: ProcessState.STARTING,
+        event: ProcessEvent.START,
+      },
+      {
+        from: ProcessState.INITIALIZING,
+        to: ProcessState.ERROR,
+        event: ProcessEvent.ERROR,
+      },
+      {
+        from: ProcessState.INITIALIZING,
+        to: ProcessState.TERMINATED,
+        event: ProcessEvent.TERMINATE,
+      },
+
       // From STARTING
-      { from: ProcessState.STARTING, to: ProcessState.RUNNING, event: ProcessEvent.START },
-      { from: ProcessState.STARTING, to: ProcessState.ERROR, event: ProcessEvent.ERROR },
-      { from: ProcessState.STARTING, to: ProcessState.STOPPING, event: ProcessEvent.STOP },
-      { from: ProcessState.STARTING, to: ProcessState.TERMINATED, event: ProcessEvent.TERMINATE },
-      
+      {
+        from: ProcessState.STARTING,
+        to: ProcessState.RUNNING,
+        event: ProcessEvent.START,
+      },
+      {
+        from: ProcessState.STARTING,
+        to: ProcessState.ERROR,
+        event: ProcessEvent.ERROR,
+      },
+      {
+        from: ProcessState.STARTING,
+        to: ProcessState.STOPPING,
+        event: ProcessEvent.STOP,
+      },
+      {
+        from: ProcessState.STARTING,
+        to: ProcessState.TERMINATED,
+        event: ProcessEvent.TERMINATE,
+      },
+
       // From RUNNING
-      { from: ProcessState.RUNNING, to: ProcessState.PAUSED, event: ProcessEvent.PAUSE },
-      { from: ProcessState.RUNNING, to: ProcessState.STOPPING, event: ProcessEvent.STOP },
-      { from: ProcessState.RUNNING, to: ProcessState.ERROR, event: ProcessEvent.ERROR },
-      { from: ProcessState.RUNNING, to: ProcessState.TERMINATED, event: ProcessEvent.TERMINATE },
-      { from: ProcessState.RUNNING, to: ProcessState.STOPPING, event: ProcessEvent.TIMEOUT },
-      
+      {
+        from: ProcessState.RUNNING,
+        to: ProcessState.PAUSED,
+        event: ProcessEvent.PAUSE,
+      },
+      {
+        from: ProcessState.RUNNING,
+        to: ProcessState.STOPPING,
+        event: ProcessEvent.STOP,
+      },
+      {
+        from: ProcessState.RUNNING,
+        to: ProcessState.ERROR,
+        event: ProcessEvent.ERROR,
+      },
+      {
+        from: ProcessState.RUNNING,
+        to: ProcessState.TERMINATED,
+        event: ProcessEvent.TERMINATE,
+      },
+      {
+        from: ProcessState.RUNNING,
+        to: ProcessState.STOPPING,
+        event: ProcessEvent.TIMEOUT,
+      },
+
       // From PAUSED
-      { from: ProcessState.PAUSED, to: ProcessState.RUNNING, event: ProcessEvent.RESUME },
-      { from: ProcessState.PAUSED, to: ProcessState.STOPPING, event: ProcessEvent.STOP },
-      { from: ProcessState.PAUSED, to: ProcessState.TERMINATED, event: ProcessEvent.TERMINATE },
-      
+      {
+        from: ProcessState.PAUSED,
+        to: ProcessState.RUNNING,
+        event: ProcessEvent.RESUME,
+      },
+      {
+        from: ProcessState.PAUSED,
+        to: ProcessState.STOPPING,
+        event: ProcessEvent.STOP,
+      },
+      {
+        from: ProcessState.PAUSED,
+        to: ProcessState.TERMINATED,
+        event: ProcessEvent.TERMINATE,
+      },
+
       // From STOPPING
-      { from: ProcessState.STOPPING, to: ProcessState.STOPPED, event: ProcessEvent.STOP },
-      { from: ProcessState.STOPPING, to: ProcessState.TERMINATED, event: ProcessEvent.TERMINATE },
-      { from: ProcessState.STOPPING, to: ProcessState.ERROR, event: ProcessEvent.ERROR },
-      
+      {
+        from: ProcessState.STOPPING,
+        to: ProcessState.STOPPED,
+        event: ProcessEvent.STOP,
+      },
+      {
+        from: ProcessState.STOPPING,
+        to: ProcessState.TERMINATED,
+        event: ProcessEvent.TERMINATE,
+      },
+      {
+        from: ProcessState.STOPPING,
+        to: ProcessState.ERROR,
+        event: ProcessEvent.ERROR,
+      },
+
       // From STOPPED
-      { from: ProcessState.STOPPED, to: ProcessState.CLEANUP, event: ProcessEvent.CLEANUP },
-      { from: ProcessState.STOPPED, to: ProcessState.INITIALIZING, event: ProcessEvent.RESET },
-      { from: ProcessState.STOPPED, to: ProcessState.TERMINATED, event: ProcessEvent.TERMINATE },
-      
+      {
+        from: ProcessState.STOPPED,
+        to: ProcessState.CLEANUP,
+        event: ProcessEvent.CLEANUP,
+      },
+      {
+        from: ProcessState.STOPPED,
+        to: ProcessState.INITIALIZING,
+        event: ProcessEvent.RESET,
+      },
+      {
+        from: ProcessState.STOPPED,
+        to: ProcessState.TERMINATED,
+        event: ProcessEvent.TERMINATE,
+      },
+
       // From ERROR
-      { from: ProcessState.ERROR, to: ProcessState.CLEANUP, event: ProcessEvent.CLEANUP },
-      { from: ProcessState.ERROR, to: ProcessState.INITIALIZING, event: ProcessEvent.RESET },
-      { from: ProcessState.ERROR, to: ProcessState.TERMINATED, event: ProcessEvent.TERMINATE },
-      
+      {
+        from: ProcessState.ERROR,
+        to: ProcessState.CLEANUP,
+        event: ProcessEvent.CLEANUP,
+      },
+      {
+        from: ProcessState.ERROR,
+        to: ProcessState.INITIALIZING,
+        event: ProcessEvent.RESET,
+      },
+      {
+        from: ProcessState.ERROR,
+        to: ProcessState.TERMINATED,
+        event: ProcessEvent.TERMINATE,
+      },
+
       // From CLEANUP
-      { from: ProcessState.CLEANUP, to: ProcessState.TERMINATED, event: ProcessEvent.TERMINATE },
-      { from: ProcessState.CLEANUP, to: ProcessState.INITIALIZING, event: ProcessEvent.RESET },
+      {
+        from: ProcessState.CLEANUP,
+        to: ProcessState.TERMINATED,
+        event: ProcessEvent.TERMINATE,
+      },
+      {
+        from: ProcessState.CLEANUP,
+        to: ProcessState.INITIALIZING,
+        event: ProcessEvent.RESET,
+      },
     ];
   }
 
-  private findTransition(currentState: ProcessState, event: ProcessEvent): StateTransition | null {
-    return this.transitions.find(t => t.from === currentState && t.event === event) || null;
+  private findTransition(
+    currentState: ProcessState,
+    event: ProcessEvent
+  ): StateTransition | null {
+    return (
+      this.transitions.find(
+        t => t.from === currentState && t.event === event
+      ) || null
+    );
   }
 
-  private validateTransition(transition: StateTransition, context: ProcessContext): TransitionResult {
+  private validateTransition(
+    transition: StateTransition,
+    context: ProcessContext
+  ): TransitionResult {
     // Check if transition condition is met
     if (transition.condition && !transition.condition(context)) {
       return {
@@ -483,7 +654,10 @@ export class ProcessStateMachine extends EventEmitter {
     // Check resource limits for certain transitions
     if (transition.to === ProcessState.RUNNING) {
       // Add resource limit checks here
-      if (context.dangerousModeEnabled && !this.validateDangerousMode(context)) {
+      if (
+        context.dangerousModeEnabled &&
+        !this.validateDangerousMode(context)
+      ) {
         return {
           allowed: false,
           reason: 'Dangerous mode validation failed',
@@ -506,7 +680,11 @@ export class ProcessStateMachine extends EventEmitter {
     }
 
     const timer = setTimeout(() => {
-      structuredLogger.warn('Process state timeout', { sessionId, state, timeout });
+      structuredLogger.warn('Process state timeout', {
+        sessionId,
+        state,
+        timeout,
+      });
       this.triggerEvent(sessionId, ProcessEvent.TIMEOUT);
     }, timeout);
 
@@ -551,7 +729,9 @@ export class ProcessStateMachine extends EventEmitter {
         type: JobType.PROCESS_EXECUTION,
         sessionId,
         userId: context.userId,
-        priority: context.dangerousModeEnabled ? JobPriority.HIGH : JobPriority.NORMAL,
+        priority: context.dangerousModeEnabled
+          ? JobPriority.HIGH
+          : JobPriority.NORMAL,
         metadata: {
           stateTransition: {
             from: transition.from,
@@ -570,7 +750,10 @@ export class ProcessStateMachine extends EventEmitter {
         dangerousModeEnabled: context.dangerousModeEnabled,
       });
     } catch (error) {
-      structuredLogger.error('Failed to queue state change', error as Error, { sessionId, transition });
+      structuredLogger.error('Failed to queue state change', error as Error, {
+        sessionId,
+        transition,
+      });
     }
   }
 
@@ -604,7 +787,7 @@ export class ProcessStateMachine extends EventEmitter {
     const history = this.lifecycleHistory.get(sessionId);
     if (history) {
       history.push(lifecycleEvent);
-      
+
       // Keep only last 100 events per process
       if (history.length > 100) {
         history.splice(0, history.length - 100);
@@ -621,13 +804,17 @@ export class ProcessStateMachine extends EventEmitter {
           duration,
         });
       } else {
-        structuredLogger.error('Process lifecycle event failed', error || new Error('Unknown error'), {
-          sessionId,
-          event,
-          previousState,
-          currentState,
-          duration,
-        });
+        structuredLogger.error(
+          'Process lifecycle event failed',
+          error || new Error('Unknown error'),
+          {
+            sessionId,
+            event,
+            previousState,
+            currentState,
+            duration,
+          }
+        );
       }
     }
 

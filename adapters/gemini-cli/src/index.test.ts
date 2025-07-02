@@ -46,27 +46,31 @@ describe('GeminiCLIAdapter', () => {
       const { spawn } = await import('node-pty');
       (spawn as any).mockReturnValue({
         ...mockPtyProcess,
-        onData: vi.fn((callback) => {
+        onData: vi.fn(callback => {
           callback('gemini version 1.0.0');
         }),
-        onExit: vi.fn((callback) => {
+        onExit: vi.fn(callback => {
           callback(0);
         }),
       });
 
       const isInstalled = await adapter.isInstalled();
       expect(isInstalled).toBe(true);
-      expect(spawn).toHaveBeenCalledWith('gemini', ['--version'], expect.any(Object));
+      expect(spawn).toHaveBeenCalledWith(
+        'gemini',
+        ['--version'],
+        expect.any(Object)
+      );
     });
 
     it('should return false if Gemini CLI is not installed', async () => {
       const { spawn } = await import('node-pty');
       (spawn as any).mockReturnValue({
         ...mockPtyProcess,
-        onData: vi.fn((callback) => {
+        onData: vi.fn(callback => {
           callback('command not found');
         }),
-        onExit: vi.fn((callback) => {
+        onExit: vi.fn(callback => {
           callback(1);
         }),
       });
@@ -88,10 +92,10 @@ describe('GeminiCLIAdapter', () => {
       vi.useFakeTimers();
       const promise = adapter.isInstalled();
       vi.advanceTimersByTime(5000);
-      
+
       const isInstalled = await promise;
       expect(isInstalled).toBe(false);
-      
+
       vi.useRealTimers();
     });
   });
@@ -132,7 +136,14 @@ describe('GeminiCLIAdapter', () => {
 
       expect(spawn).toHaveBeenCalledWith(
         'gemini',
-        ['--files', 'src/main.js', 'src/utils.js', '--stream', '--prompt', 'Review these files'],
+        [
+          '--files',
+          'src/main.js',
+          'src/utils.js',
+          '--stream',
+          '--prompt',
+          'Review these files',
+        ],
         expect.any(Object)
       );
     });
@@ -151,7 +162,13 @@ describe('GeminiCLIAdapter', () => {
 
       expect(spawn).toHaveBeenCalledWith(
         'gemini',
-        ['--project', '/path/to/project', '--stream', '--prompt', 'Analyze project'],
+        [
+          '--project',
+          '/path/to/project',
+          '--stream',
+          '--prompt',
+          'Analyze project',
+        ],
         expect.any(Object)
       );
     });
@@ -238,14 +255,14 @@ describe('GeminiCLIAdapter', () => {
   describe('Configuration Validation', () => {
     it('should validate configuration successfully', async () => {
       vi.spyOn(adapter, 'isInstalled').mockResolvedValue(true);
-      
+
       const { spawn } = await import('node-pty');
       (spawn as any).mockReturnValue({
         ...mockPtyProcess,
-        onData: vi.fn((callback) => {
+        onData: vi.fn(callback => {
           callback('usage: gemini [options]');
         }),
-        onExit: vi.fn((callback) => {
+        onExit: vi.fn(callback => {
           callback(0);
         }),
       });
@@ -265,19 +282,21 @@ describe('GeminiCLIAdapter', () => {
 
       const result = await adapter.validateConfiguration();
       expect(result.valid).toBe(false);
-      expect(result.errors).toContain('Gemini CLI is not installed or not available in PATH');
+      expect(result.errors).toContain(
+        'Gemini CLI is not installed or not available in PATH'
+      );
     });
 
     it('should report missing credentials', async () => {
       vi.spyOn(adapter, 'isInstalled').mockResolvedValue(true);
-      
+
       const { spawn } = await import('node-pty');
       (spawn as any).mockReturnValue({
         ...mockPtyProcess,
-        onData: vi.fn((callback) => {
+        onData: vi.fn(callback => {
           callback('usage: gemini [options]');
         }),
-        onExit: vi.fn((callback) => {
+        onExit: vi.fn(callback => {
           callback(0);
         }),
       });
@@ -288,16 +307,18 @@ describe('GeminiCLIAdapter', () => {
 
       const result = await adapter.validateConfiguration();
       expect(result.valid).toBe(false);
-      expect(result.errors.some(error => 
-        error.includes('Google Cloud credentials not configured')
-      )).toBe(true);
+      expect(
+        result.errors.some(error =>
+          error.includes('Google Cloud credentials not configured')
+        )
+      ).toBe(true);
     });
   });
 
   describe('Help Documentation', () => {
     it('should provide comprehensive help text', async () => {
       const help = await adapter.getHelp();
-      
+
       expect(help).toContain('Gemini CLI Adapter');
       expect(help).toContain('Available Commands');
       expect(help).toContain('Examples');

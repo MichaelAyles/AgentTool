@@ -29,7 +29,7 @@ export enum JobType {
   SECURITY_SCAN = 'security_scan',
   CLEANUP_TASK = 'cleanup_task',
   NOTIFICATION_DELIVERY = 'notification_delivery',
-  SYSTEM_MAINTENANCE = 'system_maintenance'
+  SYSTEM_MAINTENANCE = 'system_maintenance',
 }
 
 // Job priorities
@@ -38,7 +38,7 @@ export enum JobPriority {
   NORMAL = 5,
   HIGH = 10,
   CRITICAL = 20,
-  EMERGENCY = 50
+  EMERGENCY = 50,
 }
 
 // Job status
@@ -48,7 +48,7 @@ export enum JobStatus {
   COMPLETED = 'completed',
   FAILED = 'failed',
   DELAYED = 'delayed',
-  PAUSED = 'paused'
+  PAUSED = 'paused',
 }
 
 // Base job data interface
@@ -148,7 +148,8 @@ export class ProcessQueueManager extends EventEmitter {
   private queues: Map<JobType, Queue> = new Map();
   private workers: Map<JobType, Worker> = new Map();
   private queueEvents: Map<JobType, QueueEvents> = new Map();
-  private jobHandlers: Map<JobType, (job: Job) => Promise<JobResult>> = new Map();
+  private jobHandlers: Map<JobType, (job: Job) => Promise<JobResult>> =
+    new Map();
   private metrics: Map<JobType, QueueMetrics> = new Map();
   private metricsInterval?: NodeJS.Timeout;
   private isInitialized = false;
@@ -188,7 +189,10 @@ export class ProcessQueueManager extends EventEmitter {
       structuredLogger.info('Process queue system initialized');
       this.emit('initialized');
     } catch (error) {
-      structuredLogger.error('Failed to initialize queue system', error as Error);
+      structuredLogger.error(
+        'Failed to initialize queue system',
+        error as Error
+      );
       throw error;
     }
   }
@@ -220,7 +224,7 @@ export class ProcessQueueManager extends EventEmitter {
     };
 
     const job = await queue.add(jobType, data, jobOptions);
-    
+
     structuredLogger.info('Job added to queue', {
       jobId: job.id,
       jobType,
@@ -260,7 +264,10 @@ export class ProcessQueueManager extends EventEmitter {
       this.emit('jobCancelled', { jobType, jobId });
       return true;
     } catch (error) {
-      structuredLogger.error('Failed to cancel job', error as Error, { jobId, jobType });
+      structuredLogger.error('Failed to cancel job', error as Error, {
+        jobId,
+        jobType,
+      });
       return false;
     }
   }
@@ -280,7 +287,10 @@ export class ProcessQueueManager extends EventEmitter {
       this.emit('jobRetried', { jobType, jobId });
       return true;
     } catch (error) {
-      structuredLogger.error('Failed to retry job', error as Error, { jobId, jobType });
+      structuredLogger.error('Failed to retry job', error as Error, {
+        jobId,
+        jobType,
+      });
       return false;
     }
   }
@@ -312,7 +322,9 @@ export class ProcessQueueManager extends EventEmitter {
   /**
    * Get queue metrics
    */
-  async getQueueMetrics(jobType?: JobType): Promise<Map<JobType, QueueMetrics> | QueueMetrics | null> {
+  async getQueueMetrics(
+    jobType?: JobType
+  ): Promise<Map<JobType, QueueMetrics> | QueueMetrics | null> {
     if (jobType) {
       return this.metrics.get(jobType) || null;
     }
@@ -397,7 +409,12 @@ export class ProcessQueueManager extends EventEmitter {
     }
 
     const cleaned = await queue.clean(grace, 100, status);
-    structuredLogger.info('Old jobs cleaned', { jobType, cleaned, status, grace });
+    structuredLogger.info('Old jobs cleaned', {
+      jobType,
+      cleaned,
+      status,
+      grace,
+    });
     return cleaned.length;
   }
 
@@ -434,15 +451,18 @@ export class ProcessQueueManager extends EventEmitter {
       totalJobs.completed += metrics.completed;
       totalJobs.failed += metrics.failed;
       totalJobs.delayed += metrics.delayed;
-      
+
       if (metrics.totalProcessed > 0) {
-        totalProcessingTime += metrics.averageProcessingTime * metrics.totalProcessed;
+        totalProcessingTime +=
+          metrics.averageProcessingTime * metrics.totalProcessed;
         processedJobs += metrics.totalProcessed;
       }
     }
 
-    const averageProcessingTime = processedJobs > 0 ? totalProcessingTime / processedJobs : 0;
-    const systemLoad = totalJobs.active / (totalJobs.active + totalJobs.waiting + 1);
+    const averageProcessingTime =
+      processedJobs > 0 ? totalProcessingTime / processedJobs : 0;
+    const systemLoad =
+      totalJobs.active / (totalJobs.active + totalJobs.waiting + 1);
 
     // Test Redis health
     let redisHealth = false;
@@ -484,7 +504,7 @@ export class ProcessQueueManager extends EventEmitter {
         try {
           const result = await handler(job);
           const duration = Date.now() - startTime;
-          
+
           structuredLogger.info('Job completed', {
             jobId: job.id,
             jobType,
@@ -528,24 +548,45 @@ export class ProcessQueueManager extends EventEmitter {
     structuredLogger.info('Queue and worker created', { jobType });
   }
 
-  private setupQueueEventListeners(queueEvents: QueueEvents, jobType: JobType): void {
+  private setupQueueEventListeners(
+    queueEvents: QueueEvents,
+    jobType: JobType
+  ): void {
     queueEvents.on('completed', (jobId, returnValue) => {
-      this.emit('jobStatusChanged', { jobType, jobId, status: JobStatus.COMPLETED, returnValue });
+      this.emit('jobStatusChanged', {
+        jobType,
+        jobId,
+        status: JobStatus.COMPLETED,
+        returnValue,
+      });
     });
 
     queueEvents.on('failed', (jobId, error) => {
-      this.emit('jobStatusChanged', { jobType, jobId, status: JobStatus.FAILED, error });
+      this.emit('jobStatusChanged', {
+        jobType,
+        jobId,
+        status: JobStatus.FAILED,
+        error,
+      });
     });
 
-    queueEvents.on('waiting', (jobId) => {
-      this.emit('jobStatusChanged', { jobType, jobId, status: JobStatus.WAITING });
+    queueEvents.on('waiting', jobId => {
+      this.emit('jobStatusChanged', {
+        jobType,
+        jobId,
+        status: JobStatus.WAITING,
+      });
     });
 
-    queueEvents.on('active', (jobId) => {
-      this.emit('jobStatusChanged', { jobType, jobId, status: JobStatus.ACTIVE });
+    queueEvents.on('active', jobId => {
+      this.emit('jobStatusChanged', {
+        jobType,
+        jobId,
+        status: JobStatus.ACTIVE,
+      });
     });
 
-    queueEvents.on('stalled', (jobId) => {
+    queueEvents.on('stalled', jobId => {
       structuredLogger.warn('Job stalled', { jobType, jobId });
       this.emit('jobStalled', { jobType, jobId });
     });
@@ -553,37 +594,46 @@ export class ProcessQueueManager extends EventEmitter {
 
   private setupJobHandlers(): void {
     // Process execution handler
-    this.jobHandlers.set(JobType.PROCESS_EXECUTION, async (job: Job<ProcessExecutionJobData>) => {
-      // This will be implemented when we integrate with the process manager
-      return {
-        success: true,
-        data: { message: 'Process execution placeholder' },
-        duration: 1000,
-        metadata: { jobType: JobType.PROCESS_EXECUTION },
-      };
-    });
+    this.jobHandlers.set(
+      JobType.PROCESS_EXECUTION,
+      async (job: Job<ProcessExecutionJobData>) => {
+        // This will be implemented when we integrate with the process manager
+        return {
+          success: true,
+          data: { message: 'Process execution placeholder' },
+          duration: 1000,
+          metadata: { jobType: JobType.PROCESS_EXECUTION },
+        };
+      }
+    );
 
     // Adapter operation handler
-    this.jobHandlers.set(JobType.ADAPTER_OPERATION, async (job: Job<AdapterOperationJobData>) => {
-      // This will be implemented when we integrate with the adapter system
-      return {
-        success: true,
-        data: { message: 'Adapter operation placeholder' },
-        duration: 2000,
-        metadata: { jobType: JobType.ADAPTER_OPERATION },
-      };
-    });
+    this.jobHandlers.set(
+      JobType.ADAPTER_OPERATION,
+      async (job: Job<AdapterOperationJobData>) => {
+        // This will be implemented when we integrate with the adapter system
+        return {
+          success: true,
+          data: { message: 'Adapter operation placeholder' },
+          duration: 2000,
+          metadata: { jobType: JobType.ADAPTER_OPERATION },
+        };
+      }
+    );
 
     // Git operation handler
-    this.jobHandlers.set(JobType.GIT_OPERATION, async (job: Job<GitOperationJobData>) => {
-      // This will be implemented when we integrate with git operations
-      return {
-        success: true,
-        data: { message: 'Git operation placeholder' },
-        duration: 3000,
-        metadata: { jobType: JobType.GIT_OPERATION },
-      };
-    });
+    this.jobHandlers.set(
+      JobType.GIT_OPERATION,
+      async (job: Job<GitOperationJobData>) => {
+        // This will be implemented when we integrate with git operations
+        return {
+          success: true,
+          data: { message: 'Git operation placeholder' },
+          duration: 3000,
+          metadata: { jobType: JobType.GIT_OPERATION },
+        };
+      }
+    );
 
     // Default handlers for other job types
     const defaultJobTypes = [
@@ -614,10 +664,16 @@ export class ProcessQueueManager extends EventEmitter {
           if (status) {
             // Calculate processing rate and average time (simplified)
             const currentMetrics = this.metrics.get(jobType);
-            const processingRate = currentMetrics ? currentMetrics.processingRate : 0;
-            const averageProcessingTime = currentMetrics ? currentMetrics.averageProcessingTime : 0;
-            const totalProcessed = (currentMetrics?.totalProcessed || 0) + status.completed;
-            const errorRate = totalProcessed > 0 ? status.failed / totalProcessed : 0;
+            const processingRate = currentMetrics
+              ? currentMetrics.processingRate
+              : 0;
+            const averageProcessingTime = currentMetrics
+              ? currentMetrics.averageProcessingTime
+              : 0;
+            const totalProcessed =
+              (currentMetrics?.totalProcessed || 0) + status.completed;
+            const errorRate =
+              totalProcessed > 0 ? status.failed / totalProcessed : 0;
 
             this.metrics.set(jobType, {
               waiting: status.waiting,
@@ -633,7 +689,9 @@ export class ProcessQueueManager extends EventEmitter {
             });
           }
         } catch (error) {
-          structuredLogger.error('Failed to collect metrics', error as Error, { jobType });
+          structuredLogger.error('Failed to collect metrics', error as Error, {
+            jobType,
+          });
         }
       }
     }, 30000); // Every 30 seconds
@@ -642,7 +700,7 @@ export class ProcessQueueManager extends EventEmitter {
   private setupGracefulShutdown(): void {
     const shutdown = async () => {
       structuredLogger.info('Shutting down queue system...');
-      
+
       if (this.metricsInterval) {
         clearInterval(this.metricsInterval);
       }

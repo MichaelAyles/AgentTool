@@ -1,9 +1,9 @@
 import { BaseAdapter } from '@vibecode/adapter-sdk';
-import type { 
-  CLICapabilities, 
-  ExecuteOptions, 
-  ProcessHandle, 
-  StreamChunk 
+import type {
+  CLICapabilities,
+  ExecuteOptions,
+  ProcessHandle,
+  StreamChunk,
 } from '@vibecode/shared';
 import { spawn } from 'node-pty';
 import { EventEmitter } from 'events';
@@ -36,14 +36,14 @@ export class GeminiCLIAdapter extends BaseAdapter {
         rows: 24,
       });
 
-      return new Promise((resolve) => {
+      return new Promise(resolve => {
         let output = '';
-        
-        process.onData((data) => {
+
+        process.onData(data => {
           output += data;
         });
 
-        process.onExit((exitCode) => {
+        process.onExit(exitCode => {
           this.isAvailable = exitCode === 0 && output.includes('gemini');
           resolve(this.isAvailable);
         });
@@ -77,7 +77,7 @@ export class GeminiCLIAdapter extends BaseAdapter {
 
     // Prepare Gemini CLI command
     const geminiArgs = this.prepareGeminiCommand(command, options);
-    
+
     const ptyProcess = spawn('gemini', geminiArgs, {
       name: 'xterm-color',
       cols: options.cols || 80,
@@ -93,7 +93,7 @@ export class GeminiCLIAdapter extends BaseAdapter {
     });
 
     const processHandle = new GeminiProcessHandle(ptyProcess, timeout);
-    
+
     // Handle timeout
     if (timeout > 0) {
       setTimeout(() => {
@@ -106,7 +106,10 @@ export class GeminiCLIAdapter extends BaseAdapter {
     return processHandle;
   }
 
-  private prepareGeminiCommand(command: string, options: ExecuteOptions): string[] {
+  private prepareGeminiCommand(
+    command: string,
+    options: ExecuteOptions
+  ): string[] {
     // Parse the command to determine if it's a direct prompt or a complex request
     const args: string[] = [];
 
@@ -127,7 +130,12 @@ export class GeminiCLIAdapter extends BaseAdapter {
     // Add the main command/prompt
     if (command.startsWith('gemini ')) {
       // Remove 'gemini ' prefix if present
-      args.push(...command.slice(7).split(' ').filter(arg => arg.length > 0));
+      args.push(
+        ...command
+          .slice(7)
+          .split(' ')
+          .filter(arg => arg.length > 0)
+      );
     } else {
       // Treat as a direct prompt
       args.push('--prompt', command);
@@ -188,8 +196,13 @@ Set these environment variables for optimal performance:
     }
 
     // Check for required environment variables
-    if (!process.env.GOOGLE_APPLICATION_CREDENTIALS && !process.env.GOOGLE_CLOUD_PROJECT) {
-      errors.push('Google Cloud credentials not configured. Set GOOGLE_APPLICATION_CREDENTIALS or ensure default credentials are available');
+    if (
+      !process.env.GOOGLE_APPLICATION_CREDENTIALS &&
+      !process.env.GOOGLE_CLOUD_PROJECT
+    ) {
+      errors.push(
+        'Google Cloud credentials not configured. Set GOOGLE_APPLICATION_CREDENTIALS or ensure default credentials are available'
+      );
     }
 
     // Test basic functionality
@@ -200,10 +213,10 @@ Set these environment variables for optimal performance:
         rows: 24,
       });
 
-      const helpAvailable = await new Promise<boolean>((resolve) => {
+      const helpAvailable = await new Promise<boolean>(resolve => {
         let hasOutput = false;
-        
-        testProcess.onData((data) => {
+
+        testProcess.onData(data => {
           if (data.includes('usage') || data.includes('help')) {
             hasOutput = true;
           }
@@ -220,7 +233,9 @@ Set these environment variables for optimal performance:
       });
 
       if (!helpAvailable) {
-        errors.push('Gemini CLI help command failed - installation may be corrupted');
+        errors.push(
+          'Gemini CLI help command failed - installation may be corrupted'
+        );
       }
     } catch (error) {
       errors.push(`Failed to test Gemini CLI: ${error.message}`);
@@ -256,7 +271,7 @@ class GeminiProcessHandle extends EventEmitter implements ProcessHandle {
         data,
         timestamp: Date.now(),
       };
-      
+
       this.outputBuffer.push(chunk);
       this.outputHandlers.forEach(handler => handler(chunk));
       this.emit('data', chunk);
@@ -266,14 +281,14 @@ class GeminiProcessHandle extends EventEmitter implements ProcessHandle {
       this.exitCode = exitCode;
       this.completed = true;
       this.emit('exit', exitCode);
-      
+
       // Final chunk to indicate completion
       const finalChunk: StreamChunk = {
         type: 'system',
         data: `Process exited with code ${exitCode}`,
         timestamp: Date.now(),
       };
-      
+
       this.outputBuffer.push(finalChunk);
       this.outputHandlers.forEach(handler => handler(finalChunk));
     });
@@ -291,7 +306,8 @@ class GeminiProcessHandle extends EventEmitter implements ProcessHandle {
     }
 
     // Set up real-time streaming
-    let resolveNext: ((value: IteratorResult<StreamChunk>) => void) | null = null;
+    let resolveNext: ((value: IteratorResult<StreamChunk>) => void) | null =
+      null;
     const chunks: StreamChunk[] = [];
 
     const handler = (chunk: StreamChunk) => {
@@ -311,13 +327,13 @@ class GeminiProcessHandle extends EventEmitter implements ProcessHandle {
           yield chunks.shift()!;
         } else {
           // Wait for next chunk
-          await new Promise<void>((resolve) => {
+          await new Promise<void>(resolve => {
             if (this.completed) {
               resolve();
               return;
             }
-            
-            resolveNext = (result) => {
+
+            resolveNext = result => {
               if (!result.done) {
                 resolve();
               }
@@ -354,7 +370,7 @@ class GeminiProcessHandle extends EventEmitter implements ProcessHandle {
   kill(signal: string = 'SIGTERM'): void {
     if (!this.completed && this.ptyProcess) {
       this.ptyProcess.kill(signal);
-      
+
       // Force completion after a delay if process doesn't exit gracefully
       setTimeout(() => {
         if (!this.completed) {

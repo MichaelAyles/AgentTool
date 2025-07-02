@@ -21,7 +21,7 @@ export function useTerminal(options: UseTerminalOptions) {
     connected: false,
     error: null,
   });
-  
+
   const socketRef = useRef<Socket | null>(null);
   const dataHandlerRef = useRef<((data: string) => void) | null>(null);
 
@@ -53,24 +53,24 @@ export function useTerminal(options: UseTerminalOptions) {
       options.onDisconnect?.();
     });
 
-    socket.on('terminal:created', (data) => {
+    socket.on('terminal:created', data => {
       console.log('Terminal session created:', data.sessionId);
       setSession(prev => ({ ...prev, id: data.sessionId }));
     });
 
-    socket.on('terminal:data', (data) => {
+    socket.on('terminal:data', data => {
       if (dataHandlerRef.current) {
         dataHandlerRef.current(data.data);
       }
     });
 
-    socket.on('terminal:error', (data) => {
+    socket.on('terminal:error', data => {
       console.error('Terminal error:', data.error);
       setSession(prev => ({ ...prev, error: data.error }));
       options.onError?.(data.error);
     });
 
-    socket.on('terminal:exit', (data) => {
+    socket.on('terminal:exit', data => {
       console.log('Terminal session ended:', data.exitCode);
       setSession(prev => ({ ...prev, id: null }));
     });

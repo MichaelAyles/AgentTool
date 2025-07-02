@@ -1,17 +1,17 @@
 // Mock database implementation - replace with real sqlite3 later
 import { join } from 'path';
 import type { Project, Session, Command, User } from '@vibecode/shared';
-import type { 
-  User as AuthUser, 
-  Session as AuthSession, 
-  AuthProvider 
+import type {
+  User as AuthUser,
+  Session as AuthSession,
+  AuthProvider,
 } from '../auth/types.js';
 
 export class DatabaseManager {
   private projects: Map<string, Project> = new Map();
   private sessions: Map<string, Session> = new Map();
   private users: Map<string, User> = new Map();
-  
+
   // Auth-specific storage
   private authUsers: Map<string, AuthUser> = new Map();
   private authSessions: Map<string, AuthSession> = new Map();
@@ -39,7 +39,9 @@ export class DatabaseManager {
   }
 
   getProjectsByUserId(userId: string): Project[] {
-    return Array.from(this.projects.values()).filter(p => (p as any).userId === userId);
+    return Array.from(this.projects.values()).filter(
+      p => (p as any).userId === userId
+    );
   }
 
   updateProject(id: string, updates: Partial<Project>): boolean {
@@ -65,7 +67,9 @@ export class DatabaseManager {
   }
 
   getSessionsByProjectId(projectId: string): Session[] {
-    return Array.from(this.sessions.values()).filter(s => s.projectId === projectId);
+    return Array.from(this.sessions.values()).filter(
+      s => s.projectId === projectId
+    );
   }
 
   updateSession(id: string, updates: Partial<Session>): boolean {
@@ -108,10 +112,15 @@ export class DatabaseManager {
   }
 
   getUserByUsername(username: string): AuthUser | undefined {
-    return Array.from(this.authUsers.values()).find(u => u.username === username);
+    return Array.from(this.authUsers.values()).find(
+      u => u.username === username
+    );
   }
 
-  getUserByProviderId(provider: string, providerId: string): AuthUser | undefined {
+  getUserByProviderId(
+    provider: string,
+    providerId: string
+  ): AuthUser | undefined {
     const key = `${provider}:${providerId}`;
     const userId = this.providerMappings.get(key);
     return userId ? this.authUsers.get(userId) : undefined;
@@ -129,7 +138,7 @@ export class DatabaseManager {
     if (user) {
       const updatedProviders = [...user.providers, provider];
       this.authUsers.set(userId, { ...user, providers: updatedProviders });
-      
+
       // Add to provider mapping
       const key = `${provider.provider}:${provider.providerId}`;
       this.providerMappings.set(key, userId);
@@ -159,7 +168,10 @@ export class DatabaseManager {
   updateUserSettings(userId: string, settings: any): void {
     const user = this.authUsers.get(userId);
     if (user) {
-      this.authUsers.set(userId, { ...user, settings: { ...user.settings, ...settings } });
+      this.authUsers.set(userId, {
+        ...user,
+        settings: { ...user.settings, ...settings },
+      });
     }
   }
 
@@ -175,7 +187,10 @@ export class DatabaseManager {
   updateSessionActivity(sessionId: string): void {
     const session = this.authSessions.get(sessionId);
     if (session) {
-      this.authSessions.set(sessionId, { ...session, lastActivity: new Date() });
+      this.authSessions.set(sessionId, {
+        ...session,
+        lastActivity: new Date(),
+      });
     }
   }
 
@@ -185,13 +200,13 @@ export class DatabaseManager {
 
   revokeAllUserSessions(userId: string): void {
     const sessionsToDelete: string[] = [];
-    
+
     for (const [sessionId, session] of this.authSessions.entries()) {
       if (session.userId === userId) {
         sessionsToDelete.push(sessionId);
       }
     }
-    
+
     sessionsToDelete.forEach(sessionId => this.authSessions.delete(sessionId));
   }
 

@@ -1,4 +1,9 @@
-import { SimpleGit, StatusResult, FileStatusResult, DiffResult } from 'simple-git';
+import {
+  SimpleGit,
+  StatusResult,
+  FileStatusResult,
+  DiffResult,
+} from 'simple-git';
 import { promises as fs } from 'fs';
 import { join, relative, dirname } from 'path';
 import { structuredLogger } from '../middleware/logging.js';
@@ -67,7 +72,7 @@ export enum GitFileStatus {
   UNTRACKED = 'untracked',
   IGNORED = 'ignored',
   CONFLICTED = 'conflicted',
-  UNKNOWN = 'unknown'
+  UNKNOWN = 'unknown',
 }
 
 // Stash information
@@ -144,21 +149,15 @@ export class GitStatusVisualizer {
       }
 
       // Get all git information in parallel for performance
-      const [
-        status,
-        branches,
-        remotes,
-        stashes,
-        lastCommit,
-        gitDir
-      ] = await Promise.all([
-        this.git.status(),
-        this.git.branch(['-a']),
-        this.git.getRemotes(true),
-        this.getStashes(),
-        this.getLastCommit(),
-        this.git.revparse(['--git-dir'])
-      ]);
+      const [status, branches, remotes, stashes, lastCommit, gitDir] =
+        await Promise.all([
+          this.git.status(),
+          this.git.branch(['-a']),
+          this.git.getRemotes(true),
+          this.getStashes(),
+          this.getLastCommit(),
+          this.git.revparse(['--git-dir']),
+        ]);
 
       // Build comprehensive status
       const visualization: GitStatusVisualization = {
@@ -206,9 +205,13 @@ export class GitStatusVisualizer {
 
       return visualization;
     } catch (error) {
-      structuredLogger.error('Failed to generate git status visualization', error as Error, {
-        projectPath: this.projectPath,
-      });
+      structuredLogger.error(
+        'Failed to generate git status visualization',
+        error as Error,
+        {
+          projectPath: this.projectPath,
+        }
+      );
       throw error;
     }
   }
@@ -219,7 +222,7 @@ export class GitStatusVisualizer {
   async buildChangeTree(): Promise<GitTreeNode> {
     const status = await this.git.status();
     const changes = await this.buildFileChanges(status);
-    
+
     const root: GitTreeNode = {
       name: this.getRepositoryName(),
       path: '',
@@ -229,7 +232,8 @@ export class GitStatusVisualizer {
         totalChanges: changes.length,
         staged: changes.filter(c => c.staged).length,
         unstaged: changes.filter(c => c.unstaged).length,
-        untracked: changes.filter(c => c.status === GitFileStatus.UNTRACKED).length,
+        untracked: changes.filter(c => c.status === GitFileStatus.UNTRACKED)
+          .length,
       },
     };
 
@@ -247,7 +251,10 @@ export class GitStatusVisualizer {
   /**
    * Get detailed diff information for a file
    */
-  async getFileDiff(filePath: string, staged: boolean = false): Promise<{
+  async getFileDiff(
+    filePath: string,
+    staged: boolean = false
+  ): Promise<{
     diff: string;
     stats: {
       insertions: number;
@@ -258,7 +265,7 @@ export class GitStatusVisualizer {
     try {
       const diffArgs = staged ? ['--cached', filePath] : [filePath];
       const diff = await this.git.diff(diffArgs);
-      
+
       // Parse diff stats
       const diffStat = await this.git.diffSummary(diffArgs);
       const fileStat = diffStat.files.find(f => f.file === filePath);
@@ -272,7 +279,9 @@ export class GitStatusVisualizer {
         },
       };
     } catch (error) {
-      structuredLogger.error('Failed to get file diff', error as Error, { filePath });
+      structuredLogger.error('Failed to get file diff', error as Error, {
+        filePath,
+      });
       throw error;
     }
   }
@@ -280,13 +289,15 @@ export class GitStatusVisualizer {
   /**
    * Get commit history with file changes
    */
-  async getCommitHistory(options: {
-    maxCount?: number;
-    since?: string;
-    until?: string;
-    author?: string;
-    path?: string;
-  } = {}): Promise<GitCommitInfo[]> {
+  async getCommitHistory(
+    options: {
+      maxCount?: number;
+      since?: string;
+      until?: string;
+      author?: string;
+      path?: string;
+    } = {}
+  ): Promise<GitCommitInfo[]> {
     try {
       const logOptions: any = {
         maxCount: options.maxCount || 20,
@@ -306,13 +317,16 @@ export class GitStatusVisualizer {
       if (options.author) logOptions.author = options.author;
 
       const log = await this.git.log(logOptions);
-      
+
       // Get detailed stats for each commit
       const commits: GitCommitInfo[] = [];
       for (const commit of log.all) {
         try {
-          const diffStat = await this.git.diffSummary([`${commit.hash}~1`, commit.hash]);
-          
+          const diffStat = await this.git.diffSummary([
+            `${commit.hash}~1`,
+            commit.hash,
+          ]);
+
           commits.push({
             hash: commit.hash,
             shortHash: commit.hash.substring(0, 7),
@@ -356,15 +370,19 @@ export class GitStatusVisualizer {
   }
 
   private getTotalChanges(status: StatusResult): number {
-    return status.staged.length + 
-           status.modified.length + 
-           status.not_added.length + 
-           status.deleted.length + 
-           status.renamed.length + 
-           status.conflicted.length;
+    return (
+      status.staged.length +
+      status.modified.length +
+      status.not_added.length +
+      status.deleted.length +
+      status.renamed.length +
+      status.conflicted.length
+    );
   }
 
-  private async buildFileChanges(status: StatusResult): Promise<GitFileChange[]> {
+  private async buildFileChanges(
+    status: StatusResult
+  ): Promise<GitFileChange[]> {
     const changes: GitFileChange[] = [];
 
     // Process all file states
@@ -382,18 +400,26 @@ export class GitStatusVisualizer {
         const change = await this.buildFileChange(filePath, status);
         changes.push(change);
       } catch (error) {
-        structuredLogger.warn('Failed to build file change info', { filePath, error: (error as Error).message });
+        structuredLogger.warn('Failed to build file change info', {
+          filePath,
+          error: (error as Error).message,
+        });
       }
     }
 
     return changes.sort((a, b) => a.path.localeCompare(b.path));
   }
 
-  private async buildFileChange(filePath: string, status: StatusResult): Promise<GitFileChange> {
+  private async buildFileChange(
+    filePath: string,
+    status: StatusResult
+  ): Promise<GitFileChange> {
     const fullPath = join(this.projectPath, filePath);
     const directory = dirname(filePath);
     const filename = filePath.split('/').pop() || '';
-    const extension = filename.includes('.') ? filename.split('.').pop() || '' : '';
+    const extension = filename.includes('.')
+      ? filename.split('.').pop() || ''
+      : '';
 
     // Determine file status
     let fileStatus = GitFileStatus.UNKNOWN;
@@ -442,7 +468,7 @@ export class GitStatusVisualizer {
     // Get file stats if file exists
     let size: number | undefined;
     let lastModified: Date | undefined;
-    
+
     try {
       if (fileStatus !== GitFileStatus.DELETED) {
         const stats = await fs.stat(fullPath);
@@ -509,14 +535,17 @@ export class GitStatusVisualizer {
       const log = await this.git.log({ maxCount: 1 });
       if (log.latest) {
         const commit = log.latest;
-        
+
         // Get diff stats for the commit
         let filesChanged = 0;
         let insertions = 0;
         let deletions = 0;
-        
+
         try {
-          const diffStat = await this.git.diffSummary([`${commit.hash}~1`, commit.hash]);
+          const diffStat = await this.git.diffSummary([
+            `${commit.hash}~1`,
+            commit.hash,
+          ]);
           filesChanged = diffStat.files.length;
           insertions = diffStat.insertions;
           deletions = diffStat.deletions;
@@ -551,7 +580,7 @@ export class GitStatusVisualizer {
     for (let i = 0; i < pathParts.length - 1; i++) {
       const part = pathParts[i];
       let child = current.children?.find(c => c.name === part);
-      
+
       if (!child) {
         child = {
           name: part,
@@ -559,18 +588,18 @@ export class GitStatusVisualizer {
           type: 'directory',
           children: [],
         };
-        
+
         if (!current.children) current.children = [];
         current.children.push(child);
       }
-      
+
       current = child;
     }
 
     // Add the file
     const fileName = pathParts[pathParts.length - 1];
     if (!current.children) current.children = [];
-    
+
     current.children.push({
       name: fileName,
       path: change.path,
@@ -591,7 +620,9 @@ export class GitStatusVisualizer {
           totalChanges += child.changes.length;
           staged += child.changes.filter(c => c.staged).length;
           unstaged += child.changes.filter(c => c.unstaged).length;
-          untracked += child.changes.filter(c => c.status === GitFileStatus.UNTRACKED).length;
+          untracked += child.changes.filter(
+            c => c.status === GitFileStatus.UNTRACKED
+          ).length;
         } else if (child.type === 'directory') {
           this.calculateDirectorySummaries(child);
           if (child.summary) {
