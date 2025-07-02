@@ -10,6 +10,7 @@ class VibeApp {
         this.currentUuid = this.generateUUID();
         this.connectionStateDebounceTimer = null;
         this.lastConnectionState = null;
+        this.wasManuallyDisconnected = false;
         
         this.initializeElements();
         this.attachEventListeners();
@@ -136,12 +137,25 @@ class VibeApp {
                 signal: AbortSignal.timeout(3000)
             });
             if (response.ok) {
-                this.setConnectionState('available');
+                // Only change to available if not manually disconnected
+                if (!this.wasManuallyDisconnected) {
+                    this.setConnectionState('available');
+                } else if (this.lastConnectionState === 'disconnected') {
+                    // If manually disconnected, change back to available when connector is found
+                    this.wasManuallyDisconnected = false;
+                    this.setConnectionState('available');
+                }
             } else {
-                this.setConnectionState('no-connection');
+                // If no connector found, only set to 'no-connection' if not already disconnected
+                if (!this.wasManuallyDisconnected && this.lastConnectionState !== 'disconnected') {
+                    this.setConnectionState('no-connection');
+                }
             }
         } catch (error) {
-            this.setConnectionState('no-connection');
+            // If error checking, only set to 'no-connection' if not already disconnected
+            if (!this.wasManuallyDisconnected && this.lastConnectionState !== 'disconnected') {
+                this.setConnectionState('no-connection');
+            }
             // Retry check in 5 seconds
             setTimeout(() => this.checkConnectorAvailability(), 5000);
         }
@@ -173,32 +187,44 @@ class VibeApp {
             
             this.wsConnection.onclose = (event) => {
                 console.log('WebSocket disconnected:', event.code, event.reason);
-                // Just set state to disconnected without showing error messages
-                this.setConnectionState('disconnected');
-                // Reset reconnection attempts and check availability after a delay
+                // Only set to disconnected if not already manually disconnected
+                if (!this.wasManuallyDisconnected) {
+                    this.setConnectionState('disconnected');
+                    this.wasManuallyDisconnected = true; // Treat connection loss as disconnected state
+                }
+                // Check availability after a delay
                 setTimeout(() => this.checkConnectorAvailability(), 3000);
             };
             
             this.wsConnection.onerror = (error) => {
                 console.error('WebSocket error:', error);
-                // Just set state without showing error messages
-                this.setConnectionState('disconnected');
+                // Only set to disconnected if not already manually disconnected
+                if (!this.wasManuallyDisconnected) {
+                    this.setConnectionState('disconnected');
+                    this.wasManuallyDisconnected = true;
+                }
             };
             
             // Connection timeout - increased to reduce premature timeouts
             setTimeout(() => {
                 if (this.wsConnection.readyState === WebSocket.CONNECTING) {
                     this.wsConnection.close();
-                    // Just set state without showing error messages
-                    this.setConnectionState('disconnected');
+                    // Only set to disconnected if not already manually disconnected
+                    if (!this.wasManuallyDisconnected) {
+                        this.setConnectionState('disconnected');
+                        this.wasManuallyDisconnected = true;
+                    }
                     setTimeout(() => this.checkConnectorAvailability(), 2000);
                 }
             }, 15000);
             
         } catch (error) {
             console.error('Failed to create WebSocket connection:', error);
-            // Just set state without showing error messages
-            this.setConnectionState('disconnected');
+            // Only set to disconnected if not already manually disconnected
+            if (!this.wasManuallyDisconnected) {
+                this.setConnectionState('disconnected');
+                this.wasManuallyDisconnected = true;
+            }
             setTimeout(() => this.checkConnectorAvailability(), 2000);
         }
     }
@@ -207,6 +233,7 @@ class VibeApp {
         this.sessionId = uuid;
         this.connectionStartTime = Date.now();
         this.reconnectAttempts = 0;
+        this.wasManuallyDisconnected = false; // Reset manual disconnect flag
         
         this.setConnectionState('connected');
         this.sessionIdSpan.textContent = uuid.substring(0, 8) + '...';
@@ -222,7 +249,11 @@ class VibeApp {
     
     handleConnectionError(message) {
         console.log('Connection error:', message); // Log for debugging but don't show to user
-        this.setConnectionState('disconnected');
+        
+        if (!this.wasManuallyDisconnected) {
+            this.setConnectionState('disconnected');
+            this.wasManuallyDisconnected = true;
+        }
         
         if (this.reconnectAttempts < this.maxReconnectAttempts) {
             this.reconnectAttempts++;
@@ -243,6 +274,7 @@ class VibeApp {
             this.wsConnection.close();
         }
         
+        this.wasManuallyDisconnected = true;
         this.setConnectionState('disconnected');
         this.terminalSection.classList.add('hidden');
         
@@ -255,7 +287,7 @@ class VibeApp {
         this.connectionStartTime = null;
         this.reconnectAttempts = 0;
         
-        // After disconnect, check if connector is still available
+        // Continue checking for availability to allow reconnection
         setTimeout(() => this.checkConnectorAvailability(), 2000);
     }
     
@@ -460,8 +492,11 @@ class VibeApp {
                     
                 case 'auth_error':
                     console.error('Authentication failed:', message.data);
-                    // Just set state without showing error messages
-                    this.setConnectionState('disconnected');
+                    // Only set to disconnected if not already manually disconnected
+                    if (!this.wasManuallyDisconnected) {
+                        this.setConnectionState('disconnected');
+                        this.wasManuallyDisconnected = true;
+                    }
                     setTimeout(() => this.checkConnectorAvailability(), 2000);
                     break;
                     

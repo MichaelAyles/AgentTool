@@ -316,11 +316,13 @@ body {
     justify-content: center;
 }
 
-/* No Connection Found - Gray */
+/* No Connection Found - Gray Button */
 .connection-btn.no-connection {
-    background: var(--bg-secondary);
-    color: var(--text-tertiary);
+    background: #6b7280;
+    color: #f9fafb;
     cursor: not-allowed;
+    border: 1px solid #4b5563;
+    opacity: 0.8;
 }
 
 /* Connect to Terminal - Blue */
