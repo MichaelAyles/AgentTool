@@ -1,116 +1,129 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Backend Required - Vibe Code</title>
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background: #f8fafc;
-        }
-        .container {
-            background: white;
-            padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        .icon {
-            font-size: 48px;
-            margin-bottom: 20px;
-        }
-        h1 {
-            color: #1e40af;
-            margin-bottom: 16px;
-        }
-        .code {
-            background: #1e293b;
-            color: #10b981;
-            padding: 16px;
-            border-radius: 8px;
-            font-family: 'Monaco', 'Menlo', monospace;
-            margin: 20px 0;
-        }
-        .button {
-            display: inline-block;
-            background: #3b82f6;
-            color: white;
-            padding: 12px 24px;
-            text-decoration: none;
-            border-radius: 6px;
-            margin: 10px 10px 10px 0;
-            transition: background 0.2s;
-        }
-        .button:hover {
-            background: #2563eb;
-        }
-        .button.secondary {
-            background: #6b7280;
-        }
-        .button.secondary:hover {
-            background: #4b5563;
-        }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        background: #f8fafc;
+      }
+      .container {
+        background: white;
+        padding: 40px;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+      .icon {
+        font-size: 48px;
+        margin-bottom: 20px;
+      }
+      h1 {
+        color: #1e40af;
+        margin-bottom: 16px;
+      }
+      .code {
+        background: #1e293b;
+        color: #10b981;
+        padding: 16px;
+        border-radius: 8px;
+        font-family: 'Monaco', 'Menlo', monospace;
+        margin: 20px 0;
+      }
+      .button {
+        display: inline-block;
+        background: #3b82f6;
+        color: white;
+        padding: 12px 24px;
+        text-decoration: none;
+        border-radius: 6px;
+        margin: 10px 10px 10px 0;
+        transition: background 0.2s;
+      }
+      .button:hover {
+        background: #2563eb;
+      }
+      .button.secondary {
+        background: #6b7280;
+      }
+      .button.secondary:hover {
+        background: #4b5563;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <div class="icon">🔧</div>
-        <h1>Backend Required</h1>
-        <p>
-            This Vibe Code instance is running on Vercel as a static frontend. 
-            To use the full functionality, you need to set up a backend.
-        </p>
-        
-        <h2>Quick Setup Options:</h2>
-        
-        <h3>🖥️ Desktop Connector (Recommended)</h3>
-        <p>Install the desktop connector to run everything locally:</p>
-        <div class="code">curl -fsSL https://vibecode.com/install-desktop.sh | bash</div>
-        
-        <h3>☁️ Cloud Backend</h3>
-        <p>Deploy your own backend instance or use a hosted solution.</p>
-        
-        <div style="margin-top: 30px;">
-            <a href="/" class="button">← Back to App</a>
-            <a href="/setup" class="button secondary">Setup Guide</a>
-            <a href="https://docs.vibecode.com" class="button secondary" target="_blank">Documentation</a>
+      <div class="icon">🔧</div>
+      <h1>Backend Required</h1>
+      <p>
+        This Vibe Code instance is running on Vercel as a static frontend. To
+        use the full functionality, you need to set up a backend.
+      </p>
+
+      <h2>Quick Setup Options:</h2>
+
+      <h3>🖥️ Desktop Connector (Recommended)</h3>
+      <p>Install the desktop connector to run everything locally:</p>
+      <div class="code">
+        curl -fsSL https://vibecode.com/install-desktop.sh | bash
+      </div>
+
+      <h3>☁️ Cloud Backend</h3>
+      <p>Deploy your own backend instance or use a hosted solution.</p>
+
+      <div style="margin-top: 30px">
+        <a href="/" class="button">← Back to App</a>
+        <a href="/setup" class="button secondary">Setup Guide</a>
+        <a
+          href="https://docs.vibecode.com"
+          class="button secondary"
+          target="_blank"
+          >Documentation</a
+        >
+      </div>
+
+      <hr style="margin: 30px 0; border: none; border-top: 1px solid #e5e7eb" />
+
+      <h3>For Developers:</h3>
+      <p>
+        The frontend automatically detects available backends. When a desktop
+        connector is running locally (http://localhost:3000), it will use that.
+        Otherwise, it falls back to this message.
+      </p>
+
+      <details style="margin-top: 20px">
+        <summary style="cursor: pointer; font-weight: bold">
+          Technical Details
+        </summary>
+        <div style="margin-top: 10px; color: #6b7280; font-size: 14px">
+          <p><strong>Request:</strong> <code id="current-url"></code></p>
+          <p><strong>Method:</strong> <span id="request-method">GET</span></p>
+          <p><strong>Expected:</strong> Backend API running at /api/v1/*</p>
+          <p>
+            <strong>Solution:</strong> Install desktop connector or configure
+            cloud backend
+          </p>
         </div>
-        
-        <hr style="margin: 30px 0; border: none; border-top: 1px solid #e5e7eb;">
-        
-        <h3>For Developers:</h3>
-        <p>
-            The frontend automatically detects available backends. When a desktop connector 
-            is running locally (http://localhost:3000), it will use that. Otherwise, it 
-            falls back to this message.
-        </p>
-        
-        <details style="margin-top: 20px;">
-            <summary style="cursor: pointer; font-weight: bold;">Technical Details</summary>
-            <div style="margin-top: 10px; color: #6b7280; font-size: 14px;">
-                <p><strong>Request:</strong> <code id="current-url"></code></p>
-                <p><strong>Method:</strong> <span id="request-method">GET</span></p>
-                <p><strong>Expected:</strong> Backend API running at /api/v1/*</p>
-                <p><strong>Solution:</strong> Install desktop connector or configure cloud backend</p>
-            </div>
-        </details>
+      </details>
     </div>
-    
+
     <script>
-        document.getElementById('current-url').textContent = window.location.href;
-        
-        // Try to detect if desktop connector is available
-        fetch('http://localhost:3000/api/v1/health')
-            .then(response => response.json())
-            .then(data => {
-                if (data.type === 'desktop-connector') {
-                    const container = document.querySelector('.container');
-                    container.innerHTML = `
+      document.getElementById('current-url').textContent = window.location.href;
+
+      // Try to detect if desktop connector is available
+      fetch('http://localhost:3000/api/v1/health')
+        .then(response => response.json())
+        .then(data => {
+          if (data.type === 'desktop-connector') {
+            const container = document.querySelector('.container');
+            container.innerHTML = `
                         <div class="icon">✅</div>
                         <h1>Desktop Connector Detected</h1>
                         <p>A desktop connector is running locally but the frontend is trying to use the cloud API.</p>
@@ -119,11 +132,11 @@
                             <a href="/setup" class="button secondary">Configuration</a>
                         </div>
                     `;
-                }
-            })
-            .catch(() => {
-                // Desktop connector not available - keep original message
-            });
+          }
+        })
+        .catch(() => {
+          // Desktop connector not available - keep original message
+        });
     </script>
-</body>
+  </body>
 </html>
