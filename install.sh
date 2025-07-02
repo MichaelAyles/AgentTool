@@ -88,7 +88,7 @@ fi
 cd "$CONNECTOR_DIR/connector"
 
 echo "📦 Installing dependencies..."
-npm install --production
+npm install
 
 echo "🔨 Building connector..."
 npm run build
