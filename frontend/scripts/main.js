@@ -301,21 +301,46 @@ class VibeApp {
         
         const terminalInput = document.getElementById('terminal-input');
         
-        terminalInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                const command = terminalInput.value;
-                terminalInput.value = '';
+        // Handle all keydown events for better terminal emulation
+        terminalInput.addEventListener('keydown', (e) => {
+            if (this.wsConnection && this.wsConnection.readyState === WebSocket.OPEN) {
+                let keyData = '';
                 
-                // Display command in terminal
-                this.appendToTerminal(`$ ${command}\n`);
+                // Handle special keys
+                if (e.key === 'Enter') {
+                    keyData = '\r';
+                    terminalInput.value = '';
+                } else if (e.key === 'Backspace') {
+                    keyData = '\u007f';
+                } else if (e.key === 'Tab') {
+                    e.preventDefault();
+                    keyData = '\t';
+                } else if (e.ctrlKey && e.key === 'c') {
+                    e.preventDefault();
+                    keyData = '\u0003';
+                } else if (e.ctrlKey && e.key === 'd') {
+                    e.preventDefault();
+                    keyData = '\u0004';
+                } else if (e.key.length === 1) {
+                    // Regular printable characters
+                    keyData = e.key;
+                }
                 
-                // Send command to desktop connector
-                if (this.wsConnection && this.wsConnection.readyState === WebSocket.OPEN) {
+                // Send key data to terminal
+                if (keyData) {
                     this.sendMessage({
                         type: 'terminal_input',
-                        data: command + '\r',
+                        data: keyData,
                         timestamp: Date.now()
                     });
+                }
+                
+                // For regular characters, let the input field handle them
+                if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+                    // Don't prevent default for regular typing
+                } else if (e.key === 'Backspace' || e.key === 'Enter' || e.key === 'Tab') {
+                    // Prevent default for special keys we handle
+                    e.preventDefault();
                 }
             }
         });
@@ -324,9 +349,10 @@ class VibeApp {
         terminalInput.focus();
         
         // Initial terminal message
-        this.appendToTerminal(`Welcome to Vibe Coding Terminal\n`);
+        this.appendToTerminal(`🚀 Vibe Coding Terminal Connected\n`);
         this.appendToTerminal(`Session: ${this.sessionId}\n`);
-        this.appendToTerminal(`Type commands and press Enter to execute\n\n`);
+        this.appendToTerminal(`Platform: ${navigator.platform}\n`);
+        this.appendToTerminal(`Waiting for shell to initialize...\n\n`);
     }
     
     handleWebSocketMessage(event) {
@@ -346,6 +372,11 @@ class VibeApp {
                     
                 case 'terminal_output':
                     this.appendToTerminal(message.data);
+                    // Clear the input field if we receive output (shell is echoing)
+                    const terminalInput = document.getElementById('terminal-input');
+                    if (terminalInput && message.data.includes('\n')) {
+                        terminalInput.value = '';
+                    }
                     break;
                     
                 case 'terminal_ready':
