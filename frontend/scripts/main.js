@@ -173,30 +173,33 @@ class VibeApp {
             
             this.wsConnection.onclose = (event) => {
                 console.log('WebSocket disconnected:', event.code, event.reason);
-                // Only show connection closed if it wasn't an intentional disconnect
-                if (event.code !== 1000 && this.lastConnectionState !== 'disconnected') {
-                    this.handleConnectionError('Connection closed');
-                } else {
-                    this.setConnectionState('disconnected');
-                }
+                // Just set state to disconnected without showing error messages
+                this.setConnectionState('disconnected');
+                // Reset reconnection attempts and check availability after a delay
+                setTimeout(() => this.checkConnectorAvailability(), 3000);
             };
             
             this.wsConnection.onerror = (error) => {
                 console.error('WebSocket error:', error);
-                this.handleConnectionError('Unable to connect to desktop connector. Make sure it is running on localhost:3002');
+                // Just set state without showing error messages
+                this.setConnectionState('disconnected');
             };
             
             // Connection timeout - increased to reduce premature timeouts
             setTimeout(() => {
                 if (this.wsConnection.readyState === WebSocket.CONNECTING) {
                     this.wsConnection.close();
-                    this.handleConnectionError('Connection timeout. Make sure desktop connector is running.');
+                    // Just set state without showing error messages
+                    this.setConnectionState('disconnected');
+                    setTimeout(() => this.checkConnectorAvailability(), 2000);
                 }
             }, 15000);
             
         } catch (error) {
             console.error('Failed to create WebSocket connection:', error);
-            this.handleConnectionError('Failed to create connection');
+            // Just set state without showing error messages
+            this.setConnectionState('disconnected');
+            setTimeout(() => this.checkConnectorAvailability(), 2000);
         }
     }
     
@@ -218,15 +221,15 @@ class VibeApp {
     }
     
     handleConnectionError(message) {
+        console.log('Connection error:', message); // Log for debugging but don't show to user
         this.setConnectionState('disconnected');
-        this.showError(message);
         
         if (this.reconnectAttempts < this.maxReconnectAttempts) {
             this.reconnectAttempts++;
             // Exponential backoff with minimum 3 seconds to reduce flickering
             const delay = Math.max(3000, 2000 * this.reconnectAttempts);
             setTimeout(() => {
-                this.showError(`Reconnecting... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+                console.log(`Reconnecting... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
                 this.handleConnect();
             }, delay);
         } else {
@@ -457,7 +460,9 @@ class VibeApp {
                     
                 case 'auth_error':
                     console.error('Authentication failed:', message.data);
-                    this.handleConnectionError(`Authentication failed: ${message.data}`);
+                    // Just set state without showing error messages
+                    this.setConnectionState('disconnected');
+                    setTimeout(() => this.checkConnectorAvailability(), 2000);
                     break;
                     
                 case 'terminal_output':
