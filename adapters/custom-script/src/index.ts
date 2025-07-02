@@ -287,6 +287,7 @@ export class CustomScriptAdapter extends BaseAdapter {
       // Execute script
       const result = await this.runScript(
         config,
+        script,
         scriptPath,
         {
           workingDirectory: workingDir,
@@ -483,6 +484,7 @@ export class CustomScriptAdapter extends BaseAdapter {
 
   private async runScript(
     config: ScriptConfig,
+    script: string,
     scriptPath: string,
     execOptions: {
       workingDirectory: string;

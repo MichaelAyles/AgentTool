@@ -172,3 +172,31 @@ export interface SecurityRestrictions {
   maxCPU: number;
   timeout: number;
 }
+
+export interface CLICapabilities {
+  supportsStreaming: boolean;
+  supportsMCP: boolean;
+  supportsSubagents: boolean;
+  supportsInteractiveMode: boolean;
+  supportsFileOperations: boolean;
+  supportsProjectContext: boolean;
+}
+
+export interface ExecuteOptions {
+  workingDirectory?: string;
+  environment?: Record<string, string>;
+  timeout?: number;
+  files?: string[];
+  projectPath?: string;
+  cols?: number;
+  rows?: number;
+  args?: string[];
+  stdin?: string;
+}
+
+export interface StreamChunk {
+  type: 'stdout' | 'stderr' | 'system';
+  data: string;
+  timestamp: Date;
+  metadata?: Record<string, unknown>;
+}

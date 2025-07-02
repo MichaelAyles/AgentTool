@@ -4,9 +4,10 @@ import type {
   ExecuteOptions,
   ProcessHandle,
   StreamChunk,
+  OutputChunk,
 } from '@vibecode/shared';
-import { spawn } from 'node-pty';
 import { EventEmitter } from 'events';
+import { spawn as nodeSpawn } from 'child_process';
 
 export class GeminiCLIAdapter extends BaseAdapter {
   name = 'gemini-cli';
@@ -30,11 +31,21 @@ export class GeminiCLIAdapter extends BaseAdapter {
     }
 
     try {
-      const process = spawn('gemini', ['--version'], {
-        name: 'xterm-color',
-        cols: 80,
-        rows: 24,
-      });
+      let process: any;
+      try {
+        // Try to use node-pty
+        const nodePty = await import('node-pty');
+        process = nodePty.spawn('gemini', ['--version'], {
+          name: 'xterm-color',
+          cols: 80,
+          rows: 24,
+        });
+      } catch (error) {
+        // Fallback to regular spawn
+        process = nodeSpawn('gemini', ['--version'], {
+          stdio: 'pipe',
+        });
+      }
 
       return new Promise(resolve => {
         let output = '';
@@ -78,19 +89,37 @@ export class GeminiCLIAdapter extends BaseAdapter {
     // Prepare Gemini CLI command
     const geminiArgs = this.prepareGeminiCommand(command, options);
 
-    const ptyProcess = spawn('gemini', geminiArgs, {
-      name: 'xterm-color',
-      cols: options.cols || 80,
-      rows: options.rows || 24,
-      cwd: workingDirectory,
-      env: {
-        ...process.env,
-        ...environment,
-        // Set Gemini-specific environment variables
-        GEMINI_STREAMING: 'true',
-        GEMINI_FORMAT: 'markdown',
-      },
-    });
+    let ptyProcess: any;
+    try {
+      // Try to use node-pty for better terminal support
+      const nodePty = await import('node-pty');
+      ptyProcess = nodePty.spawn('gemini', geminiArgs, {
+        name: 'xterm-color',
+        cols: options.cols || 80,
+        rows: options.rows || 24,
+        cwd: workingDirectory,
+        env: {
+          ...process.env,
+          ...environment,
+          // Set Gemini-specific environment variables
+          GEMINI_STREAMING: 'true',
+          GEMINI_FORMAT: 'markdown',
+        },
+      });
+    } catch (error) {
+      // Fallback to regular child_process.spawn
+      ptyProcess = nodeSpawn('gemini', geminiArgs, {
+        cwd: workingDirectory,
+        env: {
+          ...process.env,
+          ...environment,
+          // Set Gemini-specific environment variables
+          GEMINI_STREAMING: 'true',
+          GEMINI_FORMAT: 'markdown',
+        },
+        stdio: 'pipe',
+      });
+    }
 
     const processHandle = new GeminiProcessHandle(ptyProcess, timeout);
 
@@ -144,12 +173,19 @@ export class GeminiCLIAdapter extends BaseAdapter {
     return args;
   }
 
-  async *streamOutput(handle: ProcessHandle): AsyncIterator<StreamChunk> {
+  async *streamOutput(handle: ProcessHandle): AsyncIterable<OutputChunk> {
     if (!(handle instanceof GeminiProcessHandle)) {
       throw new Error('Invalid process handle for Gemini CLI adapter');
     }
 
-    yield* handle.streamOutput();
+    for await (const chunk of handle.streamOutput()) {
+      yield {
+        type: chunk.type,
+        data: chunk.data,
+        timestamp: chunk.timestamp,
+        metadata: chunk.metadata,
+      };
+    }
   }
 
   async interrupt(handle: ProcessHandle): Promise<void> {
@@ -207,11 +243,21 @@ Set these environment variables for optimal performance:
 
     // Test basic functionality
     try {
-      const testProcess = spawn('gemini', ['--help'], {
-        name: 'xterm-color',
-        cols: 80,
-        rows: 24,
-      });
+      let testProcess: any;
+      try {
+        // Try to use node-pty
+        const nodePty = await import('node-pty');
+        testProcess = nodePty.spawn('gemini', ['--help'], {
+          name: 'xterm-color',
+          cols: 80,
+          rows: 24,
+        });
+      } catch (error) {
+        // Fallback to regular spawn
+        testProcess = nodeSpawn('gemini', ['--help'], {
+          stdio: 'pipe',
+        });
+      }
 
       const helpAvailable = await new Promise<boolean>(resolve => {
         let hasOutput = false;
@@ -249,7 +295,10 @@ Set these environment variables for optimal performance:
 }
 
 class GeminiProcessHandle extends EventEmitter implements ProcessHandle {
-  pid?: number;
+  id: string;
+  pid: number;
+  adapter: string;
+  startTime: Date;
   exitCode?: number;
   private completed = false;
   private outputBuffer: StreamChunk[] = [];
@@ -260,7 +309,10 @@ class GeminiProcessHandle extends EventEmitter implements ProcessHandle {
     private timeoutMs: number
   ) {
     super();
+    this.id = `gemini-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     this.pid = ptyProcess.pid;
+    this.adapter = 'gemini-cli';
+    this.startTime = new Date();
     this.setupEventHandlers();
   }
 
@@ -269,7 +321,7 @@ class GeminiProcessHandle extends EventEmitter implements ProcessHandle {
       const chunk: StreamChunk = {
         type: 'stdout',
         data,
-        timestamp: Date.now(),
+        timestamp: new Date(),
       };
 
       this.outputBuffer.push(chunk);
@@ -286,7 +338,7 @@ class GeminiProcessHandle extends EventEmitter implements ProcessHandle {
       const finalChunk: StreamChunk = {
         type: 'system',
         data: `Process exited with code ${exitCode}`,
-        timestamp: Date.now(),
+        timestamp: new Date(),
       };
 
       this.outputBuffer.push(finalChunk);
@@ -294,7 +346,7 @@ class GeminiProcessHandle extends EventEmitter implements ProcessHandle {
     });
   }
 
-  async *streamOutput(): AsyncIterator<StreamChunk> {
+  async *streamOutput(): AsyncIterable<StreamChunk> {
     // Yield any buffered output first
     for (const chunk of this.outputBuffer) {
       yield chunk;
