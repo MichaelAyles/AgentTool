@@ -1,6 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { Copy, Check, Terminal, Loader2, Wifi, WifiOff, AlertTriangle } from 'lucide-react';
+import {
+  Copy,
+  Check,
+  Terminal,
+  Loader2,
+  Wifi,
+  WifiOff,
+  AlertTriangle,
+} from 'lucide-react';
 
 interface ConnectionStatus {
   status: 'pending' | 'connected' | 'expired';
@@ -30,7 +38,7 @@ export const LocalAgentConnector: React.FC<LocalAgentConnectorProps> = ({
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
-  
+
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<number>(0);
@@ -81,7 +89,7 @@ export const LocalAgentConnector: React.FC<LocalAgentConnectorProps> = ({
 
     setIsPolling(true);
     setElapsedTime(0);
-    
+
     // Poll immediately, then every 2 seconds
     checkConnectionStatus();
     pollingIntervalRef.current = setInterval(checkConnectionStatus, 2000);
@@ -101,8 +109,10 @@ export const LocalAgentConnector: React.FC<LocalAgentConnectorProps> = ({
 
   const checkConnectionStatus = async () => {
     try {
-      const response = await fetch(`/api/v1/connection/status?sessionId=${sessionId}`);
-      
+      const response = await fetch(
+        `/api/v1/connection/status?sessionId=${sessionId}`
+      );
+
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
@@ -118,11 +128,15 @@ export const LocalAgentConnector: React.FC<LocalAgentConnectorProps> = ({
         }
       } else if (connectionStatus.status === 'expired') {
         stopPolling();
-        setError('Connection session expired. Please refresh to generate a new connection.');
+        setError(
+          'Connection session expired. Please refresh to generate a new connection.'
+        );
       }
     } catch (err) {
       console.error('Error checking connection status:', err);
-      setError(err instanceof Error ? err.message : 'Failed to check connection status');
+      setError(
+        err instanceof Error ? err.message : 'Failed to check connection status'
+      );
     }
   };
 
@@ -169,13 +183,13 @@ export const LocalAgentConnector: React.FC<LocalAgentConnectorProps> = ({
   const getStatusIcon = () => {
     switch (status.status) {
       case 'pending':
-        return <Loader2 className="h-5 w-5 animate-spin text-blue-500" />;
+        return <Loader2 className='h-5 w-5 animate-spin text-blue-500' />;
       case 'connected':
-        return <Wifi className="h-5 w-5 text-green-500" />;
+        return <Wifi className='h-5 w-5 text-green-500' />;
       case 'expired':
-        return <WifiOff className="h-5 w-5 text-red-500" />;
+        return <WifiOff className='h-5 w-5 text-red-500' />;
       default:
-        return <WifiOff className="h-5 w-5 text-gray-400" />;
+        return <WifiOff className='h-5 w-5 text-gray-400' />;
     }
   };
 
@@ -193,34 +207,36 @@ export const LocalAgentConnector: React.FC<LocalAgentConnectorProps> = ({
   };
 
   return (
-    <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 ${className}`}>
-      <div className="flex items-center mb-6">
-        <Terminal className="h-6 w-6 text-blue-500 mr-3" />
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+    <div
+      className={`bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 ${className}`}
+    >
+      <div className='flex items-center mb-6'>
+        <Terminal className='h-6 w-6 text-blue-500 mr-3' />
+        <h2 className='text-xl font-semibold text-gray-900 dark:text-white'>
           Connect Local Terminal
         </h2>
       </div>
 
       {error && (
-        <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-          <div className="flex items-center">
-            <AlertTriangle className="h-5 w-5 text-red-500 mr-2" />
-            <span className="text-red-700 dark:text-red-300">{error}</span>
+        <div className='mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg'>
+          <div className='flex items-center'>
+            <AlertTriangle className='h-5 w-5 text-red-500 mr-2' />
+            <span className='text-red-700 dark:text-red-300'>{error}</span>
           </div>
         </div>
       )}
 
-      <div className="space-y-6">
+      <div className='space-y-6'>
         {/* Status Section */}
-        <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-          <div className="flex items-center">
+        <div className='flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg'>
+          <div className='flex items-center'>
             {getStatusIcon()}
-            <span className="ml-3 text-sm font-medium text-gray-700 dark:text-gray-300">
+            <span className='ml-3 text-sm font-medium text-gray-700 dark:text-gray-300'>
               {getStatusMessage()}
             </span>
           </div>
           {status.status === 'pending' && (
-            <span className="text-sm text-gray-500 dark:text-gray-400">
+            <span className='text-sm text-gray-500 dark:text-gray-400'>
               {formatElapsedTime(elapsedTime)}
             </span>
           )}
@@ -228,20 +244,29 @@ export const LocalAgentConnector: React.FC<LocalAgentConnectorProps> = ({
 
         {/* Connection Details */}
         {status.status === 'connected' && status.tunnelUrl && (
-          <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-            <h3 className="text-sm font-medium text-green-800 dark:text-green-200 mb-2">
+          <div className='p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg'>
+            <h3 className='text-sm font-medium text-green-800 dark:text-green-200 mb-2'>
               Connection Details
             </h3>
-            <div className="text-sm text-green-700 dark:text-green-300 space-y-1">
-              <div><strong>Tunnel URL:</strong> {status.tunnelUrl}</div>
+            <div className='text-sm text-green-700 dark:text-green-300 space-y-1'>
+              <div>
+                <strong>Tunnel URL:</strong> {status.tunnelUrl}
+              </div>
               {status.clientInfo && (
                 <>
-                  <div><strong>Platform:</strong> {status.clientInfo.platform}</div>
-                  <div><strong>Version:</strong> {status.clientInfo.version}</div>
+                  <div>
+                    <strong>Platform:</strong> {status.clientInfo.platform}
+                  </div>
+                  <div>
+                    <strong>Version:</strong> {status.clientInfo.version}
+                  </div>
                 </>
               )}
               {status.timestamp && (
-                <div><strong>Connected:</strong> {new Date(status.timestamp).toLocaleTimeString()}</div>
+                <div>
+                  <strong>Connected:</strong>{' '}
+                  {new Date(status.timestamp).toLocaleTimeString()}
+                </div>
               )}
             </div>
           </div>
@@ -250,78 +275,82 @@ export const LocalAgentConnector: React.FC<LocalAgentConnectorProps> = ({
         {/* Instructions */}
         {status.status === 'pending' && (
           <>
-            <div className="space-y-3">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+            <div className='space-y-3'>
+              <h3 className='text-lg font-medium text-gray-900 dark:text-white'>
                 Connect Your Local Machine
               </h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                To connect your local terminal to this web interface, paste and run this command in your terminal:
+              <p className='text-gray-600 dark:text-gray-400'>
+                To connect your local terminal to this web interface, paste and
+                run this command in your terminal:
               </p>
             </div>
 
             {/* Command Section */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            <div className='space-y-3'>
+              <div className='flex items-center justify-between'>
+                <label className='text-sm font-medium text-gray-700 dark:text-gray-300'>
                   Installation Command
                 </label>
                 <button
                   onClick={copyToClipboard}
-                  className="flex items-center px-3 py-1 text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-md hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+                  className='flex items-center px-3 py-1 text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-md hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors'
                 >
                   {copied ? (
                     <>
-                      <Check className="h-4 w-4 mr-1" />
+                      <Check className='h-4 w-4 mr-1' />
                       Copied!
                     </>
                   ) : (
                     <>
-                      <Copy className="h-4 w-4 mr-1" />
+                      <Copy className='h-4 w-4 mr-1' />
                       Copy
                     </>
                   )}
                 </button>
               </div>
-              
-              <div className="relative">
-                <pre className="bg-gray-900 text-green-400 p-4 rounded-lg text-sm overflow-x-auto border">
+
+              <div className='relative'>
+                <pre className='bg-gray-900 text-green-400 p-4 rounded-lg text-sm overflow-x-auto border'>
                   <code>{getInstallCommand()}</code>
                 </pre>
               </div>
             </div>
 
             {/* Additional Instructions */}
-            <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-              <p><strong>What this command does:</strong></p>
-              <ul className="list-disc list-inside space-y-1 ml-4">
+            <div className='space-y-2 text-sm text-gray-600 dark:text-gray-400'>
+              <p>
+                <strong>What this command does:</strong>
+              </p>
+              <ul className='list-disc list-inside space-y-1 ml-4'>
                 <li>Downloads the Vibe Code local agent installer</li>
                 <li>Installs necessary dependencies (Node.js, Bun, Git)</li>
                 <li>Sets up a secure tunnel to your local machine</li>
                 <li>Registers the connection with this session</li>
               </ul>
-              
-              <p className="pt-2">
-                <strong>Requirements:</strong> macOS, Linux, or Windows with WSL2
+
+              <p className='pt-2'>
+                <strong>Requirements:</strong> macOS, Linux, or Windows with
+                WSL2
               </p>
             </div>
           </>
         )}
 
         {/* Action Buttons */}
-        <div className="flex space-x-3">
+        <div className='flex space-x-3'>
           {status.status === 'expired' && (
             <button
               onClick={resetConnection}
-              className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              className='flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors'
             >
               Generate New Connection
             </button>
           )}
-          
+
           {status.status === 'pending' && (
             <button
               onClick={resetConnection}
-              className="px-4 py-2 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              className='px-4 py-2 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors'
             >
               Reset Connection
             </button>
@@ -329,8 +358,8 @@ export const LocalAgentConnector: React.FC<LocalAgentConnectorProps> = ({
         </div>
 
         {/* Session Info */}
-        <div className="pt-4 border-t border-gray-200 dark:border-gray-600">
-          <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
+        <div className='pt-4 border-t border-gray-200 dark:border-gray-600'>
+          <div className='flex justify-between text-xs text-gray-500 dark:text-gray-400'>
             <span>Session ID: {sessionId.slice(0, 8)}...</span>
             <span>Auto-expires in 5 minutes</span>
           </div>

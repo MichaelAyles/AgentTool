@@ -35,6 +35,7 @@ Vibe Code includes comprehensive backup and recovery procedures to ensure busine
 ### 1. Database Recovery
 
 #### Quick Database Restore
+
 ```bash
 # List available backups
 docker exec vibe-code-backup ls -la /backups/
@@ -47,6 +48,7 @@ docker exec vibe-code-backup /scripts/restore.sh -s s3 vibe-code-backup-YYYYMMDD
 ```
 
 #### Point-in-Time Recovery
+
 ```bash
 # Stop database
 docker-compose -f docker-compose.prod.yml stop postgres
@@ -68,26 +70,29 @@ SELECT pg_wal_replay_resume();
 #### From Total Infrastructure Loss
 
 1. **Provision New Infrastructure**
+
    ```bash
    # Clone repository
    git clone https://github.com/your-org/vibe-code.git
    cd vibe-code
-   
+
    # Copy production environment
    cp .env.production .env
    # Edit .env with new infrastructure details
    ```
 
 2. **Deploy Base System**
+
    ```bash
    # Deploy infrastructure services
    docker-compose -f docker-compose.prod.yml up -d redis postgres elasticsearch
-   
+
    # Wait for services to be ready
    sleep 60
    ```
 
 3. **Restore Data**
+
    ```bash
    # Download latest backup from S3
    docker-compose -f docker-compose.prod.yml run --rm backup \
@@ -95,10 +100,11 @@ SELECT pg_wal_replay_resume();
    ```
 
 4. **Deploy Application Services**
+
    ```bash
    # Start application
    docker-compose -f docker-compose.prod.yml up -d backend frontend nginx
-   
+
    # Start monitoring
    docker-compose -f docker-compose.prod.yml up -d prometheus grafana kibana
    ```
@@ -106,6 +112,7 @@ SELECT pg_wal_replay_resume();
 ### 3. Application Recovery
 
 #### Service Restart
+
 ```bash
 # Restart specific service
 docker-compose -f docker-compose.prod.yml restart backend
@@ -115,6 +122,7 @@ docker-compose -f docker-compose.prod.yml restart backend frontend nginx
 ```
 
 #### Configuration Recovery
+
 ```bash
 # Restore configuration from backup
 docker exec vibe-code-backup tar -xzf /backups/latest/config.tar.gz -C /app/
@@ -126,6 +134,7 @@ docker-compose -f docker-compose.prod.yml restart backend
 ### 4. Data Corruption Recovery
 
 #### Selective Data Recovery
+
 ```bash
 # Extract specific data from backup
 docker exec vibe-code-backup bash -c "
@@ -140,46 +149,48 @@ docker cp vibe-code-backup:/tmp/validation-reports /var/lib/vibe-code/
 
 ## Recovery Time Objectives (RTO)
 
-| Scenario | Target RTO | Description |
-|----------|------------|-------------|
-| Database failure | 15 minutes | Restore from latest backup |
-| Application failure | 5 minutes | Service restart |
-| Complete system failure | 2 hours | Full infrastructure rebuild |
-| Data corruption | 30 minutes | Selective restore |
+| Scenario                | Target RTO | Description                 |
+| ----------------------- | ---------- | --------------------------- |
+| Database failure        | 15 minutes | Restore from latest backup  |
+| Application failure     | 5 minutes  | Service restart             |
+| Complete system failure | 2 hours    | Full infrastructure rebuild |
+| Data corruption         | 30 minutes | Selective restore           |
 
 ## Recovery Point Objectives (RPO)
 
-| Data Type | Target RPO | Backup Frequency |
-|-----------|------------|------------------|
-| Database | 24 hours | Daily |
-| Configuration | 24 hours | Daily |
-| Logs | 24 hours | Daily |
-| Validation data | 24 hours | Daily |
+| Data Type       | Target RPO | Backup Frequency |
+| --------------- | ---------- | ---------------- |
+| Database        | 24 hours   | Daily            |
+| Configuration   | 24 hours   | Daily            |
+| Logs            | 24 hours   | Daily            |
+| Validation data | 24 hours   | Daily            |
 
 ## Testing Procedures
 
 ### Monthly Recovery Tests
 
 1. **Database Recovery Test**
+
    ```bash
    # Create test environment
    docker-compose -f docker-compose.test.yml up -d
-   
+
    # Restore latest backup to test environment
    docker exec test-backup /scripts/restore.sh latest
-   
+
    # Verify data integrity
    docker exec test-postgres psql -U vibecode -d vibecode -c "SELECT COUNT(*) FROM users;"
    ```
 
 2. **Complete System Recovery Test**
+
    ```bash
    # Deploy to staging environment
    ./scripts/deploy.sh staging
-   
+
    # Restore production backup
    docker exec staging-backup /scripts/restore.sh -s s3 latest
-   
+
    # Run integration tests
    npm run test:integration:staging
    ```
@@ -202,12 +213,12 @@ docker cp vibe-code-backup:/tmp/validation-reports /var/lib/vibe-code/
 
 ### Escalation Matrix
 
-| Level | Contact | Response Time |
-|-------|---------|---------------|
-| L1 | On-call Engineer | 15 minutes |
-| L2 | Senior Engineer | 30 minutes |
-| L3 | Engineering Manager | 1 hour |
-| L4 | CTO | 2 hours |
+| Level | Contact             | Response Time |
+| ----- | ------------------- | ------------- |
+| L1    | On-call Engineer    | 15 minutes    |
+| L2    | Senior Engineer     | 30 minutes    |
+| L3    | Engineering Manager | 1 hour        |
+| L4    | CTO                 | 2 hours       |
 
 ### Communication Channels
 

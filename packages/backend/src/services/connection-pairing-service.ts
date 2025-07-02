@@ -89,7 +89,7 @@ export class ConnectionPairingService {
 
     // Check if session has expired
     const now = Date.now();
-    const isExpired = (now - session.timestamp) > this.SESSION_TTL;
+    const isExpired = now - session.timestamp > this.SESSION_TTL;
 
     if (isExpired) {
       this.sessions.delete(sessionId);
@@ -113,8 +113,8 @@ export class ConnectionPairingService {
     const activeSessions: PairingSession[] = [];
 
     for (const [sessionId, session] of this.sessions.entries()) {
-      const isExpired = (now - session.timestamp) > this.SESSION_TTL;
-      
+      const isExpired = now - session.timestamp > this.SESSION_TTL;
+
       if (isExpired) {
         this.sessions.delete(sessionId);
       } else {
@@ -131,11 +131,11 @@ export class ConnectionPairingService {
   async removeSession(sessionId: string): Promise<boolean> {
     const existed = this.sessions.has(sessionId);
     this.sessions.delete(sessionId);
-    
+
     if (existed) {
       logger.info('Session manually removed', { sessionId });
     }
-    
+
     return existed;
   }
 
@@ -149,7 +149,7 @@ export class ConnectionPairingService {
   }> {
     const sessions = await this.getActiveSessions();
     const now = Date.now();
-    
+
     const totalAge = sessions.reduce((sum, session) => {
       return sum + (now - session.timestamp);
     }, 0);
@@ -169,8 +169,8 @@ export class ConnectionPairingService {
     let cleanedCount = 0;
 
     for (const [sessionId, session] of this.sessions.entries()) {
-      const isExpired = (now - session.timestamp) > this.SESSION_TTL;
-      
+      const isExpired = now - session.timestamp > this.SESSION_TTL;
+
       if (isExpired) {
         this.sessions.delete(sessionId);
         cleanedCount++;
@@ -188,7 +188,7 @@ export class ConnectionPairingService {
   private isValidTunnelUrl(url: string): boolean {
     try {
       const parsedUrl = new URL(url);
-      
+
       // Must be HTTPS for security
       if (parsedUrl.protocol !== 'https:') {
         return false;
@@ -204,7 +204,7 @@ export class ConnectionPairingService {
         'localtunnel.me',
       ];
 
-      const isValidHost = validHosts.some(host => 
+      const isValidHost = validHosts.some(host =>
         parsedUrl.hostname.endsWith(host)
       );
 

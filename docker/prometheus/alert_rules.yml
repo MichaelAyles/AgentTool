@@ -8,8 +8,8 @@ groups:
         labels:
           severity: critical
         annotations:
-          summary: "Service {{ $labels.job }} is down"
-          description: "Service {{ $labels.job }} has been down for more than 1 minute."
+          summary: 'Service {{ $labels.job }} is down'
+          description: 'Service {{ $labels.job }} has been down for more than 1 minute.'
 
       # Backend application alerts
       - alert: HighErrorRate
@@ -18,8 +18,8 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "High error rate detected"
-          description: "Error rate is {{ $value }} errors per second over the last 5 minutes."
+          summary: 'High error rate detected'
+          description: 'Error rate is {{ $value }} errors per second over the last 5 minutes.'
 
       - alert: HighResponseTime
         expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1
@@ -27,8 +27,8 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "High response time detected"
-          description: "95th percentile response time is {{ $value }} seconds."
+          summary: 'High response time detected'
+          description: '95th percentile response time is {{ $value }} seconds.'
 
       - alert: HighMemoryUsage
         expr: (process_resident_memory_bytes / process_virtual_memory_max_bytes) * 100 > 80
@@ -36,8 +36,8 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "High memory usage"
-          description: "Memory usage is {{ $value }}% of available memory."
+          summary: 'High memory usage'
+          description: 'Memory usage is {{ $value }}% of available memory.'
 
       # Database alerts
       - alert: PostgreSQLDown
@@ -46,8 +46,8 @@ groups:
         labels:
           severity: critical
         annotations:
-          summary: "PostgreSQL is down"
-          description: "PostgreSQL database is not responding."
+          summary: 'PostgreSQL is down'
+          description: 'PostgreSQL database is not responding.'
 
       - alert: RedisDown
         expr: redis_up == 0
@@ -55,8 +55,8 @@ groups:
         labels:
           severity: critical
         annotations:
-          summary: "Redis is down"
-          description: "Redis cache server is not responding."
+          summary: 'Redis is down'
+          description: 'Redis cache server is not responding.'
 
       - alert: HighDatabaseConnections
         expr: pg_stat_database_numbackends > 80
@@ -64,8 +64,8 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "High database connection count"
-          description: "Database has {{ $value }} active connections."
+          summary: 'High database connection count'
+          description: 'Database has {{ $value }} active connections.'
 
       # System resource alerts
       - alert: HighCPUUsage
@@ -74,8 +74,8 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "High CPU usage"
-          description: "CPU usage is {{ $value }}% on {{ $labels.instance }}."
+          summary: 'High CPU usage'
+          description: 'CPU usage is {{ $value }}% on {{ $labels.instance }}.'
 
       - alert: HighDiskUsage
         expr: (node_filesystem_size_bytes - node_filesystem_free_bytes) / node_filesystem_size_bytes * 100 > 85
@@ -83,8 +83,8 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "High disk usage"
-          description: "Disk usage is {{ $value }}% on {{ $labels.instance }}."
+          summary: 'High disk usage'
+          description: 'Disk usage is {{ $value }}% on {{ $labels.instance }}.'
 
       - alert: LowDiskSpace
         expr: node_filesystem_free_bytes < 1e9
@@ -92,8 +92,8 @@ groups:
         labels:
           severity: critical
         annotations:
-          summary: "Low disk space"
-          description: "Less than 1GB of disk space remaining on {{ $labels.instance }}."
+          summary: 'Low disk space'
+          description: 'Less than 1GB of disk space remaining on {{ $labels.instance }}.'
 
       # Application-specific alerts
       - alert: ValidationQueueBacklog
@@ -102,8 +102,8 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "Validation queue backlog"
-          description: "Validation queue has {{ $value }} pending tasks."
+          summary: 'Validation queue backlog'
+          description: 'Validation queue has {{ $value }} pending tasks.'
 
       - alert: FailedValidationRate
         expr: rate(validation_failures_total[5m]) > 0.5
@@ -111,8 +111,8 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "High validation failure rate"
-          description: "Validation failure rate is {{ $value }} failures per second."
+          summary: 'High validation failure rate'
+          description: 'Validation failure rate is {{ $value }} failures per second.'
 
       - alert: AdapterFailureRate
         expr: rate(adapter_errors_total[5m]) > 0.1
@@ -120,5 +120,5 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "High adapter failure rate"
-          description: "Adapter {{ $labels.adapter }} failure rate is {{ $value }} errors per second."
+          summary: 'High adapter failure rate'
+          description: 'Adapter {{ $labels.adapter }} failure rate is {{ $value }} errors per second.'

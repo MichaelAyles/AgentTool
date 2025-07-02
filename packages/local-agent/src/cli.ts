@@ -14,22 +14,35 @@ const program = new Command();
 
 program
   .name('vibe-code-agent')
-  .description('Vibe Code Local Agent - Connect your local terminal to the web interface')
+  .description(
+    'Vibe Code Local Agent - Connect your local terminal to the web interface'
+  )
   .version('1.0.0');
 
 program
   .command('connect')
   .description('Connect to a Vibe Code server with a session ID')
   .argument('<session-id>', 'Session ID from the web interface')
-  .option('-s, --server <url>', 'Server URL', process.env.VIBE_CODE_SERVER_URL || 'https://vibecode.com')
+  .option(
+    '-s, --server <url>',
+    'Server URL',
+    process.env.VIBE_CODE_SERVER_URL || 'https://vibecode.com'
+  )
   .option('-p, --port <number>', 'Local port to use', '3001')
-  .option('-t, --ngrok-token <token>', 'Ngrok auth token', process.env.NGROK_TOKEN)
+  .option(
+    '-t, --ngrok-token <token>',
+    'Ngrok auth token',
+    process.env.NGROK_TOKEN
+  )
   .action(async (sessionId: string, options) => {
     try {
       // Validate session ID format
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const uuidRegex =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
       if (!uuidRegex.test(sessionId)) {
-        console.error(chalk.red('Error: Invalid session ID format. Expected UUID format.'));
+        console.error(
+          chalk.red('Error: Invalid session ID format. Expected UUID format.')
+        );
         process.exit(1);
       }
 
@@ -68,9 +81,11 @@ program
 
       // Keep the process running
       await new Promise(() => {}); // Run forever until killed
-
     } catch (error) {
-      console.error(chalk.red('Error:'), error instanceof Error ? error.message : error);
+      console.error(
+        chalk.red('Error:'),
+        error instanceof Error ? error.message : error
+      );
       process.exit(1);
     }
   });
@@ -90,8 +105,12 @@ program
 program
   .command('test-connection')
   .description('Test connection to a Vibe Code server')
-  .option('-s, --server <url>', 'Server URL to test', process.env.VIBE_CODE_SERVER_URL || 'https://vibecode.com')
-  .action(async (options) => {
+  .option(
+    '-s, --server <url>',
+    'Server URL to test',
+    process.env.VIBE_CODE_SERVER_URL || 'https://vibecode.com'
+  )
+  .action(async options => {
     const spinner = ora(`Testing connection to ${options.server}...`).start();
 
     try {
@@ -102,17 +121,24 @@ program
       });
 
       if (response.ok) {
-        const data = await response.json() as any;
-        spinner.succeed(chalk.green(`Successfully connected to ${options.server}`));
+        const data = (await response.json()) as any;
+        spinner.succeed(
+          chalk.green(`Successfully connected to ${options.server}`)
+        );
         console.log(chalk.gray('Server status:'), data.status);
         console.log(chalk.gray('Timestamp:'), data.timestamp);
       } else {
-        spinner.fail(chalk.red(`Server responded with status: ${response.status}`));
+        spinner.fail(
+          chalk.red(`Server responded with status: ${response.status}`)
+        );
         process.exit(1);
       }
     } catch (error) {
       spinner.fail(chalk.red('Connection failed'));
-      console.error(chalk.gray('Error:'), error instanceof Error ? error.message : error);
+      console.error(
+        chalk.gray('Error:'),
+        error instanceof Error ? error.message : error
+      );
       process.exit(1);
     }
   });
@@ -126,7 +152,7 @@ program
     console.log(chalk.gray(`Platform: ${process.platform}`));
     console.log(chalk.gray(`Node.js: ${process.version}`));
     console.log(chalk.gray(`Working Directory: ${process.cwd()}`));
-    
+
     // Check for required dependencies
     const checkDependency = (name: string) => {
       try {
@@ -143,12 +169,16 @@ program
     console.log(`  node-pty: ${checkDependency('node-pty')}`);
     console.log(`  WebSocket: ${checkDependency('ws')}`);
     console.log(`  ngrok: ${checkDependency('ngrok')}`);
-    
+
     // Check environment variables
     console.log('');
     console.log(chalk.blue('Environment:'));
-    console.log(`  VIBE_CODE_SERVER_URL: ${process.env.VIBE_CODE_SERVER_URL || chalk.gray('(default)')}`);
-    console.log(`  NGROK_TOKEN: ${process.env.NGROK_TOKEN ? chalk.green('set') : chalk.yellow('not set')}`);
+    console.log(
+      `  VIBE_CODE_SERVER_URL: ${process.env.VIBE_CODE_SERVER_URL || chalk.gray('(default)')}`
+    );
+    console.log(
+      `  NGROK_TOKEN: ${process.env.NGROK_TOKEN ? chalk.green('set') : chalk.yellow('not set')}`
+    );
     console.log(`  PORT: ${process.env.PORT || chalk.gray('(default: 3001)')}`);
   });
 

@@ -10,5 +10,14 @@
     "ecmaVersion": 2022,
     "sourceType": "module"
   },
-  "rules": {}
+  "rules": {},
+  "ignorePatterns": [
+    "dist/", 
+    "node_modules/", 
+    "*.js",
+    "*.ts",
+    "*.tsx",
+    "packages/*/src/**/*.ts",
+    "packages/*/src/**/*.tsx"
+  ]
 }

@@ -24,6 +24,7 @@ curl -fsSL https://raw.githubusercontent.com/your-org/vibe-code/main/setup.sh | 
 ```
 
 This script will:
+
 - Install all dependencies (Bun, Docker, etc.)
 - Clone the repository
 - Set up the development environment
@@ -34,21 +35,24 @@ This script will:
 If you prefer to set up manually:
 
 1. **Clone the repository**
+
    ```bash
    git clone https://github.com/your-org/vibe-code.git
    cd vibe-code
    ```
 
 2. **Install dependencies**
+
    ```bash
    # Install Bun (package manager)
    curl -fsSL https://bun.sh/install | bash
-   
+
    # Install project dependencies
    bun install
    ```
 
 3. **Start development environment**
+
    ```bash
    bun dev
    ```
@@ -177,6 +181,7 @@ To use Vibe Code, you'll need API keys for the AI services:
 ### Typical Development Session
 
 1. **Start Session**
+
    ```bash
    bun dev  # Start development environment
    ```
@@ -214,21 +219,25 @@ To use Vibe Code, you'll need API keys for the AI services:
 ### Common Issues
 
 **Q: Vibe Code won't start**
+
 - Check that all dependencies are installed
 - Verify Docker is running
 - Check the logs: `docker-compose logs`
 
 **Q: AI adapters not working**
+
 - Verify API keys are correct
 - Check network connectivity
 - Review adapter configuration
 
 **Q: Validation pipeline failing**
+
 - Check project configuration
 - Verify test commands work manually
 - Review validation criteria
 
 **Q: Permission denied errors**
+
 - Check file permissions
 - Verify Docker permissions
 - Try running with appropriate privileges

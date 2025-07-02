@@ -1,6 +1,6 @@
 import { Request, Response, Router } from 'express';
-import { 
-  connectionPairingService, 
+import {
+  connectionPairingService,
   PairingRegistration,
 } from '../services/connection-pairing-service';
 import { logger } from '../utils/logger';
@@ -14,7 +14,7 @@ const router = Router();
 router.post('/register', async (req: Request, res: Response) => {
   try {
     const registration: PairingRegistration = req.body;
-    
+
     // Validate required fields
     if (!registration.sessionId || !registration.tunnelUrl) {
       return res.status(400).json({
@@ -24,7 +24,8 @@ router.post('/register', async (req: Request, res: Response) => {
     }
 
     // Validate sessionId format (should be UUID)
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(registration.sessionId)) {
       return res.status(400).json({
         error: 'Invalid sessionId format. Must be a valid UUID.',
@@ -34,8 +35,8 @@ router.post('/register', async (req: Request, res: Response) => {
 
     // Extract client info from request
     const clientInfo = {
-      platform: req.headers['x-client-platform'] as string || 'unknown',
-      version: req.headers['x-client-version'] as string || '1.0.0',
+      platform: (req.headers['x-client-platform'] as string) || 'unknown',
+      version: (req.headers['x-client-version'] as string) || '1.0.0',
       userAgent: req.headers['user-agent'],
       ...registration.clientInfo,
     };
@@ -56,14 +57,16 @@ router.post('/register', async (req: Request, res: Response) => {
       sessionId: registration.sessionId,
       timestamp: Date.now(),
     });
-
   } catch (error) {
     logger.error('Error registering connection', {
       error: error instanceof Error ? error.message : 'Unknown error',
       body: req.body,
     });
 
-    if (error instanceof Error && error.message.includes('Invalid tunnel URL')) {
+    if (
+      error instanceof Error &&
+      error.message.includes('Invalid tunnel URL')
+    ) {
       return res.status(400).json({
         error: error.message,
         code: 'INVALID_TUNNEL_URL',
@@ -92,7 +95,8 @@ router.get('/status', async (req: Request, res: Response) => {
       });
     }
 
-    const status = await connectionPairingService.getConnectionStatus(sessionId);
+    const status =
+      await connectionPairingService.getConnectionStatus(sessionId);
 
     // Add helpful information for pending status
     if (status.status === 'pending') {
@@ -104,7 +108,6 @@ router.get('/status', async (req: Request, res: Response) => {
     } else {
       res.status(200).json(status);
     }
-
   } catch (error) {
     logger.error('Error checking connection status', {
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -147,7 +150,6 @@ router.delete('/:sessionId', async (req: Request, res: Response) => {
         sessionId,
       });
     }
-
   } catch (error) {
     logger.error('Error removing session', {
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -175,7 +177,6 @@ router.get('/sessions', async (req: Request, res: Response) => {
       stats,
       timestamp: Date.now(),
     });
-
   } catch (error) {
     logger.error('Error getting active sessions', {
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -195,14 +196,13 @@ router.get('/sessions', async (req: Request, res: Response) => {
 router.get('/health', async (req: Request, res: Response) => {
   try {
     const stats = await connectionPairingService.getSessionStats();
-    
+
     res.status(200).json({
       status: 'healthy',
       service: 'connection-pairing',
       timestamp: Date.now(),
       stats,
     });
-
   } catch (error) {
     logger.error('Connection pairing health check failed', {
       error: error instanceof Error ? error.message : 'Unknown error',

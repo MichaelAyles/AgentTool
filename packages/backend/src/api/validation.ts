@@ -99,10 +99,12 @@ const validationResults = new Map<string, ValidationResult>();
 /**
  * Submit a new task with success criteria for validation
  */
-router.post('/tasks', 
+router.post(
+  '/tasks',
   requirePermission('task', 'create'),
   asyncHandler(async (req, res) => {
-    const { prompt, success_criteria, adapter, project_path, timeout } = req.body as TaskRequest;
+    const { prompt, success_criteria, adapter, project_path, timeout } =
+      req.body as TaskRequest;
 
     if (!prompt) {
       return res.status(400).json({ error: 'prompt is required' });
@@ -139,7 +141,8 @@ router.post('/tasks',
 /**
  * Get validation result for a specific task
  */
-router.get('/tasks/:taskId', 
+router.get(
+  '/tasks/:taskId',
   requirePermission('task', 'read'),
   asyncHandler(async (req, res) => {
     const { taskId } = req.params;
@@ -156,21 +159,28 @@ router.get('/tasks/:taskId',
 /**
  * Get all validation results for the current user
  */
-router.get('/tasks', 
+router.get(
+  '/tasks',
   requirePermission('task', 'read'),
   asyncHandler(async (req, res) => {
     const { status, limit = 50, offset = 0 } = req.query;
-    
+
     let results = Array.from(validationResults.values());
-    
+
     if (status) {
       results = results.filter(r => r.status === status);
     }
 
-    results.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-    
-    const paginatedResults = results.slice(Number(offset), Number(offset) + Number(limit));
-    
+    results.sort(
+      (a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+
+    const paginatedResults = results.slice(
+      Number(offset),
+      Number(offset) + Number(limit)
+    );
+
     res.json({
       results: paginatedResults,
       total: results.length,
@@ -183,11 +193,13 @@ router.get('/tasks',
 /**
  * Update task status (used internally by validation service)
  */
-router.put('/tasks/:taskId/status', 
+router.put(
+  '/tasks/:taskId/status',
   requirePermission('task', 'update'),
   asyncHandler(async (req, res) => {
     const { taskId } = req.params;
-    const { status, validation_results, overall_success, error_message } = req.body;
+    const { status, validation_results, overall_success, error_message } =
+      req.body;
 
     const result = validationResults.get(taskId);
     if (!result) {
@@ -217,11 +229,12 @@ router.put('/tasks/:taskId/status',
 /**
  * Delete a validation result
  */
-router.delete('/tasks/:taskId', 
+router.delete(
+  '/tasks/:taskId',
   requirePermission('task', 'delete'),
   asyncHandler(async (req, res) => {
     const { taskId } = req.params;
-    
+
     if (!validationResults.has(taskId)) {
       return res.status(404).json({ error: 'Task not found' });
     }
@@ -234,7 +247,8 @@ router.delete('/tasks/:taskId',
 /**
  * Get validation statistics
  */
-router.get('/stats', 
+router.get(
+  '/stats',
   requirePermission('task', 'read'),
   asyncHandler(async (req, res) => {
     const userId = req.user!.id;
@@ -247,12 +261,17 @@ router.get('/stats',
 /**
  * Generate validation report
  */
-router.get('/tasks/:taskId/report', 
+router.get(
+  '/tasks/:taskId/report',
   requirePermission('task', 'read'),
   asyncHandler(async (req, res) => {
     const { taskId } = req.params;
-    const { template = 'default', format = 'html', includeDetails = true } = req.query;
-    
+    const {
+      template = 'default',
+      format = 'html',
+      includeDetails = true,
+    } = req.query;
+
     const validationResult = await validationStorage.get(taskId);
     if (!validationResult) {
       return res.status(404).json({ error: 'Validation result not found' });
@@ -268,9 +287,12 @@ router.get('/tasks/:taskId/report',
       }
     );
 
-    const contentType = format === 'html' ? 'text/html' : 
-                       format === 'json' ? 'application/json' : 
-                       'text/plain';
+    const contentType =
+      format === 'html'
+        ? 'text/html'
+        : format === 'json'
+          ? 'application/json'
+          : 'text/plain';
 
     res.setHeader('Content-Type', contentType);
     res.send(report);
@@ -280,7 +302,8 @@ router.get('/tasks/:taskId/report',
 /**
  * Start self-correction for failed validation
  */
-router.post('/tasks/:taskId/correct', 
+router.post(
+  '/tasks/:taskId/correct',
   requirePermission('task', 'update'),
   asyncHandler(async (req, res) => {
     const { taskId } = req.params;
@@ -303,22 +326,23 @@ router.post('/tasks/:taskId/correct',
     const mockAdapterService = {}; // This would be the real adapter service
 
     try {
-      const correctionResult = await selfCorrectionService.startCorrectionSession(
-        taskId,
-        validationResult.original_prompt,
-        validationResult.success_criteria,
-        validationResult.validation_report,
-        mockAdapterService
-      );
+      const correctionResult =
+        await selfCorrectionService.startCorrectionSession(
+          taskId,
+          validationResult.original_prompt,
+          validationResult.success_criteria,
+          validationResult.validation_report,
+          mockAdapterService
+        );
 
       // Update storage with correction results
       if (correctionResult.success) {
-        await validationStorage.update(taskId, { 
+        await validationStorage.update(taskId, {
           status: 'corrected',
-          metadata: { 
+          metadata: {
             ...validationResult.metadata,
             correction_session: correctionResult.session,
-          }
+          },
         });
       }
 
@@ -330,8 +354,8 @@ router.post('/tasks/:taskId/correct',
         final_validation: correctionResult.final_validation,
       });
     } catch (error) {
-      res.status(500).json({ 
-        error: 'Self-correction failed', 
+      res.status(500).json({
+        error: 'Self-correction failed',
         message: error instanceof Error ? error.message : 'Unknown error',
       });
     }
@@ -341,25 +365,28 @@ router.post('/tasks/:taskId/correct',
 /**
  * Export validation results
  */
-router.post('/export', 
+router.post(
+  '/export',
   requirePermission('task', 'read'),
   asyncHandler(async (req, res) => {
     const userId = req.user!.id;
     const { format = 'json', filters = {} } = req.body;
-    
+
     const query = { user_id: userId, ...filters };
     const exportData = await validationStorage.export(query, format, userId);
 
     const filename = `validation-export-${Date.now()}.${format}`;
-    
+
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.setHeader('Content-Type', 'application/octet-stream');
-    
+
     if (format === 'json') {
       res.json(exportData);
     } else {
       // TODO: Implement other export formats (CSV, Excel, PDF)
-      res.status(501).json({ error: `Export format ${format} not yet implemented` });
+      res
+        .status(501)
+        .json({ error: `Export format ${format} not yet implemented` });
     }
   })
 );
@@ -367,12 +394,13 @@ router.post('/export',
 /**
  * Search validation results
  */
-router.post('/search', 
+router.post(
+  '/search',
   requirePermission('task', 'read'),
   asyncHandler(async (req, res) => {
     const userId = req.user!.id;
     const query = { user_id: userId, ...req.body };
-    
+
     const results = await validationStorage.query(query);
     res.json(results);
   })

@@ -32,6 +32,7 @@ cp .env.production .env
 ```
 
 **Includes**:
+
 - Application services (frontend, backend)
 - Database (PostgreSQL)
 - Cache (Redis)
@@ -52,6 +53,7 @@ kubectl apply -f k8s/
 ```
 
 **Features**:
+
 - Auto-scaling based on load
 - Rolling updates with zero downtime
 - Health checks and self-healing
@@ -61,6 +63,7 @@ kubectl apply -f k8s/
 ### 3. Cloud Services
 
 **AWS ECS/Fargate**:
+
 ```bash
 # Deploy using AWS CDK
 cd deployment/aws
@@ -69,6 +72,7 @@ cdk deploy VibCodeStack
 ```
 
 **Google Cloud Run**:
+
 ```bash
 # Deploy to Cloud Run
 gcloud run deploy vibe-code \
@@ -78,6 +82,7 @@ gcloud run deploy vibe-code \
 ```
 
 **Azure Container Instances**:
+
 ```bash
 # Deploy to Azure
 az container create \
@@ -120,6 +125,7 @@ az container create \
 ### 1. Infrastructure Setup
 
 **Create Infrastructure**:
+
 ```bash
 # Using Terraform (recommended)
 cd deployment/terraform
@@ -134,6 +140,7 @@ aws cloudformation deploy \
 ```
 
 **Verify Infrastructure**:
+
 ```bash
 # Check load balancer
 curl -f https://your-domain.com/health
@@ -148,6 +155,7 @@ redis-cli -h your-redis-host ping
 ### 2. Application Deployment
 
 **Build Images**:
+
 ```bash
 # Build production images
 docker build -t vibe-code-backend:v1.0.0 -f packages/backend/Dockerfile .
@@ -159,6 +167,7 @@ docker push your-registry/vibe-code-frontend:v1.0.0
 ```
 
 **Deploy Services**:
+
 ```bash
 # Update docker-compose with new image tags
 sed -i 's|image: vibe-code-backend:.*|image: your-registry/vibe-code-backend:v1.0.0|' docker-compose.prod.yml
@@ -168,6 +177,7 @@ docker-compose -f docker-compose.prod.yml up -d
 ```
 
 **Verify Deployment**:
+
 ```bash
 # Check service health
 curl -f https://your-domain.com/api/health
@@ -180,6 +190,7 @@ docker-compose -f docker-compose.prod.yml ps
 ### 3. Database Setup
 
 **Initialize Database**:
+
 ```bash
 # Run migrations
 docker-compose -f docker-compose.prod.yml exec backend \
@@ -191,6 +202,7 @@ docker-compose -f docker-compose.prod.yml exec backend \
 ```
 
 **Configure Backup**:
+
 ```bash
 # Test backup
 docker-compose -f docker-compose.prod.yml exec backup \
@@ -203,6 +215,7 @@ aws s3 ls s3://your-backup-bucket/backups/
 ### 4. Monitoring Setup
 
 **Configure Prometheus**:
+
 ```bash
 # Verify Prometheus targets
 curl http://your-domain.com:9090/api/v1/targets
@@ -212,6 +225,7 @@ curl http://your-domain.com:9090/api/v1/query?query=up
 ```
 
 **Configure Grafana**:
+
 ```bash
 # Access Grafana
 open http://your-domain.com:3001
@@ -223,6 +237,7 @@ curl -X POST http://admin:password@your-domain.com:3001/api/dashboards/db \
 ```
 
 **Configure Alerts**:
+
 ```bash
 # Test alert rules
 curl http://your-domain.com:9090/api/v1/rules
@@ -238,6 +253,7 @@ curl -X POST http://your-domain.com:9093/api/v1/alerts \
 ### Environment-Specific Configuration
 
 **Production (.env.production)**:
+
 ```bash
 NODE_ENV=production
 DATABASE_URL=postgresql://user:pass@prod-db:5432/vibecode
@@ -248,6 +264,7 @@ AUDIT_LOG_LEVEL=info
 ```
 
 **Staging (.env.staging)**:
+
 ```bash
 NODE_ENV=staging
 DATABASE_URL=postgresql://user:pass@staging-db:5432/vibecode_staging
@@ -260,6 +277,7 @@ AUDIT_LOG_LEVEL=debug
 ### Secret Management
 
 **Using Docker Secrets**:
+
 ```bash
 # Create secrets
 echo "your-jwt-secret" | docker secret create jwt_secret -
@@ -274,6 +292,7 @@ services:
 ```
 
 **Using Kubernetes Secrets**:
+
 ```bash
 # Create secret
 kubectl create secret generic vibe-code-secrets \
@@ -294,6 +313,7 @@ env:
 ### Horizontal Scaling
 
 **Scale Backend Services**:
+
 ```bash
 # Docker Compose
 docker-compose -f docker-compose.prod.yml up -d --scale backend=3
@@ -303,6 +323,7 @@ kubectl scale deployment backend --replicas=3
 ```
 
 **Load Balancing**:
+
 ```nginx
 upstream backend {
     server backend-1:3000;
@@ -320,6 +341,7 @@ server {
 ### Database High Availability
 
 **PostgreSQL with Streaming Replication**:
+
 ```yaml
 services:
   postgres-primary:
@@ -327,7 +349,7 @@ services:
     environment:
       POSTGRES_REPLICATION_USER: replicator
       POSTGRES_REPLICATION_PASSWORD: repl_password
-  
+
   postgres-replica:
     image: postgres:15
     environment:
@@ -336,6 +358,7 @@ services:
 ```
 
 **Redis Cluster**:
+
 ```yaml
 services:
   redis-1:
@@ -354,17 +377,18 @@ services:
 ### SSL/TLS Configuration
 
 **Nginx SSL Configuration**:
+
 ```nginx
 server {
     listen 443 ssl http2;
     ssl_certificate /etc/ssl/certs/your-domain.crt;
     ssl_certificate_key /etc/ssl/private/your-domain.key;
-    
+
     # Modern SSL configuration
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256;
     ssl_prefer_server_ciphers off;
-    
+
     # Security headers
     add_header Strict-Transport-Security "max-age=63072000" always;
     add_header X-Frame-Options DENY;
@@ -375,6 +399,7 @@ server {
 ### Network Security
 
 **Docker Network Isolation**:
+
 ```yaml
 networks:
   frontend:
@@ -393,6 +418,7 @@ services:
 ```
 
 **Firewall Rules**:
+
 ```bash
 # Allow only necessary ports
 ufw allow 80/tcp
@@ -407,9 +433,10 @@ ufw enable
 ### Health Checks
 
 **Application Health**:
+
 ```yaml
 healthcheck:
-  test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+  test: ['CMD', 'curl', '-f', 'http://localhost:3000/health']
   interval: 30s
   timeout: 10s
   retries: 3
@@ -417,9 +444,10 @@ healthcheck:
 ```
 
 **Database Health**:
+
 ```yaml
 healthcheck:
-  test: ["CMD-SHELL", "pg_isready -U vibecode -d vibecode"]
+  test: ['CMD-SHELL', 'pg_isready -U vibecode -d vibecode']
   interval: 10s
   timeout: 5s
   retries: 5
@@ -428,6 +456,7 @@ healthcheck:
 ### Alerting Rules
 
 **Critical Alerts**:
+
 ```yaml
 groups:
   - name: critical
@@ -438,10 +467,11 @@ groups:
         labels:
           severity: critical
         annotations:
-          summary: "Service {{ $labels.job }} is down"
+          summary: 'Service {{ $labels.job }} is down'
 ```
 
 **Performance Alerts**:
+
 ```yaml
 - alert: HighResponseTime
   expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1
@@ -449,7 +479,7 @@ groups:
   labels:
     severity: warning
   annotations:
-    summary: "High response time detected"
+    summary: 'High response time detected'
 ```
 
 ## Backup and Recovery
@@ -457,6 +487,7 @@ groups:
 ### Automated Backups
 
 **Database Backup**:
+
 ```bash
 # Daily backup script
 #!/bin/bash
@@ -469,6 +500,7 @@ aws s3 cp /backups/vibecode-$(date +%Y%m%d).sql.gz \
 ```
 
 **Application Data Backup**:
+
 ```bash
 # Backup validation reports
 tar -czf /backups/validation-reports-$(date +%Y%m%d).tar.gz \
@@ -482,6 +514,7 @@ tar -czf /backups/config-$(date +%Y%m%d).tar.gz \
 ### Disaster Recovery
 
 **Complete System Recovery**:
+
 ```bash
 # Restore from backup
 ./scripts/deploy.sh restore production latest
@@ -495,6 +528,7 @@ curl -f https://your-domain.com/health
 ### Updates and Upgrades
 
 **Rolling Update**:
+
 ```bash
 # Build new version
 docker build -t vibe-code-backend:v1.1.0 .
@@ -507,6 +541,7 @@ curl -f https://your-domain.com/api/health
 ```
 
 **Database Migrations**:
+
 ```bash
 # Run migrations
 docker-compose -f docker-compose.prod.yml exec backend \
@@ -520,6 +555,7 @@ docker-compose -f docker-compose.prod.yml exec postgres \
 ### Log Management
 
 **Log Rotation**:
+
 ```bash
 # Configure logrotate
 echo '/var/log/vibe-code/*.log {
@@ -534,18 +570,19 @@ echo '/var/log/vibe-code/*.log {
 ```
 
 **Log Aggregation**:
+
 ```yaml
 # Filebeat configuration
 filebeat.inputs:
-- type: log
-  paths:
-    - /var/log/vibe-code/*.log
-  fields:
-    service: vibe-code
-    environment: production
+  - type: log
+    paths:
+      - /var/log/vibe-code/*.log
+    fields:
+      service: vibe-code
+      environment: production
 
 output.elasticsearch:
-  hosts: ["elasticsearch:9200"]
+  hosts: ['elasticsearch:9200']
 ```
 
 ## Troubleshooting
@@ -553,6 +590,7 @@ output.elasticsearch:
 ### Common Issues
 
 **Service Won't Start**:
+
 ```bash
 # Check logs
 docker-compose logs backend
@@ -565,6 +603,7 @@ df -h
 ```
 
 **Database Connection Issues**:
+
 ```bash
 # Test connection
 docker-compose exec backend \
@@ -575,6 +614,7 @@ docker-compose logs postgres
 ```
 
 **Performance Issues**:
+
 ```bash
 # Check resource usage
 docker stats
@@ -590,6 +630,7 @@ docker-compose exec postgres \
 ### Recovery Procedures
 
 **Service Recovery**:
+
 ```bash
 # Restart specific service
 docker-compose restart backend
@@ -599,6 +640,7 @@ docker-compose up -d --force-recreate backend
 ```
 
 **Data Recovery**:
+
 ```bash
 # Restore from backup
 ./docker/backup/restore.sh vibe-code-backup-20231201_120000

@@ -84,9 +84,11 @@ export class ValidationService {
   /**
    * Execute the complete validation pipeline
    */
-  private async _executeValidation(execution: TaskExecution): Promise<ValidationResult> {
+  private async _executeValidation(
+    execution: TaskExecution
+  ): Promise<ValidationResult> {
     const { taskId, successCriteria, projectPath, fileChanges } = execution;
-    
+
     const result: ValidationResult = {
       task_id: taskId,
       status: 'running',
@@ -98,27 +100,41 @@ export class ValidationService {
 
     try {
       // Step 1: Create temporary workspace
-      const tempWorkspace = await this.createTemporaryWorkspace(projectPath, fileChanges);
-      
+      const tempWorkspace = await this.createTemporaryWorkspace(
+        projectPath,
+        fileChanges
+      );
+
       // Step 2: Run validation steps
-      const validationSteps = this.buildValidationSteps(successCriteria, tempWorkspace);
-      
+      const validationSteps = this.buildValidationSteps(
+        successCriteria,
+        tempWorkspace
+      );
+
       for (const step of validationSteps) {
         const stepResult = await this.executeValidationStep(step);
-        this.updateValidationResult(result, step.name, stepResult, step.successCriteria);
+        this.updateValidationResult(
+          result,
+          step.name,
+          stepResult,
+          step.successCriteria
+        );
       }
 
       // Step 3: Determine overall success
-      result.overall_success = this.determineOverallSuccess(result, successCriteria);
+      result.overall_success = this.determineOverallSuccess(
+        result,
+        successCriteria
+      );
       result.status = 'completed';
       result.completed_at = new Date().toISOString();
 
       // Step 4: Cleanup temporary workspace
       await this.cleanupTemporaryWorkspace(tempWorkspace);
-
     } catch (error) {
       result.status = 'failed';
-      result.error_message = error instanceof Error ? error.message : 'Unknown error occurred';
+      result.error_message =
+        error instanceof Error ? error.message : 'Unknown error occurred';
       result.completed_at = new Date().toISOString();
     }
 
@@ -128,19 +144,25 @@ export class ValidationService {
   /**
    * Create a temporary workspace with the AI-generated changes applied
    */
-  async createTemporaryWorkspace(projectPath: string, fileChanges: FileChange[]): Promise<string> {
-    const tempWorkspace = path.join(this.config.tempDir!, `validation-${uuidv4()}`);
-    
+  async createTemporaryWorkspace(
+    projectPath: string,
+    fileChanges: FileChange[]
+  ): Promise<string> {
+    const tempWorkspace = path.join(
+      this.config.tempDir!,
+      `validation-${uuidv4()}`
+    );
+
     // Create temp directory
     await fs.mkdir(tempWorkspace, { recursive: true });
-    
+
     // Copy original project files
     await this.copyProjectFiles(projectPath, tempWorkspace);
-    
+
     // Apply file changes
     for (const change of fileChanges) {
       const targetPath = path.join(tempWorkspace, change.path);
-      
+
       switch (change.operation) {
         case 'create':
         case 'update':
@@ -156,14 +178,17 @@ export class ValidationService {
           break;
       }
     }
-    
+
     return tempWorkspace;
   }
 
   /**
    * Build validation steps based on success criteria
    */
-  private buildValidationSteps(criteria: SuccessCriteria, workspace: string): ValidationStep[] {
+  private buildValidationSteps(
+    criteria: SuccessCriteria,
+    workspace: string
+  ): ValidationStep[] {
     const steps: ValidationStep[] = [];
 
     if (criteria.lint) {
@@ -240,23 +265,27 @@ export class ValidationService {
         shell: true,
       });
 
-      child.stdout?.on('data', (data) => {
+      child.stdout?.on('data', data => {
         stdout += data.toString();
       });
 
-      child.stderr?.on('data', (data) => {
+      child.stderr?.on('data', data => {
         stderr += data.toString();
       });
 
       const timeout = setTimeout(() => {
         child.kill('SIGKILL');
-        reject(new Error(`Validation step '${step.name}' timed out after ${step.timeout}ms`));
+        reject(
+          new Error(
+            `Validation step '${step.name}' timed out after ${step.timeout}ms`
+          )
+        );
       }, step.timeout);
 
-      child.on('close', (exitCode) => {
+      child.on('close', exitCode => {
         clearTimeout(timeout);
         const duration = Date.now() - startTime;
-        
+
         resolve({
           exitCode: exitCode || 0,
           stdout,
@@ -265,7 +294,7 @@ export class ValidationService {
         });
       });
 
-      child.on('error', (error) => {
+      child.on('error', error => {
         clearTimeout(timeout);
         reject(error);
       });
@@ -290,7 +319,9 @@ export class ValidationService {
     switch (stepName) {
       case 'lint':
         result.validation_results.lint = {
-          passed: stepResult.exitCode === 0 && this.checkLintCriteria(stepResult, criteria),
+          passed:
+            stepResult.exitCode === 0 &&
+            this.checkLintCriteria(stepResult, criteria),
           errors: this.extractLintErrors(stepResult.stdout),
           warnings: this.extractLintWarnings(stepResult.stdout),
           output,
@@ -323,7 +354,9 @@ export class ValidationService {
         break;
 
       case 'security':
-        const vulnerabilities = this.extractSecurityVulnerabilities(stepResult.stdout);
+        const vulnerabilities = this.extractSecurityVulnerabilities(
+          stepResult.stdout
+        );
         result.validation_results.security = {
           passed: vulnerabilities <= (criteria.vulnerabilities || 0),
           vulnerabilities,
@@ -336,7 +369,10 @@ export class ValidationService {
   /**
    * Determine if overall validation passed
    */
-  private determineOverallSuccess(result: ValidationResult, criteria: SuccessCriteria): boolean {
+  private determineOverallSuccess(
+    result: ValidationResult,
+    criteria: SuccessCriteria
+  ): boolean {
     const results = result.validation_results;
     if (!results) return false;
 
@@ -353,7 +389,10 @@ export class ValidationService {
   /**
    * Copy project files to temporary workspace
    */
-  private async copyProjectFiles(source: string, destination: string): Promise<void> {
+  private async copyProjectFiles(
+    source: string,
+    destination: string
+  ): Promise<void> {
     try {
       await this.recursiveCopy(source, destination);
     } catch (error) {
@@ -366,21 +405,18 @@ export class ValidationService {
    */
   private async recursiveCopy(src: string, dest: string): Promise<void> {
     const stat = await fs.stat(src);
-    
+
     if (stat.isDirectory()) {
       await fs.mkdir(dest, { recursive: true });
       const files = await fs.readdir(src);
-      
+
       for (const file of files) {
         // Skip node_modules, .git, and other common directories
         if (['node_modules', '.git', 'dist', 'build', '.next'].includes(file)) {
           continue;
         }
-        
-        await this.recursiveCopy(
-          path.join(src, file),
-          path.join(dest, file)
-        );
+
+        await this.recursiveCopy(path.join(src, file), path.join(dest, file));
       }
     } else {
       await fs.copyFile(src, dest);
@@ -394,7 +430,10 @@ export class ValidationService {
     try {
       await fs.rm(workspace, { recursive: true, force: true });
     } catch (error) {
-      console.warn(`Failed to cleanup temporary workspace: ${workspace}`, error);
+      console.warn(
+        `Failed to cleanup temporary workspace: ${workspace}`,
+        error
+      );
     }
   }
 
@@ -415,9 +454,9 @@ export class ValidationService {
   }
 
   private extractTypeErrors(output: string): number {
-    const errorLines = output.split('\n').filter(line => 
-      line.includes('error TS') || line.includes('Error:')
-    );
+    const errorLines = output
+      .split('\n')
+      .filter(line => line.includes('error TS') || line.includes('Error:'));
     return errorLines.length;
   }
 
@@ -427,9 +466,9 @@ export class ValidationService {
   }
 
   private extractBuildWarnings(output: string): number {
-    const warningLines = output.split('\n').filter(line => 
-      line.toLowerCase().includes('warning')
-    );
+    const warningLines = output
+      .split('\n')
+      .filter(line => line.toLowerCase().includes('warning'));
     return warningLines.length;
   }
 

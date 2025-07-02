@@ -42,12 +42,15 @@ export interface ValidationStatistics {
   average_score: number;
   success_rate: number;
   correction_rate: number;
-  criteria_breakdown: Record<string, {
-    total: number;
-    passed: number;
-    failed: number;
-    success_rate: number;
-  }>;
+  criteria_breakdown: Record<
+    string,
+    {
+      total: number;
+      passed: number;
+      failed: number;
+      success_rate: number;
+    }
+  >;
   trend_data: Array<{
     date: string;
     validations: number;
@@ -90,11 +93,11 @@ export class ValidationStorage {
     metadata: Record<string, any> = {}
   ): Promise<StoredValidationResult> {
     const id = `validation_${taskId}_${Date.now()}`;
-    
-    const status: StoredValidationResult['status'] = correctionSession 
-      ? 'corrected' 
-      : validationReport.overall_success 
-        ? 'completed' 
+
+    const status: StoredValidationResult['status'] = correctionSession
+      ? 'corrected'
+      : validationReport.overall_success
+        ? 'completed'
         : 'failed';
 
     const result: StoredValidationResult = {
@@ -115,7 +118,7 @@ export class ValidationStorage {
 
     // Store in database
     await this.storeInDatabase(result);
-    
+
     // Store detailed report as file
     await this.storeReportFile(result);
 
@@ -127,9 +130,13 @@ export class ValidationStorage {
    */
   async get(id: string): Promise<StoredValidationResult | null> {
     try {
-      const result = db.prepare(`
+      const result = db
+        .prepare(
+          `
         SELECT * FROM validation_results WHERE id = ?
-      `).get(id) as any;
+      `
+        )
+        .get(id) as any;
 
       if (!result) return null;
 
@@ -161,7 +168,9 @@ export class ValidationStorage {
         FROM validation_results 
         ${whereClause}
       `;
-      const totalResult = db.prepare(countQuery).get(...params) as { total: number };
+      const totalResult = db.prepare(countQuery).get(...params) as {
+        total: number;
+      };
       const total = totalResult.total;
 
       // Get results
@@ -171,7 +180,9 @@ export class ValidationStorage {
         ORDER BY ${sortBy} ${sortOrder}
         LIMIT ? OFFSET ?
       `;
-      const results = db.prepare(resultsQuery).all(...params, limit, offset) as any[];
+      const results = db
+        .prepare(resultsQuery)
+        .all(...params, limit, offset) as any[];
 
       const deserializedResults = results.map(r => this.deserializeResult(r));
 
@@ -189,12 +200,16 @@ export class ValidationStorage {
   /**
    * Get validation statistics
    */
-  async getStatistics(query: Partial<ValidationQuery> = {}): Promise<ValidationStatistics> {
+  async getStatistics(
+    query: Partial<ValidationQuery> = {}
+  ): Promise<ValidationStatistics> {
     try {
       const { whereClause, params } = this.buildWhereClause(query);
 
       // Basic statistics
-      const basicStats = db.prepare(`
+      const basicStats = db
+        .prepare(
+          `
         SELECT 
           COUNT(*) as total_validations,
           SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as successful_validations,
@@ -203,15 +218,21 @@ export class ValidationStorage {
           AVG(overall_score) as average_score
         FROM validation_results 
         ${whereClause}
-      `).get(...params) as any;
+      `
+        )
+        .get(...params) as any;
 
-      const successRate = basicStats.total_validations > 0 
-        ? (basicStats.successful_validations + basicStats.corrected_validations) / basicStats.total_validations 
-        : 0;
+      const successRate =
+        basicStats.total_validations > 0
+          ? (basicStats.successful_validations +
+              basicStats.corrected_validations) /
+            basicStats.total_validations
+          : 0;
 
-      const correctionRate = basicStats.total_validations > 0
-        ? basicStats.corrected_validations / basicStats.total_validations
-        : 0;
+      const correctionRate =
+        basicStats.total_validations > 0
+          ? basicStats.corrected_validations / basicStats.total_validations
+          : 0;
 
       // Criteria breakdown
       const criteriaStats = await this.getCriteriaBreakdown(query);
@@ -275,9 +296,13 @@ export class ValidationStorage {
    */
   async delete(id: string): Promise<boolean> {
     try {
-      const result = db.prepare(`
+      const result = db
+        .prepare(
+          `
         DELETE FROM validation_results WHERE id = ?
-      `).run(id);
+      `
+        )
+        .run(id);
 
       // Also delete report file
       await this.deleteReportFile(id);
@@ -294,7 +319,9 @@ export class ValidationStorage {
    */
   async update(
     id: string,
-    updates: Partial<Pick<StoredValidationResult, 'tags' | 'metadata' | 'status'>>
+    updates: Partial<
+      Pick<StoredValidationResult, 'tags' | 'metadata' | 'status'>
+    >
   ): Promise<boolean> {
     try {
       const setParts = [];
@@ -321,11 +348,15 @@ export class ValidationStorage {
       params.push(new Date().toISOString());
       params.push(id);
 
-      const result = db.prepare(`
+      const result = db
+        .prepare(
+          `
         UPDATE validation_results 
         SET ${setParts.join(', ')}
         WHERE id = ?
-      `).run(...params);
+      `
+        )
+        .run(...params);
 
       return result.changes > 0;
     } catch (error) {
@@ -378,13 +409,15 @@ export class ValidationStorage {
   }
 
   private async storeInDatabase(result: StoredValidationResult): Promise<void> {
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO validation_results (
         id, task_id, user_id, project_path, original_prompt, 
         success_criteria, validation_report, correction_session, 
         status, overall_score, created_at, updated_at, tags, metadata
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
+    `
+    ).run(
       result.id,
       result.task_id,
       result.user_id,
@@ -392,7 +425,9 @@ export class ValidationStorage {
       result.original_prompt,
       JSON.stringify(result.success_criteria),
       JSON.stringify(result.validation_report),
-      result.correction_session ? JSON.stringify(result.correction_session) : null,
+      result.correction_session
+        ? JSON.stringify(result.correction_session)
+        : null,
       result.status,
       result.validation_report.overall_score,
       result.created_at,
@@ -429,7 +464,9 @@ export class ValidationStorage {
       original_prompt: row.original_prompt,
       success_criteria: JSON.parse(row.success_criteria),
       validation_report: JSON.parse(row.validation_report),
-      correction_session: row.correction_session ? JSON.parse(row.correction_session) : undefined,
+      correction_session: row.correction_session
+        ? JSON.parse(row.correction_session)
+        : undefined,
       status: row.status,
       created_at: row.created_at,
       updated_at: row.updated_at,
@@ -438,7 +475,10 @@ export class ValidationStorage {
     };
   }
 
-  private buildWhereClause(query: ValidationQuery): { whereClause: string; params: any[] } {
+  private buildWhereClause(query: ValidationQuery): {
+    whereClause: string;
+    params: any[];
+  } {
     const conditions = [];
     const params = [];
 
@@ -473,18 +513,23 @@ export class ValidationStorage {
       params.push(...query.tags.map(tag => `%"${tag}"%`));
     }
 
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const whereClause =
+      conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
     return { whereClause, params };
   }
 
-  private async getCriteriaBreakdown(query: Partial<ValidationQuery>): Promise<ValidationStatistics['criteria_breakdown']> {
+  private async getCriteriaBreakdown(
+    query: Partial<ValidationQuery>
+  ): Promise<ValidationStatistics['criteria_breakdown']> {
     // This would parse validation_report JSON to extract criteria statistics
     // For now, return empty object
     return {};
   }
 
-  private async getTrendData(query: Partial<ValidationQuery>): Promise<ValidationStatistics['trend_data']> {
+  private async getTrendData(
+    query: Partial<ValidationQuery>
+  ): Promise<ValidationStatistics['trend_data']> {
     // This would generate trend data over time
     // For now, return empty array
     return [];

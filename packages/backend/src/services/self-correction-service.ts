@@ -1,4 +1,7 @@
-import type { ValidationReport, CriteriaAnalysisResult } from './criteria-analyzer.js';
+import type {
+  ValidationReport,
+  CriteriaAnalysisResult,
+} from './criteria-analyzer.js';
 import type { SuccessCriteria, TaskRequest } from '../api/validation.js';
 import type { FileChange } from './workspace-manager.js';
 
@@ -127,7 +130,7 @@ export class SelfCorrectionService {
     adapterService: any // Interface to re-run AI tasks
   ): Promise<CorrectionResult> {
     const sessionId = `correction_${taskId}_${Date.now()}`;
-    
+
     const session: CorrectionSession = {
       session_id: sessionId,
       task_id: taskId,
@@ -173,12 +176,16 @@ export class SelfCorrectionService {
     let currentValidation = initialValidation;
     let attemptNumber = 0;
 
-    while (attemptNumber < this.config.maxAttempts && !currentValidation.overall_success) {
+    while (
+      attemptNumber < this.config.maxAttempts &&
+      !currentValidation.overall_success
+    ) {
       attemptNumber++;
 
       // Identify correctable failed criteria
-      const correctableFailures = this.identifyCorrectableFailures(currentValidation);
-      
+      const correctableFailures =
+        this.identifyCorrectableFailures(currentValidation);
+
       if (correctableFailures.length === 0) {
         console.log('No correctable failures found, stopping correction loop');
         break;
@@ -208,8 +215,10 @@ export class SelfCorrectionService {
         const attemptStartTime = Date.now();
 
         // Execute correction with AI adapter
-        console.log(`Starting correction attempt ${attemptNumber}/${this.config.maxAttempts}`);
-        
+        console.log(
+          `Starting correction attempt ${attemptNumber}/${this.config.maxAttempts}`
+        );
+
         const correctionResult = await this.executeCorrectionWithAdapter(
           correctionPrompt,
           session.original_criteria,
@@ -224,15 +233,17 @@ export class SelfCorrectionService {
         // Update current validation
         currentValidation = correctionResult.validationResult;
 
-        console.log(`Correction attempt ${attemptNumber} completed: ${attempt.success ? 'SUCCESS' : 'FAILED'}`);
+        console.log(
+          `Correction attempt ${attemptNumber} completed: ${attempt.success ? 'SUCCESS' : 'FAILED'}`
+        );
 
         // Add delay before next attempt
         if (!attempt.success && attemptNumber < this.config.maxAttempts) {
           await this.delay(this.config.retryDelay);
         }
-
       } catch (error) {
-        attempt.error_message = error instanceof Error ? error.message : String(error);
+        attempt.error_message =
+          error instanceof Error ? error.message : String(error);
         attempt.duration = Date.now() - startTime;
         console.error(`Correction attempt ${attemptNumber} failed:`, error);
       }
@@ -248,7 +259,11 @@ export class SelfCorrectionService {
     session.total_duration = Date.now() - startTime;
 
     // Calculate improvements
-    const improvements = this.calculateImprovements(initialValidation, currentValidation, session.attempts.length);
+    const improvements = this.calculateImprovements(
+      initialValidation,
+      currentValidation,
+      session.attempts.length
+    );
 
     return {
       success: currentValidation.overall_success,
@@ -261,14 +276,20 @@ export class SelfCorrectionService {
   /**
    * Identify failures that can be automatically corrected
    */
-  private identifyCorrectableFailures(validation: ValidationReport): CriteriaAnalysisResult[] {
+  private identifyCorrectableFailures(
+    validation: ValidationReport
+  ): CriteriaAnalysisResult[] {
     return validation.criteria_results.filter(result => {
       if (result.met) return false;
 
       // Check if this criterion type is enabled for correction
       const criteriaType = result.criteria_name.replace('custom_', '');
-      return this.config.enabledCriteria.includes(criteriaType) &&
-             this.config.correctionStrategies[criteriaType as keyof typeof this.config.correctionStrategies]?.enabled;
+      return (
+        this.config.enabledCriteria.includes(criteriaType) &&
+        this.config.correctionStrategies[
+          criteriaType as keyof typeof this.config.correctionStrategies
+        ]?.enabled
+      );
     });
   }
 
@@ -283,7 +304,7 @@ export class SelfCorrectionService {
     attemptNumber: number
   ): string {
     const failuresByType = new Map<string, CriteriaAnalysisResult[]>();
-    
+
     for (const failure of failures) {
       const type = failure.criteria_name.replace('custom_', '');
       if (!failuresByType.has(type)) {
@@ -300,7 +321,10 @@ export class SelfCorrectionService {
 
     // Add original context if strategies require it
     const includeOriginal = Array.from(failuresByType.keys()).some(type => {
-      const strategy = this.config.correctionStrategies[type as keyof typeof this.config.correctionStrategies];
+      const strategy =
+        this.config.correctionStrategies[
+          type as keyof typeof this.config.correctionStrategies
+        ];
       return strategy?.includeOriginalPrompt;
     });
 
@@ -310,14 +334,17 @@ export class SelfCorrectionService {
 
     // Add specific correction instructions for each failure type
     for (const [type, typeFailures] of failuresByType.entries()) {
-      const strategy = this.config.correctionStrategies[type as keyof typeof this.config.correctionStrategies];
+      const strategy =
+        this.config.correctionStrategies[
+          type as keyof typeof this.config.correctionStrategies
+        ];
       if (!strategy) continue;
 
       prompt += `${type.toUpperCase()} ISSUES TO FIX:\n`;
-      
+
       for (const failure of typeFailures) {
         prompt += `- ${failure.details.message}\n`;
-        
+
         if (strategy.includeErrorDetails && failure.evidence.length > 0) {
           for (const evidence of failure.evidence) {
             if (evidence.data && typeof evidence.data === 'object') {
@@ -349,7 +376,8 @@ export class SelfCorrectionService {
       prompt += `- ${failure.criteria_name}: ${JSON.stringify(failure.details.expected)}\n`;
     }
 
-    prompt += '\nPlease provide the corrected implementation that addresses all the above issues.';
+    prompt +=
+      '\nPlease provide the corrected implementation that addresses all the above issues.';
 
     return prompt;
   }
@@ -409,7 +437,8 @@ export class SelfCorrectionService {
     return {
       criteria_before: initialValidation.summary.met_criteria,
       criteria_after: finalValidation.summary.met_criteria,
-      score_improvement: finalValidation.overall_score - initialValidation.overall_score,
+      score_improvement:
+        finalValidation.overall_score - initialValidation.overall_score,
       attempts_used: attemptsUsed,
     };
   }

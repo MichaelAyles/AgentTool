@@ -93,7 +93,10 @@ export class StaticAnalysisRunner {
   /**
    * Run comprehensive static analysis on a workspace
    */
-  async runAnalysis(workspacePath: string, workspaceId: string): Promise<StaticAnalysisReport> {
+  async runAnalysis(
+    workspacePath: string,
+    workspaceId: string
+  ): Promise<StaticAnalysisReport> {
     const startTime = Date.now();
     const results: AnalysisResult[] = [];
 
@@ -121,14 +124,16 @@ export class StaticAnalysisRunner {
             info: 0,
             files_checked: 0,
           },
-          issues: [{
-            file: 'tool_execution',
-            line: 0,
-            column: 0,
-            severity: 'error',
-            rule: 'tool_failure',
-            message: `Failed to execute ${tool}: ${error}`,
-          }],
+          issues: [
+            {
+              file: 'tool_execution',
+              line: 0,
+              column: 0,
+              severity: 'error',
+              rule: 'tool_failure',
+              message: `Failed to execute ${tool}: ${error}`,
+            },
+          ],
         });
       }
     }
@@ -153,7 +158,8 @@ export class StaticAnalysisRunner {
    * Run a specific static analysis tool
    */
   async runTool(tool: string, workspacePath: string): Promise<AnalysisResult> {
-    const command = this.config.commands[tool as keyof typeof this.config.commands];
+    const command =
+      this.config.commands[tool as keyof typeof this.config.commands];
     if (!command) {
       throw new Error(`No command configured for tool: ${tool}`);
     }
@@ -163,7 +169,11 @@ export class StaticAnalysisRunner {
     const duration = Date.now() - startTime;
 
     // Parse output based on tool type
-    const parsed = await this.parseToolOutput(tool, result.stdout, result.stderr);
+    const parsed = await this.parseToolOutput(
+      tool,
+      result.stdout,
+      result.stderr
+    );
 
     return {
       tool,
@@ -187,18 +197,32 @@ export class StaticAnalysisRunner {
 
     // Check for configuration files and package.json scripts
     const configFiles = {
-      eslint: ['.eslintrc.js', '.eslintrc.json', '.eslintrc.yml', '.eslintrc.yaml'],
-      prettier: ['.prettierrc', '.prettierrc.json', '.prettierrc.yml', 'prettier.config.js'],
+      eslint: [
+        '.eslintrc.js',
+        '.eslintrc.json',
+        '.eslintrc.yml',
+        '.eslintrc.yaml',
+      ],
+      prettier: [
+        '.prettierrc',
+        '.prettierrc.json',
+        '.prettierrc.yml',
+        'prettier.config.js',
+      ],
       typescript: ['tsconfig.json'],
       jshint: ['.jshintrc'],
-      stylelint: ['.stylelintrc.json', '.stylelintrc.yml', 'stylelint.config.js'],
+      stylelint: [
+        '.stylelintrc.json',
+        '.stylelintrc.yml',
+        'stylelint.config.js',
+      ],
       markdownlint: ['.markdownlint.json', '.markdownlintrc'],
     };
 
     for (const [tool, configs] of Object.entries(configFiles)) {
       const hasConfig = await this.hasAnyFile(workspacePath, configs);
       const hasScript = await this.hasPackageScript(workspacePath, tool);
-      
+
       if (hasConfig || hasScript) {
         tools.push(tool);
       }
@@ -237,20 +261,24 @@ export class StaticAnalysisRunner {
         env: { ...process.env, NODE_ENV: 'production' },
       });
 
-      child.stdout?.on('data', (data) => {
+      child.stdout?.on('data', data => {
         stdout += data.toString();
       });
 
-      child.stderr?.on('data', (data) => {
+      child.stderr?.on('data', data => {
         stderr += data.toString();
       });
 
       const timeout = setTimeout(() => {
         child.kill('SIGKILL');
-        reject(new Error(`Command timed out after ${this.config.timeout}ms: ${command}`));
+        reject(
+          new Error(
+            `Command timed out after ${this.config.timeout}ms: ${command}`
+          )
+        );
       }, this.config.timeout);
 
-      child.on('close', (exitCode) => {
+      child.on('close', exitCode => {
         clearTimeout(timeout);
         resolve({
           exitCode: exitCode || 0,
@@ -259,7 +287,7 @@ export class StaticAnalysisRunner {
         });
       });
 
-      child.on('error', (error) => {
+      child.on('error', error => {
         clearTimeout(timeout);
         reject(error);
       });
@@ -278,27 +306,27 @@ export class StaticAnalysisRunner {
       switch (tool) {
         case 'eslint':
           return this.parseESLintOutput(stdout);
-        
+
         case 'prettier':
           return this.parsePrettierOutput(stdout, stderr);
-        
+
         case 'typescript':
           return this.parseTypeScriptOutput(stderr);
-        
+
         case 'jshint':
           return this.parseJSHintOutput(stdout);
-        
+
         case 'stylelint':
           return this.parseStylelintOutput(stdout);
-        
+
         case 'markdownlint':
           return this.parseMarkdownlintOutput(stdout);
-        
+
         default:
           return { raw: stdout + stderr };
       }
     } catch (error) {
-      return { 
+      return {
         raw: stdout + stderr,
         parse_error: `Failed to parse ${tool} output: ${error}`,
       };
@@ -323,7 +351,7 @@ export class StaticAnalysisRunner {
   private parsePrettierOutput(stdout: string, stderr: string): any {
     const issues = [];
     const lines = stderr.split('\n').filter(line => line.trim());
-    
+
     for (const line of lines) {
       if (line.includes('[error]')) {
         const match = line.match(/\[error\]\s+(.+?):\s+(.+)/);
@@ -349,9 +377,11 @@ export class StaticAnalysisRunner {
   private parseTypeScriptOutput(stderr: string): any {
     const issues = [];
     const lines = stderr.split('\n').filter(line => line.trim());
-    
+
     for (const line of lines) {
-      const match = line.match(/(.+?)\((\d+),(\d+)\):\s+(error|warning)\s+TS(\d+):\s+(.+)/);
+      const match = line.match(
+        /(.+?)\((\d+),(\d+)\):\s+(error|warning)\s+TS(\d+):\s+(.+)/
+      );
       if (match) {
         issues.push({
           file: match[1],
@@ -376,7 +406,7 @@ export class StaticAnalysisRunner {
   private parseJSHintOutput(output: string): any {
     const issues = [];
     const lines = output.split('\n').filter(line => line.trim());
-    
+
     for (const line of lines) {
       const match = line.match(/(.+?):(\d+):(\d+):\s+(.+)/);
       if (match) {
@@ -421,7 +451,11 @@ export class StaticAnalysisRunner {
   /**
    * Extract metrics from parsed output
    */
-  private extractMetrics(tool: string, parsed: any, rawOutput: string): AnalysisResult['metrics'] {
+  private extractMetrics(
+    tool: string,
+    parsed: any,
+    rawOutput: string
+  ): AnalysisResult['metrics'] {
     const metrics = {
       errors: 0,
       warnings: 0,
@@ -444,16 +478,24 @@ export class StaticAnalysisRunner {
 
         case 'typescript':
           if (parsed.issues) {
-            metrics.errors = parsed.issues.filter((i: any) => i.severity === 'error').length;
-            metrics.warnings = parsed.issues.filter((i: any) => i.severity === 'warning').length;
-            metrics.files_checked = new Set(parsed.issues.map((i: any) => i.file)).size;
+            metrics.errors = parsed.issues.filter(
+              (i: any) => i.severity === 'error'
+            ).length;
+            metrics.warnings = parsed.issues.filter(
+              (i: any) => i.severity === 'warning'
+            ).length;
+            metrics.files_checked = new Set(
+              parsed.issues.map((i: any) => i.file)
+            ).size;
           }
           break;
 
         case 'prettier':
           if (parsed.issues) {
             metrics.errors = parsed.issues.length;
-            metrics.files_checked = new Set(parsed.issues.map((i: any) => i.file)).size;
+            metrics.files_checked = new Set(
+              parsed.issues.map((i: any) => i.file)
+            ).size;
           }
           break;
 
@@ -461,7 +503,7 @@ export class StaticAnalysisRunner {
           // Generic parsing for other tools
           const errorMatches = rawOutput.match(/(\d+)\s+error/gi);
           const warningMatches = rawOutput.match(/(\d+)\s+warning/gi);
-          
+
           if (errorMatches) {
             metrics.errors = parseInt(errorMatches[0].match(/\d+/)![0]);
           }
@@ -479,7 +521,12 @@ export class StaticAnalysisRunner {
   /**
    * Extract standardized issues from parsed output
    */
-  private extractIssues(tool: string, parsed: any, stdout: string, stderr: string): Issue[] {
+  private extractIssues(
+    tool: string,
+    parsed: any,
+    stdout: string,
+    stderr: string
+  ): Issue[] {
     const issues: Issue[] = [];
 
     try {
@@ -539,7 +586,9 @@ export class StaticAnalysisRunner {
   /**
    * Generate analysis summary
    */
-  private generateSummary(results: AnalysisResult[]): StaticAnalysisReport['summary'] {
+  private generateSummary(
+    results: AnalysisResult[]
+  ): StaticAnalysisReport['summary'] {
     const summary = {
       total_files: 0,
       total_issues: 0,
@@ -555,7 +604,7 @@ export class StaticAnalysisRunner {
 
     for (const result of results) {
       summary.tools_run.push(result.tool);
-      
+
       if (result.success) {
         summary.tools_passed.push(result.tool);
       } else {
@@ -588,7 +637,10 @@ export class StaticAnalysisRunner {
     }
   }
 
-  private async hasAnyFile(basePath: string, files: string[]): Promise<boolean> {
+  private async hasAnyFile(
+    basePath: string,
+    files: string[]
+  ): Promise<boolean> {
     for (const file of files) {
       if (await this.fileExists(path.join(basePath, file))) {
         return true;
@@ -597,10 +649,15 @@ export class StaticAnalysisRunner {
     return false;
   }
 
-  private async hasPackageScript(workspacePath: string, scriptName: string): Promise<boolean> {
+  private async hasPackageScript(
+    workspacePath: string,
+    scriptName: string
+  ): Promise<boolean> {
     try {
       const packageJsonPath = path.join(workspacePath, 'package.json');
-      const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf8'));
+      const packageJson = JSON.parse(
+        await fs.readFile(packageJsonPath, 'utf8')
+      );
       return packageJson.scripts && packageJson.scripts[scriptName];
     } catch {
       return false;

@@ -78,12 +78,16 @@ setInterval(() => {
 /**
  * Middleware to collect HTTP metrics
  */
-export const metricsMiddleware = (req: Request, res: Response, next: NextFunction): void => {
+export const metricsMiddleware = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
   const start = Date.now();
-  
+
   // Get route pattern (not the actual path with parameters)
   const route = req.route?.path || req.path;
-  
+
   res.on('finish', () => {
     const duration = (Date.now() - start) / 1000;
     const labels = {
@@ -91,18 +95,21 @@ export const metricsMiddleware = (req: Request, res: Response, next: NextFunctio
       route: route,
       status_code: res.statusCode.toString(),
     };
-    
+
     httpRequestDuration.observe(labels, duration);
     httpRequestsTotal.inc(labels);
   });
-  
+
   next();
 };
 
 /**
  * Metrics endpoint handler
  */
-export const metricsHandler = async (req: Request, res: Response): Promise<void> => {
+export const metricsHandler = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     res.set('Content-Type', register.contentType);
     const metrics = await register.metrics();
@@ -120,33 +127,33 @@ export const metrics = {
   recordValidation: (status: 'success' | 'failure') => {
     validationTotal.inc({ status });
   },
-  
+
   recordValidationDuration: (criteriaType: string, duration: number) => {
     validationDuration.observe({ criteria_type: criteriaType }, duration);
   },
-  
+
   setValidationQueueLength: (length: number) => {
     validationQueueLength.set(length);
   },
-  
+
   // Adapter metrics
   recordAdapterError: (adapter: string, errorType: string) => {
     adapterErrors.inc({ adapter, error_type: errorType });
   },
-  
+
   // WebSocket metrics
   setWebSocketConnections: (count: number) => {
     websocketConnections.set(count);
   },
-  
+
   incrementWebSocketConnections: () => {
     websocketConnections.inc();
   },
-  
+
   decrementWebSocketConnections: () => {
     websocketConnections.dec();
   },
-  
+
   // Custom metrics
   createCounter: (name: string, help: string, labelNames: string[] = []) => {
     return new promClient.Counter({
@@ -156,7 +163,7 @@ export const metrics = {
       registers: [register],
     });
   },
-  
+
   createGauge: (name: string, help: string, labelNames: string[] = []) => {
     return new promClient.Gauge({
       name,
@@ -165,8 +172,13 @@ export const metrics = {
       registers: [register],
     });
   },
-  
-  createHistogram: (name: string, help: string, labelNames: string[] = [], buckets?: number[]) => {
+
+  createHistogram: (
+    name: string,
+    help: string,
+    labelNames: string[] = [],
+    buckets?: number[]
+  ) => {
     return new promClient.Histogram({
       name,
       help,

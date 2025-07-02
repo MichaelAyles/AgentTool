@@ -24,7 +24,11 @@ import {
   sanitizeInput,
   structuredLogger,
 } from './middleware/index.js';
-import { metricsMiddleware, metricsHandler, metrics } from './middleware/metrics.js';
+import {
+  metricsMiddleware,
+  metricsHandler,
+  metrics,
+} from './middleware/metrics.js';
 
 const app = express();
 const server = createServer(app);

@@ -171,7 +171,10 @@ export class TestRunner {
   /**
    * Run comprehensive test suite on a workspace
    */
-  async runTests(workspacePath: string, workspaceId: string): Promise<TestReport> {
+  async runTests(
+    workspacePath: string,
+    workspaceId: string
+  ): Promise<TestReport> {
     const startTime = Date.now();
     const results: TestRunResult[] = [];
 
@@ -215,7 +218,9 @@ export class TestRunner {
       project_path: workspacePath,
       timestamp: new Date().toISOString(),
       duration,
-      overall_success: aggregatedSummary.frameworks_failed.length === 0 && aggregatedSummary.failed === 0,
+      overall_success:
+        aggregatedSummary.frameworks_failed.length === 0 &&
+        aggregatedSummary.failed === 0,
       results,
       aggregated_summary: aggregatedSummary,
     };
@@ -224,7 +229,10 @@ export class TestRunner {
   /**
    * Run a specific test framework
    */
-  async runFramework(framework: string, workspacePath: string): Promise<TestRunResult> {
+  async runFramework(
+    framework: string,
+    workspacePath: string
+  ): Promise<TestRunResult> {
     const command = await this.getFrameworkCommand(framework, workspacePath);
     if (!command) {
       throw new Error(`No command configured for framework: ${framework}`);
@@ -235,7 +243,12 @@ export class TestRunner {
     const duration = Date.now() - startTime;
 
     // Parse output based on framework
-    const parsed = await this.parseFrameworkOutput(framework, result.stdout, result.stderr, workspacePath);
+    const parsed = await this.parseFrameworkOutput(
+      framework,
+      result.stdout,
+      result.stderr,
+      workspacePath
+    );
 
     // Extract performance metrics
     const performance = this.extractPerformanceMetrics(parsed);
@@ -265,16 +278,28 @@ export class TestRunner {
     // Check package.json for dependencies and scripts
     const packageJsonPath = path.join(workspacePath, 'package.json');
     try {
-      const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf8'));
-      const deps = { ...packageJson.dependencies, ...packageJson.devDependencies };
+      const packageJson = JSON.parse(
+        await fs.readFile(packageJsonPath, 'utf8')
+      );
+      const deps = {
+        ...packageJson.dependencies,
+        ...packageJson.devDependencies,
+      };
       const scripts = packageJson.scripts || {};
 
       // Check for framework dependencies
       if (deps.jest || scripts.test?.includes('jest')) frameworks.push('jest');
-      if (deps.mocha || scripts.test?.includes('mocha')) frameworks.push('mocha');
-      if (deps.vitest || scripts.test?.includes('vitest')) frameworks.push('vitest');
-      if (deps['@playwright/test'] || scripts['test:e2e']?.includes('playwright')) frameworks.push('playwright');
-      if (deps.cypress || scripts['test:e2e']?.includes('cypress')) frameworks.push('cypress');
+      if (deps.mocha || scripts.test?.includes('mocha'))
+        frameworks.push('mocha');
+      if (deps.vitest || scripts.test?.includes('vitest'))
+        frameworks.push('vitest');
+      if (
+        deps['@playwright/test'] ||
+        scripts['test:e2e']?.includes('playwright')
+      )
+        frameworks.push('playwright');
+      if (deps.cypress || scripts['test:e2e']?.includes('cypress'))
+        frameworks.push('cypress');
       if (deps.jasmine) frameworks.push('jasmine');
       if (deps.ava) frameworks.push('ava');
       if (deps.tap) frameworks.push('tap');
@@ -314,11 +339,16 @@ export class TestRunner {
   /**
    * Get the appropriate command for a framework
    */
-  private async getFrameworkCommand(framework: string, workspacePath: string): Promise<string | null> {
+  private async getFrameworkCommand(
+    framework: string,
+    workspacePath: string
+  ): Promise<string | null> {
     const packageJsonPath = path.join(workspacePath, 'package.json');
-    
+
     try {
-      const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf8'));
+      const packageJson = JSON.parse(
+        await fs.readFile(packageJsonPath, 'utf8')
+      );
       const scripts = packageJson.scripts || {};
 
       // Prefer package.json scripts
@@ -326,28 +356,37 @@ export class TestRunner {
         case 'jest':
           if (scripts.test) return 'npm test';
           return 'npx jest --json --coverage';
-        
+
         case 'mocha':
           if (scripts.test?.includes('mocha')) return 'npm test';
           return 'npx mocha --reporter json';
-        
+
         case 'vitest':
           if (scripts.test?.includes('vitest')) return 'npm test';
           return 'npx vitest run --reporter=json';
-        
+
         case 'playwright':
           if (scripts['test:e2e']) return 'npm run test:e2e';
           return 'npx playwright test --reporter=json';
-        
+
         case 'cypress':
-          if (scripts['test:e2e']?.includes('cypress')) return 'npm run test:e2e';
+          if (scripts['test:e2e']?.includes('cypress'))
+            return 'npm run test:e2e';
           return 'npx cypress run --reporter json';
-        
+
         default:
-          return this.config.frameworks[framework as keyof typeof this.config.frameworks] || null;
+          return (
+            this.config.frameworks[
+              framework as keyof typeof this.config.frameworks
+            ] || null
+          );
       }
     } catch {
-      return this.config.frameworks[framework as keyof typeof this.config.frameworks] || null;
+      return (
+        this.config.frameworks[
+          framework as keyof typeof this.config.frameworks
+        ] || null
+      );
     }
   }
 
@@ -371,27 +410,29 @@ export class TestRunner {
         cwd: workspacePath,
         stdio: 'pipe',
         shell: true,
-        env: { 
-          ...process.env, 
+        env: {
+          ...process.env,
           NODE_ENV: 'test',
           CI: 'true', // Enable CI mode for better test output
         },
       });
 
-      child.stdout?.on('data', (data) => {
+      child.stdout?.on('data', data => {
         stdout += data.toString();
       });
 
-      child.stderr?.on('data', (data) => {
+      child.stderr?.on('data', data => {
         stderr += data.toString();
       });
 
       const timeout = setTimeout(() => {
         child.kill('SIGKILL');
-        reject(new Error(`Test timed out after ${this.config.timeout}ms: ${command}`));
+        reject(
+          new Error(`Test timed out after ${this.config.timeout}ms: ${command}`)
+        );
       }, this.config.timeout);
 
-      child.on('close', (exitCode) => {
+      child.on('close', exitCode => {
         clearTimeout(timeout);
         resolve({
           exitCode: exitCode || 0,
@@ -400,7 +441,7 @@ export class TestRunner {
         });
       });
 
-      child.on('error', (error) => {
+      child.on('error', error => {
         clearTimeout(timeout);
         reject(error);
       });
@@ -420,19 +461,19 @@ export class TestRunner {
       switch (framework) {
         case 'jest':
           return this.parseJestOutput(stdout, stderr);
-        
+
         case 'mocha':
           return this.parseMochaOutput(stdout);
-        
+
         case 'vitest':
           return this.parseVitestOutput(stdout);
-        
+
         case 'playwright':
           return this.parsePlaywrightOutput(stdout);
-        
+
         case 'cypress':
           return this.parseCypressOutput(stdout);
-        
+
         default:
           return this.parseGenericOutput(stdout, stderr);
       }
@@ -457,7 +498,7 @@ export class TestRunner {
     } catch {
       // Fallback to text parsing
     }
-    
+
     return { raw: stdout + stderr };
   }
 
@@ -487,7 +528,7 @@ export class TestRunner {
     } catch {
       // Fallback
     }
-    
+
     return { raw: stdout };
   }
 
@@ -546,7 +587,11 @@ export class TestRunner {
   /**
    * Extract test summary
    */
-  private extractSummary(framework: string, parsed: any, rawOutput: string): TestRunResult['summary'] {
+  private extractSummary(
+    framework: string,
+    parsed: any,
+    rawOutput: string
+  ): TestRunResult['summary'] {
     const summary = {
       total_tests: 0,
       passed: 0,
@@ -603,14 +648,23 @@ export class TestRunner {
             for (const result of parsed.testResults) {
               const suite: TestSuite = {
                 name: result.name,
-                tests: result.assertionResults?.map((test: any) => ({
-                  name: test.title,
-                  status: test.status === 'passed' ? 'passed' : test.status === 'failed' ? 'failed' : 'skipped',
-                  duration: test.duration || 0,
-                  error: test.failureMessages?.length > 0 ? {
-                    message: test.failureMessages[0],
-                  } : undefined,
-                })) || [],
+                tests:
+                  result.assertionResults?.map((test: any) => ({
+                    name: test.title,
+                    status:
+                      test.status === 'passed'
+                        ? 'passed'
+                        : test.status === 'failed'
+                          ? 'failed'
+                          : 'skipped',
+                    duration: test.duration || 0,
+                    error:
+                      test.failureMessages?.length > 0
+                        ? {
+                            message: test.failureMessages[0],
+                          }
+                        : undefined,
+                  })) || [],
                 duration: result.endTime - result.startTime,
                 status: result.status === 'passed' ? 'passed' : 'failed',
                 errors: result.message ? [result.message] : [],
@@ -623,10 +677,10 @@ export class TestRunner {
         case 'mocha':
           if (parsed.tests) {
             const suiteMap = new Map<string, TestSuite>();
-            
+
             for (const test of parsed.tests) {
               const suiteName = test.fullTitle?.split(' ')[0] || 'default';
-              
+
               if (!suiteMap.has(suiteName)) {
                 suiteMap.set(suiteName, {
                   name: suiteName,
@@ -636,24 +690,31 @@ export class TestRunner {
                   errors: [],
                 });
               }
-              
+
               const suite = suiteMap.get(suiteName)!;
               suite.tests.push({
                 name: test.title,
-                status: test.state === 'passed' ? 'passed' : test.state === 'failed' ? 'failed' : 'skipped',
+                status:
+                  test.state === 'passed'
+                    ? 'passed'
+                    : test.state === 'failed'
+                      ? 'failed'
+                      : 'skipped',
                 duration: test.duration || 0,
-                error: test.err ? {
-                  message: test.err.message,
-                  stack: test.err.stack,
-                } : undefined,
+                error: test.err
+                  ? {
+                      message: test.err.message,
+                      stack: test.err.stack,
+                    }
+                  : undefined,
               });
-              
+
               suite.duration += test.duration || 0;
               if (test.state === 'failed') {
                 suite.status = 'failed';
               }
             }
-            
+
             suites.push(...suiteMap.values());
           }
           break;
@@ -703,8 +764,9 @@ export class TestRunner {
    */
   private extractPerformanceMetrics(parsed: any): TestRunResult['performance'] {
     try {
-      const allTests: Array<{ name: string; duration: number; suite: string }> = [];
-      
+      const allTests: Array<{ name: string; duration: number; suite: string }> =
+        [];
+
       if (parsed.testResults) {
         for (const result of parsed.testResults) {
           for (const test of result.assertionResults || []) {
@@ -737,7 +799,9 @@ export class TestRunner {
   /**
    * Generate aggregated summary
    */
-  private generateAggregatedSummary(results: TestRunResult[]): TestReport['aggregated_summary'] {
+  private generateAggregatedSummary(
+    results: TestRunResult[]
+  ): TestReport['aggregated_summary'] {
     const summary = {
       total_tests: 0,
       passed: 0,
@@ -752,7 +816,7 @@ export class TestRunner {
 
     for (const result of results) {
       summary.frameworks_run.push(result.framework);
-      
+
       if (result.success && result.summary.failed === 0) {
         summary.frameworks_passed.push(result.framework);
       } else {
@@ -779,7 +843,7 @@ export class TestRunner {
    */
   private checkCoverageThreshold(coverage: CoverageReport): boolean {
     const threshold = this.config.coverageThreshold!;
-    
+
     return (
       coverage.statements.percentage >= (threshold.statements || 0) &&
       coverage.branches.percentage >= (threshold.branches || 0) &&
@@ -794,7 +858,9 @@ export class TestRunner {
     return undefined;
   }
 
-  private async parseCoverageFile(filePath: string): Promise<CoverageReport | undefined> {
+  private async parseCoverageFile(
+    filePath: string
+  ): Promise<CoverageReport | undefined> {
     // Implementation would parse coverage files (JSON, XML, HTML)
     return undefined;
   }
@@ -808,7 +874,10 @@ export class TestRunner {
     }
   }
 
-  private async hasAnyFile(basePath: string, files: string[]): Promise<boolean> {
+  private async hasAnyFile(
+    basePath: string,
+    files: string[]
+  ): Promise<boolean> {
     for (const file of files) {
       if (await this.fileExists(path.join(basePath, file))) {
         return true;

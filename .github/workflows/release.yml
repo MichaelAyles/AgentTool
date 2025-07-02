@@ -16,8 +16,8 @@ on:
         default: 'production'
         type: choice
         options:
-        - staging
-        - production
+          - staging
+          - production
 
 env:
   NODE_VERSION: '18'
@@ -264,7 +264,7 @@ jobs:
           # Update docker-compose with new image tags
           sed -i "s|image: vibe-code-backend:.*|image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-backend:${{ needs.validate.outputs.version }}|g" docker-compose.staging.yml
           sed -i "s|image: vibe-code-frontend:.*|image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend:${{ needs.validate.outputs.version }}|g" docker-compose.staging.yml
-          
+
           # Deploy to staging environment
           ./scripts/deploy.sh staging docker-compose.staging.yml .env.staging
 
@@ -272,7 +272,7 @@ jobs:
         run: |
           # Wait for deployment to be ready
           sleep 60
-          
+
           # Run basic health checks
           curl -f https://staging.vibecode.com/health
           curl -f https://staging.vibecode.com/api/health
@@ -316,7 +316,7 @@ jobs:
           # Update docker-compose with new image tags
           sed -i "s|image: vibe-code-backend:.*|image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-backend:${{ needs.validate.outputs.version }}|g" docker-compose.prod.yml
           sed -i "s|image: vibe-code-frontend:.*|image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend:${{ needs.validate.outputs.version }}|g" docker-compose.prod.yml
-          
+
           # Rolling deployment to production
           ./scripts/deploy.sh production docker-compose.prod.yml .env.production
 
@@ -324,11 +324,11 @@ jobs:
         run: |
           # Wait for deployment to be ready
           sleep 120
-          
+
           # Run comprehensive health checks
           curl -f https://vibecode.com/health
           curl -f https://vibecode.com/api/health
-          
+
           # Check critical functionality
           curl -f https://vibecode.com/api/adapters
           curl -f https://vibecode.com/api/validation/stats
@@ -362,23 +362,23 @@ jobs:
           release_name: Release ${{ needs.validate.outputs.version }}
           body: |
             ## Changes in ${{ needs.validate.outputs.version }}
-            
+
             ### 🚀 Features
             <!-- Add new features here -->
-            
+
             ### 🐛 Bug Fixes
             <!-- Add bug fixes here -->
-            
+
             ### 🔒 Security
             <!-- Add security updates here -->
-            
+
             ### 📚 Documentation
             <!-- Add documentation updates here -->
-            
+
             ## Docker Images
             - Backend: `${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-backend:${{ needs.validate.outputs.version }}`
             - Frontend: `${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend:${{ needs.validate.outputs.version }}`
-            
+
             ## Deployment
             - Staging: https://staging.vibecode.com
             - Production: https://vibecode.com

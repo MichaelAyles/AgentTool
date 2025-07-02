@@ -6,7 +6,10 @@
   "author": "Vibe Code Team",
   "license": "MIT",
   "workspaces": [
-    "packages/*",
+    "packages/backend",
+    "packages/frontend",
+    "packages/adapter-sdk",
+    "packages/shared",
     "adapters/*"
   ],
   "scripts": {

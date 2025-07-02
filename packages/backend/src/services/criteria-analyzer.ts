@@ -13,7 +13,13 @@ export interface CriteriaAnalysisResult {
     recommendations?: string[];
   };
   evidence: {
-    source: 'static_analysis' | 'test_results' | 'build' | 'security' | 'performance' | 'custom';
+    source:
+      | 'static_analysis'
+      | 'test_results'
+      | 'build'
+      | 'security'
+      | 'performance'
+      | 'custom';
     data: any;
   }[];
 }
@@ -56,7 +62,13 @@ export interface ReportTemplate {
 }
 
 export interface ReportSection {
-  type: 'summary' | 'criteria' | 'details' | 'recommendations' | 'evidence' | 'charts';
+  type:
+    | 'summary'
+    | 'criteria'
+    | 'details'
+    | 'recommendations'
+    | 'evidence'
+    | 'charts';
   title: string;
   content?: string;
   data_source?: string;
@@ -86,32 +98,50 @@ export class CriteriaAnalyzer {
 
     // Analyze each criterion
     if (successCriteria.lint) {
-      const result = this.analyzeLintCriteria(successCriteria.lint, staticAnalysis);
+      const result = this.analyzeLintCriteria(
+        successCriteria.lint,
+        staticAnalysis
+      );
       analysisResults.push(result);
     }
 
     if (successCriteria.type_check) {
-      const result = this.analyzeTypeCheckCriteria(successCriteria.type_check, staticAnalysis);
+      const result = this.analyzeTypeCheckCriteria(
+        successCriteria.type_check,
+        staticAnalysis
+      );
       analysisResults.push(result);
     }
 
     if (successCriteria.tests) {
-      const result = this.analyzeTestCriteria(successCriteria.tests, testResults);
+      const result = this.analyzeTestCriteria(
+        successCriteria.tests,
+        testResults
+      );
       analysisResults.push(result);
     }
 
     if (successCriteria.build) {
-      const result = this.analyzeBuildCriteria(successCriteria.build, buildResults);
+      const result = this.analyzeBuildCriteria(
+        successCriteria.build,
+        buildResults
+      );
       analysisResults.push(result);
     }
 
     if (successCriteria.security) {
-      const result = this.analyzeSecurityCriteria(successCriteria.security, securityResults);
+      const result = this.analyzeSecurityCriteria(
+        successCriteria.security,
+        securityResults
+      );
       analysisResults.push(result);
     }
 
     if (successCriteria.performance) {
-      const result = this.analyzePerformanceCriteria(successCriteria.performance, performanceResults);
+      const result = this.analyzePerformanceCriteria(
+        successCriteria.performance,
+        performanceResults
+      );
       analysisResults.push(result);
     }
 
@@ -128,9 +158,11 @@ export class CriteriaAnalyzer {
 
     // Calculate overall metrics
     const overallSuccess = analysisResults.every(r => r.met);
-    const overallScore = analysisResults.length > 0 
-      ? analysisResults.reduce((sum, r) => sum + r.score, 0) / analysisResults.length 
-      : 0;
+    const overallScore =
+      analysisResults.length > 0
+        ? analysisResults.reduce((sum, r) => sum + r.score, 0) /
+          analysisResults.length
+        : 0;
 
     // Generate summary
     const summary = this.generateSummary(analysisResults);
@@ -143,9 +175,16 @@ export class CriteriaAnalyzer {
       criteria_results: analysisResults,
       summary,
       execution_context: {
-        workspace_id: staticAnalysis?.workspace_id || testResults?.workspace_id || 'unknown',
-        project_path: staticAnalysis?.project_path || testResults?.project_path || 'unknown',
-        validation_duration: (staticAnalysis?.duration || 0) + (testResults?.duration || 0),
+        workspace_id:
+          staticAnalysis?.workspace_id ||
+          testResults?.workspace_id ||
+          'unknown',
+        project_path:
+          staticAnalysis?.project_path ||
+          testResults?.project_path ||
+          'unknown',
+        validation_duration:
+          (staticAnalysis?.duration || 0) + (testResults?.duration || 0),
         static_analysis: staticAnalysis,
         test_results: testResults,
         build_results: buildResults,
@@ -161,13 +200,14 @@ export class CriteriaAnalyzer {
   async generateReport(
     validationReport: ValidationReport,
     templateName: string = 'default',
-    options: { 
+    options: {
       includeDetails?: boolean;
       includeEvidence?: boolean;
       format?: 'html' | 'markdown' | 'json';
     } = {}
   ): Promise<string> {
-    const template = this.templates.get(templateName) || this.templates.get('default')!;
+    const template =
+      this.templates.get(templateName) || this.templates.get('default')!;
     const format = options.format || template.format;
 
     switch (format) {
@@ -190,23 +230,36 @@ export class CriteriaAnalyzer {
     staticAnalysis?: StaticAnalysisReport
   ): CriteriaAnalysisResult {
     const eslintResult = staticAnalysis?.results.find(r => r.tool === 'eslint');
-    const prettierResult = staticAnalysis?.results.find(r => r.tool === 'prettier');
+    const prettierResult = staticAnalysis?.results.find(
+      r => r.tool === 'prettier'
+    );
 
-    const actualErrors = (eslintResult?.summary.errors || 0) + (prettierResult?.summary.errors || 0);
-    const actualWarnings = (eslintResult?.summary.warnings || 0) + (prettierResult?.summary.warnings || 0);
+    const actualErrors =
+      (eslintResult?.summary.errors || 0) +
+      (prettierResult?.summary.errors || 0);
+    const actualWarnings =
+      (eslintResult?.summary.warnings || 0) +
+      (prettierResult?.summary.warnings || 0);
 
     const errorsPass = actualErrors <= criteria.errors;
-    const warningsPass = !criteria.warnings || actualWarnings <= criteria.warnings;
+    const warningsPass =
+      !criteria.warnings || actualWarnings <= criteria.warnings;
     const met = errorsPass && warningsPass;
 
-    const score = met ? 100 : Math.max(0, 100 - (actualErrors * 10) - (actualWarnings * 2));
+    const score = met
+      ? 100
+      : Math.max(0, 100 - actualErrors * 10 - actualWarnings * 2);
 
     const recommendations = [];
     if (!errorsPass) {
-      recommendations.push(`Fix ${actualErrors} linting errors (maximum allowed: ${criteria.errors})`);
+      recommendations.push(
+        `Fix ${actualErrors} linting errors (maximum allowed: ${criteria.errors})`
+      );
     }
     if (!warningsPass) {
-      recommendations.push(`Reduce warnings to ${criteria.warnings} or fewer (current: ${actualWarnings})`);
+      recommendations.push(
+        `Reduce warnings to ${criteria.warnings} or fewer (current: ${actualWarnings})`
+      );
     }
 
     return {
@@ -216,15 +269,19 @@ export class CriteriaAnalyzer {
       details: {
         expected: criteria,
         actual: { errors: actualErrors, warnings: actualWarnings },
-        message: met 
+        message: met
           ? 'Linting criteria met successfully'
           : `Linting criteria failed: ${actualErrors} errors (max ${criteria.errors})`,
         recommendations,
       },
-      evidence: staticAnalysis ? [{
-        source: 'static_analysis',
-        data: { eslint: eslintResult, prettier: prettierResult },
-      }] : [],
+      evidence: staticAnalysis
+        ? [
+            {
+              source: 'static_analysis',
+              data: { eslint: eslintResult, prettier: prettierResult },
+            },
+          ]
+        : [],
     };
   }
 
@@ -235,21 +292,25 @@ export class CriteriaAnalyzer {
     criteria: NonNullable<SuccessCriteria['type_check']>,
     staticAnalysis?: StaticAnalysisReport
   ): CriteriaAnalysisResult {
-    const typescriptResult = staticAnalysis?.results.find(r => r.tool === 'typescript');
+    const typescriptResult = staticAnalysis?.results.find(
+      r => r.tool === 'typescript'
+    );
     const actualErrors = typescriptResult?.summary.errors || 0;
-    
+
     const statusPass = criteria.status === 'pass' ? actualErrors === 0 : true;
     const errorsPass = !criteria.errors || actualErrors <= criteria.errors;
     const met = statusPass && errorsPass;
 
-    const score = met ? 100 : Math.max(0, 100 - (actualErrors * 15));
+    const score = met ? 100 : Math.max(0, 100 - actualErrors * 15);
 
     const recommendations = [];
     if (!statusPass) {
       recommendations.push('Fix all TypeScript compilation errors');
     }
     if (!errorsPass) {
-      recommendations.push(`Reduce TypeScript errors to ${criteria.errors} or fewer (current: ${actualErrors})`);
+      recommendations.push(
+        `Reduce TypeScript errors to ${criteria.errors} or fewer (current: ${actualErrors})`
+      );
     }
 
     return {
@@ -258,16 +319,23 @@ export class CriteriaAnalyzer {
       score,
       details: {
         expected: criteria,
-        actual: { status: actualErrors === 0 ? 'pass' : 'fail', errors: actualErrors },
-        message: met 
+        actual: {
+          status: actualErrors === 0 ? 'pass' : 'fail',
+          errors: actualErrors,
+        },
+        message: met
           ? 'Type checking criteria met successfully'
           : `Type checking failed: ${actualErrors} errors`,
         recommendations,
       },
-      evidence: typescriptResult ? [{
-        source: 'static_analysis',
-        data: typescriptResult,
-      }] : [],
+      evidence: typescriptResult
+        ? [
+            {
+              source: 'static_analysis',
+              data: typescriptResult,
+            },
+          ]
+        : [],
     };
   }
 
@@ -282,13 +350,16 @@ export class CriteriaAnalyzer {
     const actualStatus = summary?.failed === 0 ? 'pass' : 'fail';
     const actualCoverage = summary?.coverage_summary?.lines.percentage || 0;
 
-    const statusPass = criteria.status === 'pass' ? actualStatus === 'pass' : true;
-    const coveragePass = !criteria.coverage || actualCoverage >= criteria.coverage;
+    const statusPass =
+      criteria.status === 'pass' ? actualStatus === 'pass' : true;
+    const coveragePass =
+      !criteria.coverage || actualCoverage >= criteria.coverage;
     const met = statusPass && coveragePass;
 
     let score = 100;
     if (!statusPass) score -= 50;
-    if (!coveragePass) score -= Math.min(50, (criteria.coverage! - actualCoverage) * 2);
+    if (!coveragePass)
+      score -= Math.min(50, (criteria.coverage! - actualCoverage) * 2);
     score = Math.max(0, score);
 
     const recommendations = [];
@@ -296,7 +367,9 @@ export class CriteriaAnalyzer {
       recommendations.push(`Fix ${summary?.failed || 0} failing tests`);
     }
     if (!coveragePass) {
-      recommendations.push(`Increase test coverage to ${criteria.coverage}% (current: ${actualCoverage.toFixed(1)}%)`);
+      recommendations.push(
+        `Increase test coverage to ${criteria.coverage}% (current: ${actualCoverage.toFixed(1)}%)`
+      );
     }
 
     return {
@@ -305,21 +378,25 @@ export class CriteriaAnalyzer {
       score,
       details: {
         expected: criteria,
-        actual: { 
-          status: actualStatus, 
+        actual: {
+          status: actualStatus,
           coverage: actualCoverage,
           passed: summary?.passed || 0,
           failed: summary?.failed || 0,
         },
-        message: met 
+        message: met
           ? 'Test criteria met successfully'
           : `Test criteria failed: ${summary?.failed || 0} failing tests`,
         recommendations,
       },
-      evidence: testResults ? [{
-        source: 'test_results',
-        data: testResults,
-      }] : [],
+      evidence: testResults
+        ? [
+            {
+              source: 'test_results',
+              data: testResults,
+            },
+          ]
+        : [],
     };
   }
 
@@ -333,8 +410,10 @@ export class CriteriaAnalyzer {
     const actualStatus = buildResults?.success ? 'pass' : 'fail';
     const actualWarnings = buildResults?.warnings || 0;
 
-    const statusPass = criteria.status === 'pass' ? actualStatus === 'pass' : true;
-    const warningsPass = !criteria.warnings || actualWarnings <= criteria.warnings;
+    const statusPass =
+      criteria.status === 'pass' ? actualStatus === 'pass' : true;
+    const warningsPass =
+      !criteria.warnings || actualWarnings <= criteria.warnings;
     const met = statusPass && warningsPass;
 
     const score = met ? 100 : (statusPass ? 50 : 0) + (warningsPass ? 50 : 0);
@@ -346,13 +425,19 @@ export class CriteriaAnalyzer {
       details: {
         expected: criteria,
         actual: { status: actualStatus, warnings: actualWarnings },
-        message: met ? 'Build criteria met successfully' : 'Build criteria failed',
+        message: met
+          ? 'Build criteria met successfully'
+          : 'Build criteria failed',
         recommendations: !met ? ['Fix build errors and reduce warnings'] : [],
       },
-      evidence: buildResults ? [{
-        source: 'build',
-        data: buildResults,
-      }] : [],
+      evidence: buildResults
+        ? [
+            {
+              source: 'build',
+              data: buildResults,
+            },
+          ]
+        : [],
     };
   }
 
@@ -366,11 +451,14 @@ export class CriteriaAnalyzer {
     const actualVulnerabilities = securityResults?.vulnerabilities || 0;
     const actualSeverity = securityResults?.highest_severity || 'low';
 
-    const vulnerabilitiesPass = actualVulnerabilities <= criteria.vulnerabilities;
-    const severityPass = !criteria.severity || this.compareSeverity(actualSeverity, criteria.severity) <= 0;
+    const vulnerabilitiesPass =
+      actualVulnerabilities <= criteria.vulnerabilities;
+    const severityPass =
+      !criteria.severity ||
+      this.compareSeverity(actualSeverity, criteria.severity) <= 0;
     const met = vulnerabilitiesPass && severityPass;
 
-    const score = met ? 100 : Math.max(0, 100 - (actualVulnerabilities * 10));
+    const score = met ? 100 : Math.max(0, 100 - actualVulnerabilities * 10);
 
     return {
       criteria_name: 'security',
@@ -378,14 +466,23 @@ export class CriteriaAnalyzer {
       score,
       details: {
         expected: criteria,
-        actual: { vulnerabilities: actualVulnerabilities, severity: actualSeverity },
-        message: met ? 'Security criteria met successfully' : `Security criteria failed: ${actualVulnerabilities} vulnerabilities`,
+        actual: {
+          vulnerabilities: actualVulnerabilities,
+          severity: actualSeverity,
+        },
+        message: met
+          ? 'Security criteria met successfully'
+          : `Security criteria failed: ${actualVulnerabilities} vulnerabilities`,
         recommendations: !met ? ['Address security vulnerabilities'] : [],
       },
-      evidence: securityResults ? [{
-        source: 'security',
-        data: securityResults,
-      }] : [],
+      evidence: securityResults
+        ? [
+            {
+              source: 'security',
+              data: securityResults,
+            },
+          ]
+        : [],
     };
   }
 
@@ -399,8 +496,12 @@ export class CriteriaAnalyzer {
     const actualResponseTime = performanceResults?.response_time || 0;
     const actualMemoryUsage = performanceResults?.memory_usage || 0;
 
-    const responseTimePass = !criteria.max_response_time || actualResponseTime <= criteria.max_response_time;
-    const memoryPass = !criteria.max_memory_usage || actualMemoryUsage <= criteria.max_memory_usage;
+    const responseTimePass =
+      !criteria.max_response_time ||
+      actualResponseTime <= criteria.max_response_time;
+    const memoryPass =
+      !criteria.max_memory_usage ||
+      actualMemoryUsage <= criteria.max_memory_usage;
     const met = responseTimePass && memoryPass;
 
     const score = met ? 100 : 50;
@@ -411,14 +512,23 @@ export class CriteriaAnalyzer {
       score,
       details: {
         expected: criteria,
-        actual: { response_time: actualResponseTime, memory_usage: actualMemoryUsage },
-        message: met ? 'Performance criteria met successfully' : 'Performance criteria failed',
+        actual: {
+          response_time: actualResponseTime,
+          memory_usage: actualMemoryUsage,
+        },
+        message: met
+          ? 'Performance criteria met successfully'
+          : 'Performance criteria failed',
         recommendations: !met ? ['Optimize performance'] : [],
       },
-      evidence: performanceResults ? [{
-        source: 'performance',
-        data: performanceResults,
-      }] : [],
+      evidence: performanceResults
+        ? [
+            {
+              source: 'performance',
+              data: performanceResults,
+            },
+          ]
+        : [],
     };
   }
 
@@ -442,10 +552,12 @@ export class CriteriaAnalyzer {
           message: 'Custom criteria evaluation not yet implemented',
           recommendations: ['Implement custom criteria evaluation logic'],
         },
-        evidence: [{
-          source: 'custom',
-          data: criteria,
-        }],
+        evidence: [
+          {
+            source: 'custom',
+            data: criteria,
+          },
+        ],
       });
     }
 
@@ -455,7 +567,9 @@ export class CriteriaAnalyzer {
   /**
    * Generate analysis summary
    */
-  private generateSummary(results: CriteriaAnalysisResult[]): ValidationReport['summary'] {
+  private generateSummary(
+    results: CriteriaAnalysisResult[]
+  ): ValidationReport['summary'] {
     const totalCriteria = results.length;
     const metCriteria = results.filter(r => r.met).length;
     const failedCriteria = totalCriteria - metCriteria;
@@ -529,7 +643,9 @@ export class CriteriaAnalyzer {
 
     <div class="criteria">
         <h2>Criteria Results</h2>
-        ${report.criteria_results.map(result => `
+        ${report.criteria_results
+          .map(
+            result => `
             <div class="criteria-item">
                 <h3>
                     ${result.met ? successIcon : failIcon} 
@@ -537,16 +653,23 @@ export class CriteriaAnalyzer {
                     <span class="score">(${result.score}/100)</span>
                 </h3>
                 <p><strong>Status:</strong> ${result.details.message}</p>
-                ${result.details.recommendations && result.details.recommendations.length > 0 ? `
+                ${
+                  result.details.recommendations &&
+                  result.details.recommendations.length > 0
+                    ? `
                     <div class="recommendations">
                         <strong>Recommendations:</strong>
                         <ul>
                             ${result.details.recommendations.map(rec => `<li>${rec}</li>`).join('')}
                         </ul>
                     </div>
-                ` : ''}
+                `
+                    : ''
+                }
             </div>
-        `).join('')}
+        `
+          )
+          .join('')}
     </div>
 
     <div class="summary">
@@ -555,23 +678,31 @@ export class CriteriaAnalyzer {
         <p><strong>Met:</strong> <span class="success">${report.summary.met_criteria}</span></p>
         <p><strong>Failed:</strong> <span class="failure">${report.summary.failed_criteria}</span></p>
         
-        ${report.summary.critical_failures.length > 0 ? `
+        ${
+          report.summary.critical_failures.length > 0
+            ? `
             <div class="recommendations">
                 <strong>Critical Failures:</strong>
                 <ul>
                     ${report.summary.critical_failures.map(failure => `<li>${failure}</li>`).join('')}
                 </ul>
             </div>
-        ` : ''}
+        `
+            : ''
+        }
         
-        ${report.summary.recommendations.length > 0 ? `
+        ${
+          report.summary.recommendations.length > 0
+            ? `
             <div class="recommendations">
                 <strong>All Recommendations:</strong>
                 <ul>
                     ${report.summary.recommendations.map(rec => `<li>${rec}</li>`).join('')}
                 </ul>
             </div>
-        ` : ''}
+        `
+            : ''
+        }
     </div>
 </body>
 </html>
@@ -601,16 +732,24 @@ export class CriteriaAnalyzer {
 
 ## Criteria Results
 
-${report.criteria_results.map(result => `
+${report.criteria_results
+  .map(
+    result => `
 ### ${result.met ? successIcon : failIcon} ${result.criteria_name.toUpperCase()} (${result.score}/100)
 
 **Status:** ${result.details.message}
 
-${result.details.recommendations && result.details.recommendations.length > 0 ? `
+${
+  result.details.recommendations && result.details.recommendations.length > 0
+    ? `
 **Recommendations:**
 ${result.details.recommendations.map(rec => `- ${rec}`).join('\n')}
-` : ''}
-`).join('')}
+`
+    : ''
+}
+`
+  )
+  .join('')}
 
 ## Summary
 
@@ -618,15 +757,23 @@ ${result.details.recommendations.map(rec => `- ${rec}`).join('\n')}
 - **Met:** ${report.summary.met_criteria}
 - **Failed:** ${report.summary.failed_criteria}
 
-${report.summary.critical_failures.length > 0 ? `
+${
+  report.summary.critical_failures.length > 0
+    ? `
 ### Critical Failures
 ${report.summary.critical_failures.map(failure => `- ${failure}`).join('\n')}
-` : ''}
+`
+    : ''
+}
 
-${report.summary.recommendations.length > 0 ? `
+${
+  report.summary.recommendations.length > 0
+    ? `
 ### All Recommendations
 ${report.summary.recommendations.map(rec => `- ${rec}`).join('\n')}
-` : ''}
+`
+    : ''
+}
     `.trim();
   }
 
@@ -635,7 +782,10 @@ ${report.summary.recommendations.map(rec => `- ${rec}`).join('\n')}
    */
   private compareSeverity(a: string, b: string): number {
     const levels = { low: 1, medium: 2, high: 3, critical: 4 };
-    return (levels[a as keyof typeof levels] || 1) - (levels[b as keyof typeof levels] || 1);
+    return (
+      (levels[a as keyof typeof levels] || 1) -
+      (levels[b as keyof typeof levels] || 1)
+    );
   }
 
   /**

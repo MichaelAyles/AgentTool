@@ -13,7 +13,7 @@ const logLevels = {
 // Log colors
 const logColors = {
   error: 'red',
-  warn: 'yellow', 
+  warn: 'yellow',
   info: 'green',
   http: 'magenta',
   debug: 'white',
@@ -25,14 +25,16 @@ winston.addColors(logColors);
 const consoleFormat = winston.format.combine(
   winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss:ms' }),
   winston.format.colorize({ all: true }),
-  winston.format.printf((info) => {
+  winston.format.printf(info => {
     const { timestamp, level, message, ...meta } = info;
-    const metaStr = Object.keys(meta).length ? `\n${JSON.stringify(meta, null, 2)}` : '';
+    const metaStr = Object.keys(meta).length
+      ? `\n${JSON.stringify(meta, null, 2)}`
+      : '';
     return `${timestamp} [${level}]: ${message}${metaStr}`;
   })
 );
 
-// Format for file/elastic output  
+// Format for file/elastic output
 const fileFormat = winston.format.combine(
   winston.format.timestamp(),
   winston.format.errors({ stack: true }),
@@ -46,7 +48,7 @@ const transports: winston.transport[] = [
     level: process.env.NODE_ENV === 'development' ? 'debug' : 'info',
     format: consoleFormat,
   }),
-  
+
   // File transport for all logs
   new winston.transports.File({
     filename: 'logs/error.log',
@@ -55,7 +57,7 @@ const transports: winston.transport[] = [
     maxsize: 50 * 1024 * 1024, // 50MB
     maxFiles: 5,
   }),
-  
+
   // File transport for combined logs
   new winston.transports.File({
     filename: 'logs/combined.log',
@@ -66,7 +68,10 @@ const transports: winston.transport[] = [
 ];
 
 // Add Elasticsearch transport for production
-if (process.env.NODE_ENV === 'production' && process.env.ELASTICSEARCH_ENABLED === 'true') {
+if (
+  process.env.NODE_ENV === 'production' &&
+  process.env.ELASTICSEARCH_ENABLED === 'true'
+) {
   const esTransport = new ElasticsearchTransport({
     clientOpts: {
       node: process.env.ELASTICSEARCH_URL || 'http://elasticsearch:9200',
@@ -88,7 +93,7 @@ if (process.env.NODE_ENV === 'production' && process.env.ELASTICSEARCH_ENABLED =
       };
     },
   });
-  
+
   transports.push(esTransport);
 }
 
@@ -135,7 +140,11 @@ export const logSecurity = (event: string, data: any = {}) => {
   });
 };
 
-export const logValidation = (validationId: string, event: string, data: any = {}) => {
+export const logValidation = (
+  validationId: string,
+  event: string,
+  data: any = {}
+) => {
   structuredLogger.info(`Validation ${event}`, {
     validation_id: validationId,
     validation_event: event,
@@ -153,7 +162,11 @@ export const logAdapter = (adapter: string, event: string, data: any = {}) => {
   });
 };
 
-export const logPerformance = (operation: string, duration: number, data: any = {}) => {
+export const logPerformance = (
+  operation: string,
+  duration: number,
+  data: any = {}
+) => {
   structuredLogger.info(`Performance: ${operation}`, {
     operation,
     duration_ms: duration,
@@ -166,7 +179,7 @@ export const logPerformance = (operation: string, duration: number, data: any = 
 // Middleware for request logging
 export const requestLoggerMiddleware = (req: any, res: any, next: any) => {
   const start = Date.now();
-  
+
   res.on('finish', () => {
     const duration = Date.now() - start;
     const logData = {
@@ -178,14 +191,14 @@ export const requestLoggerMiddleware = (req: any, res: any, next: any) => {
       ip: req.ip || req.connection?.remoteAddress,
       user_agent: req.get('User-Agent'),
     };
-    
+
     if (res.statusCode >= 400) {
       structuredLogger.warn('HTTP Request', logData);
     } else {
       structuredLogger.http('HTTP Request', logData);
     }
   });
-  
+
   next();
 };
 

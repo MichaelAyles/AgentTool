@@ -50,7 +50,7 @@ export class WorkspaceManager {
         '.tmp',
         '*.log',
         '.DS_Store',
-        'Thumbs.db'
+        'Thumbs.db',
       ],
       maxWorkspaceSize: 1024, // 1GB
       cleanupAfter: 3600000, // 1 hour
@@ -97,7 +97,8 @@ export class WorkspaceManager {
       }
 
       // Calculate workspace info
-      const { size, fileCount } = await this.calculateWorkspaceStats(workspacePath);
+      const { size, fileCount } =
+        await this.calculateWorkspaceStats(workspacePath);
 
       const workspaceInfo: WorkspaceInfo = {
         id: workspaceId,
@@ -122,17 +123,22 @@ export class WorkspaceManager {
   /**
    * Apply additional changes to an existing workspace
    */
-  async applyAdditionalChanges(workspaceId: string, changes: FileChange[]): Promise<void> {
+  async applyAdditionalChanges(
+    workspaceId: string,
+    changes: FileChange[]
+  ): Promise<void> {
     const workspace = this.activeWorkspaces.get(workspaceId);
     if (!workspace) {
       throw new Error(`Workspace ${workspaceId} not found`);
     }
 
     await this.applyChanges(workspace.path, changes);
-    
+
     // Update workspace info
     workspace.changes.push(...changes);
-    const { size, fileCount } = await this.calculateWorkspaceStats(workspace.path);
+    const { size, fileCount } = await this.calculateWorkspaceStats(
+      workspace.path
+    );
     workspace.size = size;
     workspace.fileCount = fileCount;
   }
@@ -186,23 +192,25 @@ export class WorkspaceManager {
         env: { ...process.env, ...options.env },
       });
 
-      child.stdout?.on('data', (data) => {
+      child.stdout?.on('data', data => {
         stdout += data.toString();
       });
 
-      child.stderr?.on('data', (data) => {
+      child.stderr?.on('data', data => {
         stderr += data.toString();
       });
 
       const timeout = setTimeout(() => {
         child.kill('SIGKILL');
-        reject(new Error(`Command timed out after ${options.timeout || 30000}ms`));
+        reject(
+          new Error(`Command timed out after ${options.timeout || 30000}ms`)
+        );
       }, options.timeout || 30000);
 
-      child.on('close', (exitCode) => {
+      child.on('close', exitCode => {
         clearTimeout(timeout);
         const duration = Date.now() - startTime;
-        
+
         resolve({
           exitCode: exitCode || 0,
           stdout,
@@ -211,7 +219,7 @@ export class WorkspaceManager {
         });
       });
 
-      child.on('error', (error) => {
+      child.on('error', error => {
         clearTimeout(timeout);
         reject(error);
       });
@@ -228,17 +236,23 @@ export class WorkspaceManager {
     }
 
     const snapshotName = name || `snapshot-${Date.now()}`;
-    const snapshotPath = path.join(this.config.tempDir, `${workspaceId}-${snapshotName}`);
+    const snapshotPath = path.join(
+      this.config.tempDir,
+      `${workspaceId}-${snapshotName}`
+    );
 
     await this.copyDirectory(workspace.path, snapshotPath);
-    
+
     return snapshotPath;
   }
 
   /**
    * Cleanup a specific workspace
    */
-  async cleanupWorkspace(workspaceId: string, force: boolean = false): Promise<boolean> {
+  async cleanupWorkspace(
+    workspaceId: string,
+    force: boolean = false
+  ): Promise<boolean> {
     const workspace = this.activeWorkspaces.get(workspaceId);
     if (!workspace) {
       return false;
@@ -288,11 +302,11 @@ export class WorkspaceManager {
     }
   ): Promise<void> {
     const excludePatterns = [...this.config.excludePatterns];
-    
+
     if (!options.preserveNodeModules) {
       excludePatterns.push('node_modules');
     }
-    
+
     if (!options.preserveGit) {
       excludePatterns.push('.git');
     }
@@ -303,21 +317,24 @@ export class WorkspaceManager {
   /**
    * Apply file changes to workspace
    */
-  private async applyChanges(workspacePath: string, changes: FileChange[]): Promise<void> {
+  private async applyChanges(
+    workspacePath: string,
+    changes: FileChange[]
+  ): Promise<void> {
     for (const change of changes) {
       const targetPath = path.join(workspacePath, change.path);
-      
+
       switch (change.operation) {
         case 'create':
         case 'update':
           await fs.mkdir(path.dirname(targetPath), { recursive: true });
           await fs.writeFile(targetPath, change.content, 'utf8');
-          
+
           if (change.mode) {
             await fs.chmod(targetPath, change.mode);
           }
           break;
-          
+
         case 'delete':
           try {
             const stat = await fs.stat(targetPath);
@@ -359,11 +376,11 @@ export class WorkspaceManager {
     excludePatterns: string[] = []
   ): Promise<void> {
     const stat = await fs.stat(src);
-    
+
     if (stat.isDirectory()) {
       await fs.mkdir(dest, { recursive: true });
       const files = await fs.readdir(src);
-      
+
       for (const file of files) {
         // Check if file should be excluded
         const shouldExclude = excludePatterns.some(pattern => {
@@ -373,11 +390,11 @@ export class WorkspaceManager {
           }
           return file === pattern;
         });
-        
+
         if (shouldExclude) {
           continue;
         }
-        
+
         await this.copyDirectory(
           path.join(src, file),
           path.join(dest, file),
@@ -401,11 +418,11 @@ export class WorkspaceManager {
 
     const calculateRecursive = async (dirPath: string): Promise<void> => {
       const files = await fs.readdir(dirPath);
-      
+
       for (const file of files) {
         const filePath = path.join(dirPath, file);
         const stat = await fs.stat(filePath);
-        
+
         if (stat.isDirectory()) {
           await calculateRecursive(filePath);
         } else {
@@ -416,7 +433,7 @@ export class WorkspaceManager {
     };
 
     await calculateRecursive(workspacePath);
-    
+
     return { size, fileCount };
   }
 
@@ -435,7 +452,7 @@ export class WorkspaceManager {
         shell: true,
       });
 
-      child.on('close', (exitCode) => {
+      child.on('close', exitCode => {
         if (exitCode === 0) {
           resolve();
         } else {
@@ -456,16 +473,19 @@ export class WorkspaceManager {
     }
 
     // Run cleanup every 30 minutes
-    this.cleanupTimer = setInterval(async () => {
-      try {
-        const cleaned = await this.cleanupExpiredWorkspaces();
-        if (cleaned > 0) {
-          console.log(`Cleaned up ${cleaned} expired workspaces`);
+    this.cleanupTimer = setInterval(
+      async () => {
+        try {
+          const cleaned = await this.cleanupExpiredWorkspaces();
+          if (cleaned > 0) {
+            console.log(`Cleaned up ${cleaned} expired workspaces`);
+          }
+        } catch (error) {
+          console.warn('Error during workspace cleanup:', error);
         }
-      } catch (error) {
-        console.warn('Error during workspace cleanup:', error);
-      }
-    }, 30 * 60 * 1000);
+      },
+      30 * 60 * 1000
+    );
   }
 
   /**
@@ -478,9 +498,7 @@ export class WorkspaceManager {
 
     // Cleanup all active workspaces
     const workspaceIds = Array.from(this.activeWorkspaces.keys());
-    await Promise.all(
-      workspaceIds.map(id => this.cleanupWorkspace(id, true))
-    );
+    await Promise.all(workspaceIds.map(id => this.cleanupWorkspace(id, true)));
   }
 }
 

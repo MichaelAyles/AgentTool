@@ -3,7 +3,15 @@
 import express from 'express';
 import { spawn } from 'child_process';
 import { WebSocketServer } from 'ws';
-import * as pty from 'node-pty';
+// Import node-pty conditionally since it's an optional dependency
+let pty: any = null;
+try {
+  pty = require('node-pty');
+} catch (error) {
+  console.warn(
+    'node-pty not available - terminal functionality will be limited'
+  );
+}
 import axios from 'axios';
 import ngrok from 'ngrok';
 import { v4 as uuidv4 } from 'uuid';
@@ -22,7 +30,7 @@ export interface LocalAgentConfig {
 
 export interface TerminalSession {
   id: string;
-  pty: pty.IPty;
+  pty: any; // pty.IPty when available
   lastActivity: number;
   cwd: string;
 }
@@ -45,14 +53,14 @@ export class LocalAgent extends EventEmitter {
       version: '1.0.0',
       ...config,
     };
-    
+
     this.app = express();
     this.setupExpress();
   }
 
   private setupExpress(): void {
     this.app.use(express.json());
-    
+
     // Health check endpoint
     this.app.get('/health', (req, res) => {
       res.json({
@@ -68,11 +76,19 @@ export class LocalAgent extends EventEmitter {
     // Terminal creation endpoint
     this.app.post('/terminal', (req, res) => {
       try {
+        if (!pty) {
+          return res.status(503).json({
+            success: false,
+            error: 'Terminal functionality not available',
+            details: 'node-pty dependency not installed',
+          });
+        }
+
         const { cwd = process.cwd(), shell, cols = 80, rows = 24 } = req.body;
-        
+
         const terminalId = uuidv4();
         const defaultShell = process.platform === 'win32' ? 'cmd.exe' : 'bash';
-        
+
         const ptyProcess = pty.spawn(shell || defaultShell, [], {
           name: 'xterm-color',
           cols,
@@ -239,16 +255,18 @@ export class LocalAgent extends EventEmitter {
     this.wss.on('connection', (ws, req) => {
       console.log(chalk.blue('WebSocket connection established'));
 
-      ws.on('message', (data) => {
+      ws.on('message', data => {
         try {
           const message = JSON.parse(data.toString());
           this.handleWebSocketMessage(ws, message);
         } catch (error) {
           console.error('Error parsing WebSocket message:', error);
-          ws.send(JSON.stringify({
-            type: 'error',
-            error: 'Invalid message format',
-          }));
+          ws.send(
+            JSON.stringify({
+              type: 'error',
+              error: 'Invalid message format',
+            })
+          );
         }
       });
 
@@ -256,16 +274,18 @@ export class LocalAgent extends EventEmitter {
         console.log(chalk.yellow('WebSocket connection closed'));
       });
 
-      ws.on('error', (error) => {
+      ws.on('error', error => {
         console.error('WebSocket error:', error);
       });
 
       // Send welcome message
-      ws.send(JSON.stringify({
-        type: 'welcome',
-        sessionId: this.config.sessionId,
-        message: 'Connected to Vibe Code local agent',
-      }));
+      ws.send(
+        JSON.stringify({
+          type: 'welcome',
+          sessionId: this.config.sessionId,
+          message: 'Connected to Vibe Code local agent',
+        })
+      );
     });
   }
 
@@ -276,48 +296,56 @@ export class LocalAgent extends EventEmitter {
       case 'terminal_attach':
         this.attachToTerminal(ws, terminalId);
         break;
-      
+
       case 'terminal_input':
         this.sendToTerminal(terminalId, data);
         break;
-      
+
       case 'terminal_resize':
         this.resizeTerminal(terminalId, data.cols, data.rows);
         break;
-      
+
       default:
-        ws.send(JSON.stringify({
-          type: 'error',
-          error: `Unknown message type: ${type}`,
-        }));
+        ws.send(
+          JSON.stringify({
+            type: 'error',
+            error: `Unknown message type: ${type}`,
+          })
+        );
     }
   }
 
   private attachToTerminal(ws: any, terminalId: string): void {
     const session = this.terminals.get(terminalId);
     if (!session) {
-      ws.send(JSON.stringify({
-        type: 'error',
-        error: 'Terminal not found',
-        terminalId,
-      }));
+      ws.send(
+        JSON.stringify({
+          type: 'error',
+          error: 'Terminal not found',
+          terminalId,
+        })
+      );
       return;
     }
 
     // Forward terminal output to WebSocket
-    session.pty.onData((data) => {
-      ws.send(JSON.stringify({
-        type: 'terminal_output',
-        terminalId,
-        data,
-      }));
+    session.pty.onData(data => {
+      ws.send(
+        JSON.stringify({
+          type: 'terminal_output',
+          terminalId,
+          data,
+        })
+      );
     });
 
-    ws.send(JSON.stringify({
-      type: 'terminal_attached',
-      terminalId,
-      message: 'Attached to terminal',
-    }));
+    ws.send(
+      JSON.stringify({
+        type: 'terminal_attached',
+        terminalId,
+        message: 'Attached to terminal',
+      })
+    );
   }
 
   private sendToTerminal(terminalId: string, data: string): void {
@@ -338,7 +366,7 @@ export class LocalAgent extends EventEmitter {
 
   private async establishTunnel(): Promise<string> {
     const spinner = ora('Establishing secure tunnel...').start();
-    
+
     try {
       // Connect to ngrok
       const url = await ngrok.connect({
@@ -407,7 +435,10 @@ export class LocalAgent extends EventEmitter {
           });
         }
       } catch (error) {
-        console.warn(chalk.yellow('Heartbeat failed:'), error instanceof Error ? error.message : 'Unknown error');
+        console.warn(
+          chalk.yellow('Heartbeat failed:'),
+          error instanceof Error ? error.message : 'Unknown error'
+        );
       }
     }, 30000); // Every 30 seconds
   }
@@ -418,7 +449,9 @@ export class LocalAgent extends EventEmitter {
 
     for (const [terminalId, session] of this.terminals) {
       if (now - session.lastActivity > timeout) {
-        console.log(chalk.yellow(`Cleaning up inactive terminal: ${terminalId}`));
+        console.log(
+          chalk.yellow(`Cleaning up inactive terminal: ${terminalId}`)
+        );
         session.pty.kill();
         this.terminals.delete(terminalId);
       }
@@ -438,7 +471,9 @@ export class LocalAgent extends EventEmitter {
     // Start HTTP server
     const spinner = ora('Starting local server...').start();
     this.server = this.app.listen(this.config.port, () => {
-      spinner.succeed(`Local server running on port ${chalk.green(this.config.port)}`);
+      spinner.succeed(
+        `Local server running on port ${chalk.green(this.config.port)}`
+      );
     });
 
     // Setup WebSocket
@@ -458,7 +493,11 @@ export class LocalAgent extends EventEmitter {
 
     console.log('');
     console.log(chalk.green('✅ Local agent is running!'));
-    console.log(chalk.cyan('You can now use the Vibe Code web interface to interact with your local terminal.'));
+    console.log(
+      chalk.cyan(
+        'You can now use the Vibe Code web interface to interact with your local terminal.'
+      )
+    );
     console.log('');
     console.log(chalk.yellow('Press Ctrl+C to stop the agent'));
     console.log('');

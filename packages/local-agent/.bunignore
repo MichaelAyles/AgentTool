@@ -1,0 +1,3 @@
+# Ignore this package from bun workspace resolution during CI
+# This package has optional native dependencies that may not build in all environments
+*
