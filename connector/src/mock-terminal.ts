@@ -19,10 +19,11 @@ export class MockPtyProcess extends EventEmitter implements MockPty {
   constructor(shell: string, args: string[], options: any) {
     super();
     
-    // Create child process instead of PTY
-    this.process = spawn(shell, args, {
+    // Create interactive shell process
+    const shellArgs = platform() === 'win32' ? [] : ['-i'];
+    this.process = spawn(shell, shellArgs, {
       cwd: options.cwd,
-      env: options.env,
+      env: { ...options.env, PS1: '$ ' },
       stdio: ['pipe', 'pipe', 'pipe']
     });
 
@@ -57,10 +58,10 @@ export class MockPtyProcess extends EventEmitter implements MockPty {
       }
     });
 
-    // Send initial prompt
+    // Send initial prompt after shell starts
     setTimeout(() => {
       this.sendPrompt();
-    }, 100);
+    }, 500);
   }
 
   onData(callback: (data: string) => void): void {
@@ -73,12 +74,14 @@ export class MockPtyProcess extends EventEmitter implements MockPty {
 
   write(data: string): void {
     // Handle special terminal commands
-    if (data === '\r') {
-      // Enter key - execute command
+    if (data === '\r' || data === '\n') {
+      // Enter key - execute command and send newline
       this.process.stdin?.write('\n');
     } else if (data === '\u007f' || data === '\b') {
       // Backspace
-      this.process.stdin?.write('\b \b');
+      if (this.dataCallback) {
+        this.dataCallback('\b \b');
+      }
     } else if (data === '\u0003') {
       // Ctrl+C
       this.process.kill('SIGINT');
@@ -86,7 +89,10 @@ export class MockPtyProcess extends EventEmitter implements MockPty {
       // Ctrl+D (EOF)
       this.process.stdin?.end();
     } else {
-      // Regular input
+      // Regular input - echo back and send to process
+      if (this.dataCallback) {
+        this.dataCallback(data);
+      }
       this.process.stdin?.write(data);
     }
   }
