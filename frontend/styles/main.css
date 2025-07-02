@@ -379,6 +379,25 @@ body {
     border-color: var(--border-hover);
 }
 
+.danger-btn {
+    background: var(--error-color);
+    color: white;
+    border: 1px solid var(--error-color);
+    border-radius: 0.5rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.danger-btn:hover {
+    background: #dc2626;
+    border-color: #dc2626;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgb(239 68 68 / 0.4);
+}
+
 .connection-status {
     display: flex;
     align-items: center;

@@ -35,6 +35,7 @@ class VibeApp {
         this.sessionIdSpan = document.getElementById('session-id');
         this.connectionTimeSpan = document.getElementById('connection-time');
         this.disconnectBtn = document.getElementById('disconnect-btn');
+        this.killConnectorBtn = document.getElementById('kill-connector-btn');
         
         // Terminal elements
         this.terminalSection = document.getElementById('terminal-section');
@@ -55,6 +56,7 @@ class VibeApp {
         this.connectBtn.addEventListener('click', () => this.handleConnect());
         this.copyInstallBtn.addEventListener('click', () => this.copyInstallCommand());
         this.disconnectBtn.addEventListener('click', () => this.disconnect());
+        this.killConnectorBtn.addEventListener('click', () => this.killConnector());
         
         // Theme toggle
         this.themeToggle.addEventListener('click', () => this.toggleTheme());
@@ -220,6 +222,31 @@ class VibeApp {
         this.sessionId = null;
         this.connectionStartTime = null;
         this.reconnectAttempts = 0;
+    }
+    
+    async killConnector() {
+        if (!confirm('Are you sure you want to kill the desktop connector? This will terminate all sessions.')) {
+            return;
+        }
+        
+        try {
+            const response = await fetch('http://localhost:3001/shutdown', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            
+            if (response.ok) {
+                this.showSuccessMessage('✅ Desktop connector terminated successfully');
+                this.disconnect();
+            } else {
+                throw new Error(`HTTP ${response.status}`);
+            }
+        } catch (error) {
+            console.error('Failed to kill connector:', error);
+            this.showError('Failed to terminate desktop connector. It may not be running.');
+        }
     }
     
     setConnectionState(state) {

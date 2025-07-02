@@ -138,6 +138,22 @@ export class VibeConnector {
       });
     });
 
+    // Shutdown connector
+    this.app.post('/shutdown', (req, res) => {
+      console.log('🛑 Shutdown requested via API');
+      
+      // Send response immediately
+      res.status(200).json({
+        success: true,
+        message: 'Shutdown initiated'
+      });
+      
+      // Allow response to be sent before shutting down
+      setTimeout(() => {
+        this.shutdown('API_REQUEST');
+      }, 100);
+    });
+
     // 404 handler
     this.app.use((req, res) => {
       res.status(404).json({
@@ -147,7 +163,8 @@ export class VibeConnector {
           'GET /info', 
           'POST /generate-uuid',
           'GET /sessions',
-          'DELETE /sessions/:uuid'
+          'DELETE /sessions/:uuid',
+          'POST /shutdown'
         ]
       });
     });
