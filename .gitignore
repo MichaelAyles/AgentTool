@@ -1,26 +1,30 @@
 # Dependencies
 node_modules/
 .pnpm-store/
+.bun/
 
 # Build outputs
 dist/
 build/
 .next/
 .nuxt/
+.vercel/
 
 # Environment files
 .env
 .env.local
-.env.production
-.env.test
+.env.production*
+.env.staging*
+.env.test*
+.env.development*
 
 # Logs
 logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
-yarn-error.log*
 pnpm-debug.log*
+bun-debug.log*
 
 # Runtime data
 pids/
@@ -54,6 +58,7 @@ Thumbs.db
 # Database
 *.sqlite
 *.db
+vibecode.db*
 
 # Docker
 .dockerignore
@@ -61,7 +66,47 @@ Thumbs.db
 # Temporary files
 tmp/
 temp/
+*.tmp
 
-# Lock files (keep pnpm-lock.yaml)
+# Lock files (keep bun.lockb)
 package-lock.json
 yarn.lock
+pnpm-lock.yaml
+
+# Redundant documentation files
+SESSION_MANAGEMENT.md
+VERCEL_DEPLOYMENT.md
+DEPLOYMENT_CHECKLIST.md
+**/docs/README.md
+
+# Empty or template directories
+**/template/
+**/.mcp/
+**/.marketplace/
+**/adapters/template/
+
+# Generated files
+*.tgz
+*.tar.gz
+
+# Security
+.env.production
+.env.staging
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Cache
+.cache/
+.parcel-cache/
+.vite/
+.turbo/
+
+# Testing
+.nyc_output/
+coverage/
+
+# Local development
+.vscode/settings.json
+.idea/workspace.xml

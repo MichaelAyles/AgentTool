@@ -135,39 +135,74 @@ Transform your AI coding workflow with a unified, browser-based interface that s
 
 ## 🚀 Quick Start
 
-### Prerequisites
-
-- Node.js 18+ (auto-installed by setup script)
-- Bun 1.0+ (auto-installed by setup script)
-- Claude Code CLI (auto-installed if needed)
-- Gemini CLI (auto-installed if needed)
-- Git (for cloning repository)
-
-### One-Line Setup (Recommended)
+### Desktop Application (Recommended)
 
 ```bash
-# Universal setup for all platforms (macOS, Linux, WSL, Windows)
-curl -fsSL https://raw.githubusercontent.com/your-org/vibe-code/main/setup.sh | bash
+# Install desktop connector
+curl -fsSL https://raw.githubusercontent.com/MichaelAyles/AgentTool/main/install-desktop.sh | bash
+
+# Start the desktop connector
+vibe-code-desktop start --session-id $(uuidgen)
+
+# Open in browser
+open http://localhost:3000
 ```
 
-### Manual Installation
+### Cloud Deployment
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/MichaelAyles/AgentTool)
+
+### Development Setup
 
 ```bash
-# Clone the repository
-git clone https://github.com/your-org/vibe-code.git
+# Clone repository
+git clone https://github.com/MichaelAyles/AgentTool.git
 cd vibe-code
 
-# Run setup script
-./setup.sh
+# Install dependencies
+bun install
+
+# Start development server
+bun dev                  # Start all services
+bun build               # Build all packages
+bun test                # Run all tests
+bun run lint            # Lint all code
+bun run typecheck       # Type checking
+
+# Docker
+docker compose up -d     # Start production environment
+docker compose build    # Build containers
 ```
 
-The application will be available at:
+### Session Management
 
-- **Frontend**: http://localhost:5173
-- **Backend API**: http://localhost:3000
-- **WebSocket**: ws://localhost:3000
+The application includes a comprehensive session management system:
 
-**Note**: Some features may be limited due to ongoing workspace dependency resolution. The frontend and basic API functionality are working.
+- **Auto-detection**: Automatically detects local desktop connector
+- **Session IDs**: UUID-based session identification for isolation
+- **Multi-session support**: Run multiple isolated sessions simultaneously
+- **Persistent state**: Sessions persist across browser refreshes
+
+When no active session is detected, the app shows a session manager with options to:
+
+1. Enter an existing session UUID
+2. Generate a new session ID and get the command to start the desktop connector
+
+### Deployment Options
+
+#### Vercel (Static Frontend)
+
+- Frontend deployed as static web application
+- Requires desktop connector for backend functionality
+- Automatic backend detection (local vs cloud)
+- One-click deployment with instant setup
+
+#### Desktop Connector (Recommended)
+
+- Unified application combining frontend, backend, and CLI tools
+- Single process for complete functionality
+- Local installation with cross-platform support
+- Session-based isolation for multiple workflows
 
 ### Development Scripts
 
