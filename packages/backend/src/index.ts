@@ -331,15 +331,26 @@ server.listen(PORT, () => {
     port: PORT,
   });
 
-  // User-friendly console output with clickable links
-  console.log('\n🎉 Vibe Code is ready!');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('🌐 Web Application:  http://localhost:5173');
-  console.log('🔗 Backend API:      http://localhost:' + PORT);
-  console.log('⚡ WebSocket:        ws://localhost:' + PORT);
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('💡 Click the links above or copy them to your browser');
-  console.log('🛑 Press Ctrl+C to stop the servers\n');
+  // Function to display the user-friendly output
+  const displayStartupInfo = () => {
+    console.log('\n🎉 Vibe Code is ready!');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('🌐 Web Application:  http://localhost:5173');
+    console.log('🔗 Backend API:      http://localhost:' + PORT);
+    console.log('⚡ WebSocket:        ws://localhost:' + PORT);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('💡 Click the links above or copy them to your browser');
+    console.log('🛑 Press Ctrl+C to stop the servers\n');
+  };
+
+  // Display immediately
+  displayStartupInfo();
+
+  // Display again after a delay to ensure it's visible after TypeScript output
+  setTimeout(displayStartupInfo, 3000);
+
+  // And once more after TypeScript has settled
+  setTimeout(displayStartupInfo, 8000);
 });
 
 export { app, server, io };

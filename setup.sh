@@ -323,7 +323,8 @@ main() {
     echo ""
     echo -e "${GREEN}🚀 Starting Vibe Code servers...${NC}"
     echo -e "${YELLOW}⏳ This may take a moment for the first startup...${NC}"
-    echo -e "${BLUE}💡 Watch for the ready message with clickable links!${NC}"
+    echo -e "${BLUE}💡 The ready message with clickable links will appear shortly!${NC}"
+    echo -e "${BLUE}   (It may appear multiple times to stay visible)${NC}"
     echo ""
     
     # Start the application
