@@ -17,7 +17,6 @@
     "verbatimModuleSyntax": false,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": false,
-    "noEmit": true,
     "jsx": "react-jsx",
     "noImplicitAny": false,
     "noImplicitThis": false,
@@ -32,6 +31,14 @@
     }
   },
   "include": ["typecheck-placeholder.ts"],
+  "references": [
+    {
+      "path": "./packages/shared"
+    },
+    {
+      "path": "./packages/adapter-sdk"
+    }
+  ],
   "exclude": [
     "node_modules",
     "**/dist/**",
