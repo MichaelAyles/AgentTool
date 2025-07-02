@@ -47,54 +47,50 @@ const CLIConfiguration: React.FC<CLIConfigurationProps> = ({
   const queryClient = useQueryClient();
 
   // Fetch monitoring configuration
-  const { data: config, isLoading: isLoadingConfig } = useQuery(
-    'cli-monitoring-config',
-    () => api.get<MonitoringConfig>('/api/cli-health/config')
-  );
+  const { data: config, isLoading: isLoadingConfig } = useQuery({
+    queryKey: ['cli-monitoring-config'],
+    queryFn: () => api.get<MonitoringConfig>('/api/cli-health/config'),
+  });
 
   // Fetch adapter configuration if a CLI is selected
-  const { data: adapterConfigData, isLoading: isLoadingAdapter } = useQuery(
-    ['adapter-config', selectedCLI],
-    () => api.get(`/api/adapter-config/${selectedCLI}`),
-    {
-      enabled: !!selectedCLI && activeTab === 'adapter',
-    }
-  );
+  const { data: adapterConfigData, isLoading: isLoadingAdapter } = useQuery({
+    queryKey: ['adapter-config', selectedCLI],
+    queryFn: () => api.get(`/api/adapter-config/${selectedCLI}`),
+    enabled: !!selectedCLI && activeTab === 'adapter',
+  });
 
   // Update monitoring configuration
-  const updateMonitoringConfigMutation = useMutation(
-    (newConfig: Partial<MonitoringConfig>) =>
+  const updateMonitoringConfigMutation = useMutation({
+    mutationFn: (newConfig: Partial<MonitoringConfig>) =>
       api.put('/api/cli-health/config', newConfig),
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries('cli-monitoring-config');
-        setIsEditing(false);
-      },
-    }
-  );
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cli-monitoring-config'] });
+      setIsEditing(false);
+    },
+  });
 
   // Update adapter configuration
-  const updateAdapterConfigMutation = useMutation(
-    ({ adapterId, config }: { adapterId: string; config: any }) =>
+  const updateAdapterConfigMutation = useMutation({
+    mutationFn: ({ adapterId, config }: { adapterId: string; config: any }) =>
       api.put(`/api/adapter-config/${adapterId}`, { configuration: config }),
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries(['adapter-config', selectedCLI]);
-        setIsEditing(false);
-      },
-    }
-  );
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['adapter-config', selectedCLI],
+      });
+      setIsEditing(false);
+    },
+  });
 
   useEffect(() => {
     if (config) {
-      setMonitoringConfig(config);
+      setMonitoringConfig(config as MonitoringConfig);
     }
   }, [config]);
 
   useEffect(() => {
-    if (adapterConfigData?.configuration) {
+    if ((adapterConfigData as any)?.configuration) {
       setAdapterConfig(
-        JSON.stringify(adapterConfigData.configuration, null, 2)
+        JSON.stringify((adapterConfigData as any).configuration, null, 2)
       );
     }
   }, [adapterConfigData]);
@@ -411,10 +407,10 @@ const CLIConfiguration: React.FC<CLIConfigurationProps> = ({
                   </button>
                   <button
                     onClick={saveMonitoringConfig}
-                    disabled={updateMonitoringConfigMutation.isLoading}
+                    disabled={updateMonitoringConfigMutation.isPending}
                     className='px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50'
                   >
-                    {updateMonitoringConfigMutation.isLoading ? (
+                    {updateMonitoringConfigMutation.isPending ? (
                       <RefreshCw className='w-4 h-4 animate-spin' />
                     ) : (
                       <>
@@ -475,10 +471,10 @@ const CLIConfiguration: React.FC<CLIConfigurationProps> = ({
                       </button>
                       <button
                         onClick={saveAdapterConfig}
-                        disabled={updateAdapterConfigMutation.isLoading}
+                        disabled={updateAdapterConfigMutation.isPending}
                         className='px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50'
                       >
-                        {updateAdapterConfigMutation.isLoading ? (
+                        {updateAdapterConfigMutation.isPending ? (
                           <RefreshCw className='w-4 h-4 animate-spin' />
                         ) : (
                           <>

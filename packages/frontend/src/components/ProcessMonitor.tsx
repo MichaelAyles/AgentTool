@@ -92,22 +92,28 @@ export function ProcessMonitor() {
 
     const handleResourceLimitExceeded = (data: any) => {
       addNotification({
+        id: Math.random().toString(36).substr(2, 9),
         type: 'warning',
         message: `Session ${data.sessionId} exceeded ${data.type} limit (${data.current}/${data.limit})`,
+        timestamp: new Date(),
       });
     };
 
     const handleSessionWarning = (data: any) => {
       addNotification({
+        id: Math.random().toString(36).substr(2, 9),
         type: 'warning',
         message: data.message,
+        timestamp: new Date(),
       });
     };
 
     const handleSessionTerminated = (data: { sessionId: string }) => {
       addNotification({
+        id: Math.random().toString(36).substr(2, 9),
         type: 'info',
         message: `Session ${data.sessionId} was terminated`,
+        timestamp: new Date(),
       });
       setMetrics(prev => prev.filter(m => m.sessionId !== data.sessionId));
     };

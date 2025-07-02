@@ -39,8 +39,8 @@ export const LocalAgentConnector: React.FC<LocalAgentConnectorProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
 
-  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pollingIntervalRef = useRef<number | null>(null);
+  const timerIntervalRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(0);
 
   // Generate session ID on component mount

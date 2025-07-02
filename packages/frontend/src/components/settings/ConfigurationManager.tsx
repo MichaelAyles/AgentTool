@@ -516,10 +516,9 @@ const ConfigurationManager: React.FC<ConfigurationManagerProps> = ({
                             <span className='text-red-500 text-xs'>*</span>
                           )}
                           {config.sensitive && (
-                            <Key
-                              className='w-3 h-3 text-orange-500'
-                              title='Sensitive value'
-                            />
+                            <div title='Sensitive value'>
+                              <Key className='w-3 h-3 text-orange-500' />
+                            </div>
                           )}
                           {modifiedValues[activeCategory]?.has(config.key) && (
                             <span className='px-1 py-0.5 bg-orange-100 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 text-xs rounded'>

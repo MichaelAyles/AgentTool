@@ -131,13 +131,6 @@ class ApiService {
     return this.request('/adapters');
   }
 
-  async createSession(data: { projectId: string; adapter: string }) {
-    return this.request('/sessions', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  }
-
   // Session-based API methods
   async getSessionStatus(sessionId: string) {
     return this.request(`/sessions/${sessionId}/status`);

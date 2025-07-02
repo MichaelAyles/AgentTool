@@ -39,63 +39,57 @@ const CLIInstaller: React.FC<CLIInstallerProps> = ({
   const queryClient = useQueryClient();
 
   // Install CLI mutation
-  const installCLIMutation = useMutation(
-    ({ cliName, options }: { cliName: string; options?: any }) =>
+  const installCLIMutation = useMutation({
+    mutationFn: ({ cliName, options }: { cliName: string; options?: any }) =>
       api.post(`/api/cli/${cliName}/install`, options),
-    {
-      onMutate: ({ cliName }) => {
-        setInstallationSteps([
-          {
-            id: 'check',
-            name: 'Checking system requirements',
-            status: 'running',
-          },
-          { id: 'download', name: 'Downloading CLI', status: 'pending' },
-          { id: 'install', name: 'Installing dependencies', status: 'pending' },
-          { id: 'verify', name: 'Verifying installation', status: 'pending' },
-        ]);
-      },
-      onSuccess: (data, { cliName }) => {
+    onMutate: ({ cliName }) => {
+      setInstallationSteps([
+        {
+          id: 'check',
+          name: 'Checking system requirements',
+          status: 'running',
+        },
+        { id: 'download', name: 'Downloading CLI', status: 'pending' },
+        { id: 'install', name: 'Installing dependencies', status: 'pending' },
+        { id: 'verify', name: 'Verifying installation', status: 'pending' },
+      ]);
+    },
+    onSuccess: (data, { cliName }) => {
+      setInstallationSteps(prev =>
+        prev.map(step => ({ ...step, status: 'success' }))
+      );
+      queryClient.invalidateQueries({ queryKey: ['cli-status'] });
+      queryClient.invalidateQueries({ queryKey: ['supported-clis'] });
+    },
+    onError: (error: any, { cliName }) => {
+      const errorStep = installationSteps.find(s => s.status === 'running');
+      if (errorStep) {
         setInstallationSteps(prev =>
-          prev.map(step => ({ ...step, status: 'success' }))
+          prev.map(step =>
+            step.id === errorStep.id
+              ? { ...step, status: 'failed', message: error.message }
+              : step
+          )
         );
-        queryClient.invalidateQueries('cli-status');
-        queryClient.invalidateQueries('supported-clis');
-      },
-      onError: (error: any, { cliName }) => {
-        const errorStep = installationSteps.find(s => s.status === 'running');
-        if (errorStep) {
-          setInstallationSteps(prev =>
-            prev.map(step =>
-              step.id === errorStep.id
-                ? { ...step, status: 'failed', message: error.message }
-                : step
-            )
-          );
-        }
-      },
-    }
-  );
+      }
+    },
+  });
 
   // Check CLI availability
-  const checkCLIMutation = useMutation(
-    (cliName: string) => api.get(`/api/cli/${cliName}/check`),
-    {
-      onSuccess: data => {
-        console.log('CLI check result:', data);
-      },
-    }
-  );
+  const checkCLIMutation = useMutation({
+    mutationFn: (cliName: string) => api.get(`/api/cli/${cliName}/check`),
+    onSuccess: data => {
+      console.log('CLI check result:', data);
+    },
+  });
 
   // Diagnose installation issues
-  const diagnoseMutation = useMutation(
-    (cliName: string) => api.get(`/api/cli/${cliName}/diagnose`),
-    {
-      onSuccess: data => {
-        console.log('Diagnosis result:', data);
-      },
-    }
-  );
+  const diagnoseMutation = useMutation({
+    mutationFn: (cliName: string) => api.get(`/api/cli/${cliName}/diagnose`),
+    onSuccess: data => {
+      console.log('Diagnosis result:', data);
+    },
+  });
 
   const isInstalled = (cliName: string) => {
     return installedCLIs?.some(cli => cli.name === cliName && cli.available);
@@ -354,10 +348,10 @@ const CLIInstaller: React.FC<CLIInstallerProps> = ({
                       onClick={() =>
                         installCLIMutation.mutate({ cliName: selectedCLI })
                       }
-                      disabled={installCLIMutation.isLoading}
+                      disabled={installCLIMutation.isPending}
                       className='w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50'
                     >
-                      {installCLIMutation.isLoading ? (
+                      {installCLIMutation.isPending ? (
                         <Loader className='w-4 h-4 animate-spin' />
                       ) : (
                         <Download className='w-4 h-4' />

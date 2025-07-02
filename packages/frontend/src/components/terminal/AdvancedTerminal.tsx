@@ -107,10 +107,8 @@ const AdvancedTerminal: React.FC = () => {
         // Initial resize
         setTimeout(handleResize, 100);
 
-        // Store cleanup function
-        pane.terminal.onDispose(() => {
-          window.removeEventListener('resize', handleResize);
-        });
+        // Store cleanup function to be called when pane is removed
+        // Note: cleanup will be handled in the component cleanup
       }
     },
     []
@@ -186,7 +184,6 @@ const AdvancedTerminal: React.FC = () => {
         theme: themes[terminalSettings.theme as keyof typeof themes],
         cursorBlink: terminalSettings.cursorBlink,
         scrollback: terminalSettings.scrollback,
-        bellSound: terminalSettings.bellSound,
         allowTransparency: true,
         macOptionIsMeta: true,
         convertEol: true,
@@ -375,11 +372,9 @@ const AdvancedTerminal: React.FC = () => {
       if (!activePane) return;
 
       const content =
-        format === 'html'
-          ? activePane.terminal.getSelectionAsHTML() || 'No selection'
-          : activePane.terminal.getSelection() ||
-            activePane.terminal.buffer.active.getLine(0)?.translateToString() ||
-            '';
+        activePane.terminal.getSelection() ||
+        activePane.terminal.buffer.active.getLine(0)?.translateToString() ||
+        'No selection';
 
       const blob = new Blob([content], {
         type: format === 'html' ? 'text/html' : 'text/plain',
@@ -513,7 +508,7 @@ const AdvancedTerminal: React.FC = () => {
               </div>
             ))}
             <button
-              onClick={createNewTab}
+              onClick={() => createNewTab()}
               className='p-1 text-gray-400 hover:text-white hover:bg-gray-700 rounded'
             >
               <Plus className='w-4 h-4' />
@@ -727,7 +722,7 @@ const AdvancedTerminal: React.FC = () => {
               <Monitor className='w-12 h-12 mx-auto mb-4' />
               <p>No terminal sessions active</p>
               <button
-                onClick={createNewTab}
+                onClick={() => createNewTab()}
                 className='mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700'
               >
                 Create New Terminal

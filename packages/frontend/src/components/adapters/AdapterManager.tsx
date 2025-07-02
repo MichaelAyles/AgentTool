@@ -461,22 +461,19 @@ const AdapterManager: React.FC<AdapterManagerProps> = ({
                               {adapter.displayName}
                             </h3>
                             {adapter.official && (
-                              <Shield
-                                className='w-4 h-4 text-blue-500'
-                                title='Official adapter'
-                              />
+                              <div title='Official adapter'>
+                                <Shield className='w-4 h-4 text-blue-500' />
+                              </div>
                             )}
                             {adapter.verified && (
-                              <CheckCircle
-                                className='w-4 h-4 text-green-500'
-                                title='Verified adapter'
-                              />
+                              <div title='Verified adapter'>
+                                <CheckCircle className='w-4 h-4 text-green-500' />
+                              </div>
                             )}
                             {adapter.experimental && (
-                              <AlertTriangle
-                                className='w-4 h-4 text-orange-500'
-                                title='Experimental'
-                              />
+                              <div title='Experimental'>
+                                <AlertTriangle className='w-4 h-4 text-orange-500' />
+                              </div>
                             )}
                           </div>
                           <p className='text-sm text-gray-600 dark:text-gray-400 truncate'>

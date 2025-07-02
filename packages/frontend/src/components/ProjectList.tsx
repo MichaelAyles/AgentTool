@@ -31,18 +31,22 @@ export function ProjectList() {
   const createProjectMutation = useMutation({
     mutationFn: api.createProject,
     onSuccess: newProject => {
-      addProject(newProject);
+      addProject(newProject as any);
       setShowCreateForm(false);
       addNotification({
+        id: Math.random().toString(36).substr(2, 9),
         type: 'success',
-        message: `Project "${newProject.name}" created successfully!`,
+        message: `Project "${(newProject as any).name}" created successfully!`,
+        timestamp: new Date(),
       });
     },
     onError: error => {
       console.error('Failed to create project:', error);
       addNotification({
+        id: Math.random().toString(36).substr(2, 9),
         type: 'error',
         message: 'Failed to create project. Please try again.',
+        timestamp: new Date(),
       });
     },
   });
@@ -109,8 +113,8 @@ export function ProjectList() {
       {showCreateForm && (
         <CreateProjectModal
           onClose={() => setShowCreateForm(false)}
-          onSubmit={createProjectMutation.mutate}
-          adapters={adapters}
+          onSubmit={(data: any) => createProjectMutation.mutate(data)}
+          adapters={(adapters as any) || []}
           isLoading={createProjectMutation.isPending}
         />
       )}

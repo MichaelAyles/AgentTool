@@ -22,9 +22,9 @@ interface SystemInfo {
 export function Setup() {
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [backendType, setBackendType] = useState<'cloud' | 'local' | 'auto'>(
-    'auto'
-  );
+  const [backendType, setBackendType] = useState<
+    'cloud' | 'local' | 'auto' | 'central'
+  >('auto');
   const [localConnected, setLocalConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -52,8 +52,8 @@ export function Setup() {
         setLocalConnected(false);
       }
 
-      const config = api.getBackendConfig();
-      setBackendType(config.type);
+      const config = api.getCentralBackendConfig();
+      setBackendType('central');
     } catch (err) {
       setError(
         err instanceof Error ? err.message : 'Failed to check backend status'
@@ -63,10 +63,12 @@ export function Setup() {
     }
   };
 
-  const setBackendMode = async (mode: 'cloud' | 'local' | 'auto') => {
+  const setBackendMode = async (
+    mode: 'cloud' | 'local' | 'auto' | 'central'
+  ) => {
     try {
-      api.setBackendConfig({ type: mode });
-      setBackendType(mode);
+      api.setCentralBackendConfig({ centralUrl: 'https://vibe.theduck.chat' });
+      setBackendType('central');
       await checkBackendStatus();
     } catch (err) {
       setError(

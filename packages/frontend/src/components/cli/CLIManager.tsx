@@ -46,24 +46,25 @@ const CLIManager: React.FC = () => {
     isLoading,
     error,
     refetch,
-  } = useQuery('cli-status', () => api.get<CLIInfo[]>('/api/cli/status'), {
+  } = useQuery({
+    queryKey: ['cli-status'],
+    queryFn: () => api.get<CLIInfo[]>('/api/cli/status'),
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
   // Fetch supported CLIs
-  const { data: supportedCLIs } = useQuery('supported-clis', () =>
-    api.get<any[]>('/api/cli/supported')
-  );
+  const { data: supportedCLIs } = useQuery({
+    queryKey: ['supported-clis'],
+    queryFn: () => api.get<any[]>('/api/cli/supported'),
+  });
 
   // Check CLI availability mutation
-  const checkCLIMutation = useMutation(
-    (cliName: string) => api.post(`/api/cli/${cliName}/check`),
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries('cli-status');
-      },
-    }
-  );
+  const checkCLIMutation = useMutation({
+    mutationFn: (cliName: string) => api.post(`/api/cli/${cliName}/check`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cli-status'] });
+    },
+  });
 
   const getStatusIcon = (cli: CLIInfo) => {
     if (!cli.health) {
@@ -204,7 +205,7 @@ const CLIManager: React.FC = () => {
                 <div>
                   <p className='text-sm text-gray-600'>Total CLIs</p>
                   <p className='text-2xl font-bold text-gray-900'>
-                    {cliStatus?.length || 0}
+                    {(cliStatus as any)?.length || 0}
                   </p>
                 </div>
                 <Terminal className='w-8 h-8 text-gray-400' />
@@ -215,8 +216,9 @@ const CLIManager: React.FC = () => {
                 <div>
                   <p className='text-sm text-gray-600'>Healthy</p>
                   <p className='text-2xl font-bold text-green-600'>
-                    {cliStatus?.filter(cli => cli.health?.status === 'healthy')
-                      .length || 0}
+                    {(cliStatus as any)?.filter(
+                      (cli: any) => cli.health?.status === 'healthy'
+                    ).length || 0}
                   </p>
                 </div>
                 <CheckCircle className='w-8 h-8 text-green-400' />
@@ -227,8 +229,8 @@ const CLIManager: React.FC = () => {
                 <div>
                   <p className='text-sm text-gray-600'>Issues</p>
                   <p className='text-2xl font-bold text-red-600'>
-                    {cliStatus?.filter(
-                      cli => cli.health?.status === 'unhealthy'
+                    {(cliStatus as any)?.filter(
+                      (cli: any) => cli.health?.status === 'unhealthy'
                     ).length || 0}
                   </p>
                 </div>
@@ -240,8 +242,9 @@ const CLIManager: React.FC = () => {
                 <div>
                   <p className='text-sm text-gray-600'>Warnings</p>
                   <p className='text-2xl font-bold text-yellow-600'>
-                    {cliStatus?.filter(cli => cli.health?.status === 'degraded')
-                      .length || 0}
+                    {(cliStatus as any)?.filter(
+                      (cli: any) => cli.health?.status === 'degraded'
+                    ).length || 0}
                   </p>
                 </div>
                 <AlertCircle className='w-8 h-8 text-yellow-400' />
@@ -257,7 +260,7 @@ const CLIManager: React.FC = () => {
               </h3>
             </div>
             <div className='divide-y divide-gray-200'>
-              {cliStatus?.map(cli => (
+              {(cliStatus as any)?.map((cli: any) => (
                 <div
                   key={cli.name}
                   className='px-6 py-4 hover:bg-gray-50 cursor-pointer transition-colors'
@@ -309,7 +312,10 @@ const CLIManager: React.FC = () => {
       )}
 
       {activeTab === 'install' && (
-        <CLIInstaller supportedCLIs={supportedCLIs} installedCLIs={cliStatus} />
+        <CLIInstaller
+          supportedCLIs={(supportedCLIs as any) || []}
+          installedCLIs={(cliStatus as any) || []}
+        />
       )}
 
       {activeTab === 'config' && (

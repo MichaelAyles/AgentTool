@@ -97,61 +97,55 @@ const CLIHealthStatus: React.FC<CLIHealthStatusProps> = ({
     data: healthStatuses,
     isLoading,
     refetch,
-  } = useQuery(
-    'cli-health-status',
-    () => api.get<HealthStatus[]>('/api/cli-health/status'),
-    {
-      refetchInterval: 10000, // Refresh every 10 seconds
-    }
-  );
+  } = useQuery({
+    queryKey: ['cli-health-status'],
+    queryFn: () => api.get<HealthStatus[]>('/api/cli-health/status'),
+    refetchInterval: 10000, // Refresh every 10 seconds
+  });
 
   // Fetch detailed health status for selected CLI
-  const { data: detailedHealth, isLoading: isLoadingDetail } = useQuery(
-    ['cli-health-detail', selectedCLI],
-    () => api.get<HealthStatus>(`/api/cli-health/status/${selectedCLI}`),
-    {
-      enabled: !!selectedCLI,
-      refetchInterval: 5000,
-    }
-  );
+  const { data: detailedHealth, isLoading: isLoadingDetail } = useQuery({
+    queryKey: ['cli-health-detail', selectedCLI],
+    queryFn: () =>
+      api.get<HealthStatus>(`/api/cli-health/status/${selectedCLI}`),
+    enabled: !!selectedCLI,
+    refetchInterval: 5000,
+  });
 
   // Start monitoring mutation
-  const startMonitoringMutation = useMutation(
-    (cliName: string) => api.post(`/api/cli-health/monitor/${cliName}/start`),
-    {
-      onSuccess: (_, cliName) => {
-        setMonitoringStatus(prev => ({ ...prev, [cliName]: true }));
-        refetch();
-      },
-    }
-  );
+  const startMonitoringMutation = useMutation({
+    mutationFn: (cliName: string) =>
+      api.post(`/api/cli-health/monitor/${cliName}/start`),
+    onSuccess: (_, cliName) => {
+      setMonitoringStatus(prev => ({ ...prev, [cliName]: true }));
+      refetch();
+    },
+  });
 
   // Stop monitoring mutation
-  const stopMonitoringMutation = useMutation(
-    (cliName: string) => api.post(`/api/cli-health/monitor/${cliName}/stop`),
-    {
-      onSuccess: (_, cliName) => {
-        setMonitoringStatus(prev => ({ ...prev, [cliName]: false }));
-        refetch();
-      },
-    }
-  );
+  const stopMonitoringMutation = useMutation({
+    mutationFn: (cliName: string) =>
+      api.post(`/api/cli-health/monitor/${cliName}/stop`),
+    onSuccess: (_, cliName) => {
+      setMonitoringStatus(prev => ({ ...prev, [cliName]: false }));
+      refetch();
+    },
+  });
 
   // Health check mutation
-  const healthCheckMutation = useMutation(
-    (cliName: string) => api.post(`/api/cli-health/check/${cliName}`),
-    {
-      onSuccess: () => refetch(),
-    }
-  );
+  const healthCheckMutation = useMutation({
+    mutationFn: (cliName: string) =>
+      api.post(`/api/cli-health/check/${cliName}`),
+    onSuccess: () => refetch(),
+  });
 
   // Export health data
   const exportHealthData = async () => {
     try {
-      const response = await api.get('/api/cli-health/export', {
-        responseType: 'blob',
+      const response = await api.get('/api/cli-health/export');
+      const blob = new Blob([JSON.stringify(response)], {
+        type: 'application/json',
       });
-      const blob = new Blob([response], { type: 'application/json' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -228,7 +222,7 @@ const CLIHealthStatus: React.FC<CLIHealthStatusProps> = ({
               Monitored CLIs
             </h4>
             <div className='space-y-2'>
-              {healthStatuses?.map(health => (
+              {(healthStatuses as any)?.map((health: any) => (
                 <div
                   key={health.name}
                   className={`p-3 rounded-lg border cursor-pointer transition-colors ${
@@ -295,7 +289,7 @@ const CLIHealthStatus: React.FC<CLIHealthStatusProps> = ({
                       {getHealthIcon(detailedHealth.status)}
                     </div>
                     <p className='text-lg font-semibold capitalize'>
-                      {detailedHealth.status}
+                      {(detailedHealth as any).status}
                     </p>
                   </div>
                   <div className='bg-gray-50 p-4 rounded-lg'>
@@ -303,9 +297,9 @@ const CLIHealthStatus: React.FC<CLIHealthStatusProps> = ({
                       Success Rate
                     </div>
                     <p className='text-lg font-semibold'>
-                      {(detailedHealth.performance.successRate * 100).toFixed(
-                        1
-                      )}
+                      {(
+                        (detailedHealth as any).performance.successRate * 100
+                      ).toFixed(1)}
                       %
                     </p>
                   </div>

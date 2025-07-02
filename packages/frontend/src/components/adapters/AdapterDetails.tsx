@@ -157,22 +157,19 @@ const AdapterDetails: React.FC<AdapterDetailsProps> = ({
                     {adapter.displayName}
                   </h1>
                   {adapter.official && (
-                    <Shield
-                      className='w-5 h-5 text-blue-500'
-                      title='Official adapter'
-                    />
+                    <div title='Official adapter'>
+                      <Shield className='w-5 h-5 text-blue-500' />
+                    </div>
                   )}
                   {adapter.verified && (
-                    <CheckCircle
-                      className='w-5 h-5 text-green-500'
-                      title='Verified adapter'
-                    />
+                    <div title='Verified adapter'>
+                      <CheckCircle className='w-5 h-5 text-green-500' />
+                    </div>
                   )}
                   {adapter.experimental && (
-                    <AlertTriangle
-                      className='w-5 h-5 text-orange-500'
-                      title='Experimental'
-                    />
+                    <div title='Experimental'>
+                      <AlertTriangle className='w-5 h-5 text-orange-500' />
+                    </div>
                   )}
                 </div>
 

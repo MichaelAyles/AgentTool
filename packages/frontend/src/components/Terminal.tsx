@@ -39,7 +39,6 @@ export function Terminal() {
         foreground: '#ffffff',
         cursor: '#ffffff',
         cursorAccent: '#ffffff',
-        selection: '#ffffff40',
       },
       fontFamily: 'JetBrains Mono, Fira Code, Monaco, Consolas, monospace',
       fontSize: 14,
