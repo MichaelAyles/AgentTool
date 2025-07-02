@@ -99,17 +99,48 @@ class VibeApp {
         this.updateStatus('connecting', 'Connecting...');
         this.connectBtn.disabled = true;
         
-        // For now, simulate a connection since we don't have the backend yet
-        // In production, this would connect to the WebSocket server
-        setTimeout(() => {
-            if (Math.random() > 0.8) {
-                // Simulate connection failure
-                this.handleConnectionError('Unable to connect to desktop connector');
-            } else {
-                // Simulate successful connection
-                this.handleConnectionSuccess(uuid);
-            }
-        }, 1500);
+        // Connect to desktop connector WebSocket
+        const wsUrl = 'ws://localhost:3002';
+        
+        try {
+            this.wsConnection = new WebSocket(wsUrl);
+            
+            this.wsConnection.onopen = () => {
+                console.log('WebSocket connected');
+                // Send authentication message
+                this.sendMessage({
+                    type: 'auth',
+                    uuid: uuid,
+                    timestamp: Date.now()
+                });
+            };
+            
+            this.wsConnection.onmessage = (event) => {
+                this.handleWebSocketMessage(event);
+            };
+            
+            this.wsConnection.onclose = (event) => {
+                console.log('WebSocket disconnected:', event.code, event.reason);
+                this.handleConnectionError('Connection closed');
+            };
+            
+            this.wsConnection.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                this.handleConnectionError('Unable to connect to desktop connector. Make sure it is running on localhost:3002');
+            };
+            
+            // Set connection timeout
+            setTimeout(() => {
+                if (this.wsConnection.readyState === WebSocket.CONNECTING) {
+                    this.wsConnection.close();
+                    this.handleConnectionError('Connection timeout. Make sure desktop connector is running.');
+                }
+            }, 10000);
+            
+        } catch (error) {
+            console.error('Failed to create WebSocket connection:', error);
+            this.handleConnectionError('Failed to create connection');
+        }
     }
     
     handleConnectionSuccess(uuid) {
@@ -182,13 +213,38 @@ class VibeApp {
     }
     
     initializeTerminal() {
-        // Placeholder for terminal initialization
-        // In production, this would integrate with a terminal library like xterm.js
+        // Create terminal display area
         this.terminalContainer.innerHTML = `
-            <div style="color: #00ff00; padding: 1rem; font-family: monospace;">
-                <p>Terminal connected to session ${this.sessionId}</p>
-                <p>Waiting for desktop connector implementation...</p>
-                <p style="margin-top: 1rem;">$ <span style="animation: blink 1s infinite;">_</span></p>
+            <div id="terminal-output" style="
+                color: #00ff00; 
+                background: #000; 
+                padding: 1rem; 
+                font-family: 'Courier New', monospace; 
+                font-size: 14px;
+                height: 400px;
+                overflow-y: auto;
+                border: 1px solid #333;
+                white-space: pre-wrap;
+            "></div>
+            <div id="terminal-input-area" style="
+                display: flex;
+                margin-top: 8px;
+                align-items: center;
+                background: #000;
+                border: 1px solid #333;
+                padding: 4px;
+            ">
+                <span style="color: #00ff00; font-family: monospace;">$</span>
+                <input type="text" id="terminal-input" style="
+                    flex: 1;
+                    background: transparent;
+                    border: none;
+                    color: #00ff00;
+                    font-family: 'Courier New', monospace;
+                    font-size: 14px;
+                    padding: 4px 8px;
+                    outline: none;
+                " placeholder="Enter command...">
             </div>
             <style>
                 @keyframes blink {
@@ -197,6 +253,36 @@ class VibeApp {
                 }
             </style>
         `;
+        
+        // Set up terminal input handling
+        const terminalInput = document.getElementById('terminal-input');
+        const terminalOutput = document.getElementById('terminal-output');
+        
+        terminalInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const command = terminalInput.value;
+                terminalInput.value = '';
+                
+                // Display command in terminal
+                this.appendToTerminal(`$ ${command}\n`);
+                
+                // Send command to desktop connector
+                if (this.wsConnection && this.wsConnection.readyState === WebSocket.OPEN) {
+                    this.sendMessage({
+                        type: 'terminal_input',
+                        data: command + '\r',
+                        timestamp: Date.now()
+                    });
+                }
+            }
+        });
+        
+        // Focus terminal input
+        terminalInput.focus();
+        
+        // Initial terminal message
+        this.appendToTerminal(`Terminal connected to session ${this.sessionId}\n`);
+        this.appendToTerminal(`Type commands and press Enter to execute\n\n`);
     }
     
     showError(message) {
@@ -205,6 +291,68 @@ class VibeApp {
     
     clearError() {
         this.connectionError.textContent = '';
+    }
+    
+    sendMessage(message) {
+        if (this.wsConnection && this.wsConnection.readyState === WebSocket.OPEN) {
+            this.wsConnection.send(JSON.stringify(message));
+        }
+    }
+    
+    handleWebSocketMessage(event) {
+        try {
+            const message = JSON.parse(event.data);
+            
+            switch (message.type) {
+                case 'auth_success':
+                    console.log('Authentication successful');
+                    this.handleConnectionSuccess(message.data.uuid);
+                    break;
+                    
+                case 'auth_error':
+                    console.error('Authentication failed:', message.data);
+                    this.handleConnectionError(`Authentication failed: ${message.data}`);
+                    break;
+                    
+                case 'terminal_output':
+                    this.appendToTerminal(message.data);
+                    break;
+                    
+                case 'terminal_ready':
+                    console.log('Terminal ready');
+                    break;
+                    
+                case 'terminal_exit':
+                    this.appendToTerminal(`\nProcess exited with code ${message.data.exitCode}\n`);
+                    break;
+                    
+                case 'ping':
+                    // Respond to ping with pong
+                    this.sendMessage({
+                        type: 'pong',
+                        timestamp: Date.now()
+                    });
+                    break;
+                    
+                case 'pong':
+                    // Handle pong response
+                    break;
+                    
+                default:
+                    console.warn('Unknown message type:', message.type);
+            }
+        } catch (error) {
+            console.error('Failed to parse WebSocket message:', error);
+        }
+    }
+    
+    appendToTerminal(text) {
+        const terminalOutput = document.getElementById('terminal-output');
+        if (terminalOutput) {
+            terminalOutput.textContent += text;
+            // Auto-scroll to bottom
+            terminalOutput.scrollTop = terminalOutput.scrollHeight;
+        }
     }
     
     // Check for stored UUID on load

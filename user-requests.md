@@ -1,9 +1,12 @@
 # User Requests
 
 ## Frontend Deployment Issue  
-- Vercel is looking for "packages/frontend" directory but our structure is "frontend/"
-- ✅ **RESOLVED**: Working deployment at https://frontend-three-delta-48.vercel.app
-- Need to configure custom domain vibe.theduck.chat to point to this deployment
+- ❌ **CURRENT ISSUE**: Vercel build failing on working branch
+- Error: "The specified Root Directory 'packages/frontend' does not exist"
+- Our structure: "frontend/" at repository root
+- Previous deployment still working: https://frontend-three-delta-48.vercel.app
+- **Action needed**: Update Vercel project settings to use "frontend" as root directory
+- Need to configure custom domain vibe.theduck.chat to point to deployment
 
 ## Desktop Connector Dependencies Issue
 - node-pty compilation failing on macOS with Node.js v24.2.0
