@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "test": "vitest",
-    "vercel-build": "npm run build:fast",
+    "vercel-build": "vite build --mode production",
+    "build:static": "vite build --mode production --logLevel error",
     "vercel-dev": "npm run dev",
     "analyze": "vite build --mode analyze"
   },

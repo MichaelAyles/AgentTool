@@ -1,17 +1,24 @@
 {
-  "buildCommand": "cd packages/frontend && npm run vercel-build",
-  "outputDirectory": "packages/frontend/dist",
-  "installCommand": "cd packages/frontend && npm install",
-  "devCommand": "cd packages/frontend && npm run dev",
-  "framework": "vite",
-  "rewrites": [
+  "version": 2,
+  "name": "vibe-code-frontend",
+  "builds": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api-fallback.html"
+      "src": "packages/frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api-fallback.html",
+      "status": 503
     },
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
   ],
   "headers": [
