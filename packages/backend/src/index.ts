@@ -2,6 +2,11 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cookieParser from 'cookie-parser';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 import { setupRoutes } from './api/index.js';
 import { setupWebSocket } from './websocket/index.js';
 import { ProcessManager } from './processes/index.js';
@@ -257,6 +262,15 @@ validationStorage.initializeDatabase().catch(error => {
   console.warn('⚠️ Validation storage initialization failed:', error.message);
 });
 console.log('✅ Validation storage initialized');
+
+// Serve install script
+const projectRoot = path.resolve(__dirname, '../../../');
+app.get('/install.sh', (req, res) => {
+  const installScriptPath = path.join(projectRoot, 'install.sh');
+  res.setHeader('Content-Type', 'text/plain');
+  res.setHeader('Content-Disposition', 'inline; filename="install.sh"');
+  res.sendFile(installScriptPath);
+});
 
 // Routes
 setupRoutes(app, { adapterRegistry, processManager });
