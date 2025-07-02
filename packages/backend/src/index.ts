@@ -19,6 +19,7 @@ import {
   sanitizeInput,
   structuredLogger,
 } from './middleware/index.js';
+import { metricsMiddleware, metricsHandler, metrics } from './middleware/metrics.js';
 
 const app = express();
 const server = createServer(app);
@@ -61,6 +62,9 @@ app.use(sanitizeInput());
 // Logging middleware
 app.use(requestLogger);
 app.use(errorLogger);
+
+// Metrics middleware
+app.use(metricsMiddleware);
 
 // Services
 const adapterRegistry = new AdapterRegistry();
@@ -256,6 +260,9 @@ console.log('✅ Validation storage initialized');
 
 // Routes
 setupRoutes(app, { adapterRegistry, processManager });
+
+// Metrics endpoint
+app.get('/metrics', metricsHandler);
 
 // WebSocket
 setupWebSocket(io, { adapterRegistry, processManager });
