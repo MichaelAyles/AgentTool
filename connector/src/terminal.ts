@@ -24,7 +24,7 @@ export class TerminalManager extends EventEmitter {
   private readonly MAX_MEMORY_PER_TERMINAL = 100 * 1024 * 1024; // 100MB
   private readonly MAX_IDLE_TIME = 2 * 60 * 60 * 1000; // 2 hours
 
-  createSession(uuid: string, terminalId?: string, name?: string, color?: string): TerminalSession {
+  createSession(uuid: string, terminalId?: string, name?: string, color?: string, projectSettings?: any): TerminalSession {
     // Check resource limits first
     this.enforceResourceLimits(uuid);
     
@@ -40,17 +40,35 @@ export class TerminalManager extends EventEmitter {
       throw new Error(`Terminal ${terminalId} already exists for session ${uuid}`);
     }
 
-    // Determine the shell based on platform
-    const shell = this.getDefaultShell();
+    // Determine the shell based on project settings or platform
+    const shell = projectSettings?.defaultShell || this.getDefaultShell();
     const args = this.getDefaultArgs();
+
+    // Get terminal settings from project or use defaults
+    const terminalSettings = projectSettings?.terminalSettings || {};
+    const cols = terminalSettings.cols || 80;
+    const rows = terminalSettings.rows || 24;
+
+    // Determine working directory from project settings or default
+    const workingDirectory = projectSettings?.workingDirectory || 
+                           process.env.HOME || 
+                           process.env.USERPROFILE || 
+                           process.cwd();
+
+    // Merge environment variables from project settings
+    const env = {
+      ...process.env,
+      TERM: 'xterm-256color',
+      ...projectSettings?.environmentVariables
+    };
 
     // Create mock PTY process (replace with real PTY when node-pty is working)
     const ptyProcess = mockSpawn(shell, args, {
       name: 'xterm-color',
-      cols: 80,
-      rows: 24,
-      cwd: process.env.HOME || process.env.USERPROFILE || process.cwd(),
-      env: { ...process.env, TERM: 'xterm-256color' }
+      cols: cols,
+      rows: rows,
+      cwd: workingDirectory,
+      env: env
     });
 
     const session: TerminalSession = {

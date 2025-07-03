@@ -1002,9 +1002,16 @@ class DuckBridgeApp {
     }
     
     // Terminal Tab Management
-    createNewTerminalTab(name = 'Terminal', color = null) {
+    createNewTerminalTab(name = 'Terminal', color = null, projectSettings = null) {
         const tabId = 'tab-' + Date.now();
         const panelId = 'panel-' + Date.now();
+        
+        // Get terminal settings from project or use defaults
+        const terminalSettings = projectSettings?.terminalSettings || {
+            cols: 80,
+            rows: 24,
+            fontSize: 14
+        };
         
         // Assign a color if not provided
         if (!color) {
@@ -1482,7 +1489,7 @@ class DuckBridgeApp {
         });
     }
     
-    createNewTerminal(name, color) {
+    createNewTerminal(name, color, projectSettings = null) {
         if (!name) {
             name = `Terminal ${this.terminalCounter++}`;
         }
@@ -1493,9 +1500,15 @@ class DuckBridgeApp {
             color = colors.find(c => !usedColors.includes(c)) || colors[0];
         }
         
+        // Include project settings if available
+        const terminalData = { name, color };
+        if (projectSettings) {
+            terminalData.projectSettings = projectSettings;
+        }
+        
         this.sendMessage({
             type: 'terminal_create',
-            data: { name, color },
+            data: terminalData,
             timestamp: Date.now()
         });
     }
@@ -1669,6 +1682,48 @@ class DuckBridgeApp {
                                 <option value="teal">Teal</option>
                             </select>
                         </div>
+                        
+                        <details class="settings-section">
+                            <summary>Project Settings (Optional)</summary>
+                            <div class="settings-content">
+                                <div class="form-group">
+                                    <label for="project-shell">Default Shell</label>
+                                    <select id="project-shell">
+                                        <option value="">System Default</option>
+                                        <option value="/bin/bash">Bash</option>
+                                        <option value="/bin/zsh">Zsh</option>
+                                        <option value="/bin/fish">Fish</option>
+                                        <option value="powershell">PowerShell</option>
+                                        <option value="cmd">Command Prompt</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="project-working-dir">Working Directory</label>
+                                    <input type="text" id="project-working-dir" placeholder="Defaults to project path">
+                                </div>
+                                <div class="form-group">
+                                    <label for="project-env-vars">Environment Variables</label>
+                                    <textarea id="project-env-vars" placeholder="KEY1=value1&#10;KEY2=value2&#10;(one per line)"></textarea>
+                                </div>
+                                <div class="terminal-settings">
+                                    <h4>Terminal Settings</h4>
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label for="terminal-cols">Columns</label>
+                                            <input type="number" id="terminal-cols" value="80" min="40" max="200">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="terminal-rows">Rows</label>
+                                            <input type="number" id="terminal-rows" value="24" min="10" max="60">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="terminal-font-size">Font Size</label>
+                                            <input type="number" id="terminal-font-size" value="14" min="8" max="24">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </details>
                         <div class="form-actions">
                             <button type="submit" class="primary-btn">Create Project</button>
                             <button type="button" class="secondary-btn cancel-btn">Cancel</button>
@@ -1700,11 +1755,34 @@ class DuckBridgeApp {
             e.preventDefault();
             
             const formData = new FormData(form);
+            
+            // Parse environment variables
+            const envVarsText = dialog.querySelector('#project-env-vars').value;
+            const environmentVariables = {};
+            if (envVarsText.trim()) {
+                envVarsText.split('\n').forEach(line => {
+                    const [key, ...valueParts] = line.split('=');
+                    if (key && valueParts.length > 0) {
+                        environmentVariables[key.trim()] = valueParts.join('=').trim();
+                    }
+                });
+            }
+            
             const projectData = {
-                name: formData.get('project-name'),
-                path: formData.get('project-path'),
-                description: formData.get('project-description'),
-                color: formData.get('project-color')
+                name: dialog.querySelector('#project-name').value,
+                path: dialog.querySelector('#project-path').value,
+                description: dialog.querySelector('#project-description').value,
+                color: dialog.querySelector('#project-color').value,
+                settings: {
+                    defaultShell: dialog.querySelector('#project-shell').value || undefined,
+                    workingDirectory: dialog.querySelector('#project-working-dir').value || undefined,
+                    environmentVariables,
+                    terminalSettings: {
+                        cols: parseInt(dialog.querySelector('#terminal-cols').value) || 80,
+                        rows: parseInt(dialog.querySelector('#terminal-rows').value) || 24,
+                        fontSize: parseInt(dialog.querySelector('#terminal-font-size').value) || 14
+                    }
+                }
             };
             
             try {
@@ -1752,11 +1830,16 @@ class DuckBridgeApp {
             
             this.activeProjectId = projectId;
             
-            // Show success feedback
+            // Get project data
             const project = this.projects.get(projectId);
             if (project) {
                 console.log(`Opened project: ${project.name}`);
+                
+                // Create a new terminal with project settings
+                this.createNewTerminal(`${project.name}`, project.color, project.settings);
+                
                 // You could show a toast notification here
+                this.showSuccessMessage(`Opened project: ${project.name}`);
             }
             
             // Reload projects to update last accessed time
@@ -1764,19 +1847,185 @@ class DuckBridgeApp {
             
         } catch (error) {
             console.error('Failed to open project:', error);
+            this.showErrorMessage('Failed to open project');
         }
     }
     
     async editProject(projectId) {
-        // Implementation for editing projects
-        alert('Edit project functionality not yet implemented');
+        const project = this.projects.get(projectId);
+        if (!project) return;
+        
+        const dialog = document.createElement('div');
+        dialog.className = 'modal';
+        
+        // Convert environment variables to text
+        const envVarsText = Object.entries(project.settings.environmentVariables || {})
+            .map(([key, value]) => `${key}=${value}`)
+            .join('\n');
+        
+        dialog.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Edit Project</h3>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="edit-project-form">
+                        <div class="form-group">
+                            <label for="edit-project-name">Project Name *</label>
+                            <input type="text" id="edit-project-name" value="${project.name}" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-project-description">Description</label>
+                            <textarea id="edit-project-description">${project.description || ''}</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-project-color">Color</label>
+                            <select id="edit-project-color">
+                                <option value="blue" ${project.color === 'blue' ? 'selected' : ''}>Blue</option>
+                                <option value="green" ${project.color === 'green' ? 'selected' : ''}>Green</option>
+                                <option value="purple" ${project.color === 'purple' ? 'selected' : ''}>Purple</option>
+                                <option value="orange" ${project.color === 'orange' ? 'selected' : ''}>Orange</option>
+                                <option value="red" ${project.color === 'red' ? 'selected' : ''}>Red</option>
+                                <option value="pink" ${project.color === 'pink' ? 'selected' : ''}>Pink</option>
+                                <option value="indigo" ${project.color === 'indigo' ? 'selected' : ''}>Indigo</option>
+                                <option value="teal" ${project.color === 'teal' ? 'selected' : ''}>Teal</option>
+                            </select>
+                        </div>
+                        
+                        <details class="settings-section" open>
+                            <summary>Project Settings</summary>
+                            <div class="settings-content">
+                                <div class="form-group">
+                                    <label for="edit-project-shell">Default Shell</label>
+                                    <select id="edit-project-shell">
+                                        <option value="" ${!project.settings.defaultShell ? 'selected' : ''}>System Default</option>
+                                        <option value="/bin/bash" ${project.settings.defaultShell === '/bin/bash' ? 'selected' : ''}>Bash</option>
+                                        <option value="/bin/zsh" ${project.settings.defaultShell === '/bin/zsh' ? 'selected' : ''}>Zsh</option>
+                                        <option value="/bin/fish" ${project.settings.defaultShell === '/bin/fish' ? 'selected' : ''}>Fish</option>
+                                        <option value="powershell" ${project.settings.defaultShell === 'powershell' ? 'selected' : ''}>PowerShell</option>
+                                        <option value="cmd" ${project.settings.defaultShell === 'cmd' ? 'selected' : ''}>Command Prompt</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="edit-project-working-dir">Working Directory</label>
+                                    <input type="text" id="edit-project-working-dir" value="${project.settings.workingDirectory || ''}" placeholder="Defaults to project path">
+                                </div>
+                                <div class="form-group">
+                                    <label for="edit-project-env-vars">Environment Variables</label>
+                                    <textarea id="edit-project-env-vars" placeholder="KEY1=value1&#10;KEY2=value2&#10;(one per line)">${envVarsText}</textarea>
+                                </div>
+                                <div class="terminal-settings">
+                                    <h4>Terminal Settings</h4>
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label for="edit-terminal-cols">Columns</label>
+                                            <input type="number" id="edit-terminal-cols" value="${project.settings.terminalSettings?.cols || 80}" min="40" max="200">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="edit-terminal-rows">Rows</label>
+                                            <input type="number" id="edit-terminal-rows" value="${project.settings.terminalSettings?.rows || 24}" min="10" max="60">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="edit-terminal-font-size">Font Size</label>
+                                            <input type="number" id="edit-terminal-font-size" value="${project.settings.terminalSettings?.fontSize || 14}" min="8" max="24">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </details>
+                        <div class="form-actions">
+                            <button type="submit" class="primary-btn">Save Changes</button>
+                            <button type="button" class="secondary-btn cancel-btn">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(dialog);
+        dialog.classList.add('show');
+        
+        // Event listeners
+        const form = dialog.querySelector('#edit-project-form');
+        const closeBtn = dialog.querySelector('.modal-close');
+        const cancelBtn = dialog.querySelector('.cancel-btn');
+        
+        const closeDialog = () => {
+            dialog.remove();
+        };
+        
+        closeBtn.addEventListener('click', closeDialog);
+        cancelBtn.addEventListener('click', closeDialog);
+        dialog.addEventListener('click', (e) => {
+            if (e.target === dialog) closeDialog();
+        });
+        
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // Parse environment variables
+            const envVarsText = dialog.querySelector('#edit-project-env-vars').value;
+            const environmentVariables = {};
+            if (envVarsText.trim()) {
+                envVarsText.split('\n').forEach(line => {
+                    const [key, ...valueParts] = line.split('=');
+                    if (key && valueParts.length > 0) {
+                        environmentVariables[key.trim()] = valueParts.join('=').trim();
+                    }
+                });
+            }
+            
+            const updateData = {
+                name: dialog.querySelector('#edit-project-name').value,
+                description: dialog.querySelector('#edit-project-description').value,
+                color: dialog.querySelector('#edit-project-color').value,
+                settings: {
+                    defaultShell: dialog.querySelector('#edit-project-shell').value || undefined,
+                    workingDirectory: dialog.querySelector('#edit-project-working-dir').value || undefined,
+                    environmentVariables,
+                    terminalSettings: {
+                        cols: parseInt(dialog.querySelector('#edit-terminal-cols').value) || 80,
+                        rows: parseInt(dialog.querySelector('#edit-terminal-rows').value) || 24,
+                        fontSize: parseInt(dialog.querySelector('#edit-terminal-font-size').value) || 14
+                    }
+                }
+            };
+            
+            try {
+                await this.updateProject(projectId, updateData);
+                closeDialog();
+            } catch (error) {
+                alert('Failed to update project: ' + error.message);
+            }
+        });
+    }
+    
+    async updateProject(projectId, updateData) {
+        if (!this.currentUuid) throw new Error('No UUID available');
+        
+        const response = await fetch(`http://localhost:3001/projects/${this.currentUuid}/${projectId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(updateData)
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to update project');
+        }
+        
+        // Reload projects
+        await this.loadUserProjects();
     }
     
     async deleteProject(projectId) {
         const project = this.projects.get(projectId);
         if (!project) return;
         
-        if (!confirm(`Are you sure you want to delete the project "${project.name}"?`)) {
+        if (!confirm(`Are you sure you want to delete the project "${project.name}"? This action cannot be undone.`)) {
             return;
         }
         
@@ -1785,12 +2034,14 @@ class DuckBridgeApp {
                 method: 'DELETE'
             });
             
-            if (response.ok) {
-                await this.loadUserProjects();
-            } else {
+            if (!response.ok) {
                 const error = await response.json();
-                alert('Failed to delete project: ' + error.error);
+                throw new Error(error.error || 'Failed to delete project');
             }
+            
+            // Reload projects
+            await this.loadUserProjects();
+            
         } catch (error) {
             alert('Failed to delete project: ' + error.message);
         }

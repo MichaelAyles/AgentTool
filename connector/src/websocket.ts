@@ -287,8 +287,9 @@ export class WebSocketManager {
       const { terminalId, data } = message;
       const name = data?.name || undefined;
       const color = data?.color || undefined;
+      const projectSettings = data?.projectSettings || undefined;
       
-      const session = this.terminalManager.createSession(client.uuid, terminalId, name, color);
+      const session = this.terminalManager.createSession(client.uuid, terminalId, name, color, projectSettings);
       
       this.sendMessage(client.ws, {
         type: 'terminal_created' as any,

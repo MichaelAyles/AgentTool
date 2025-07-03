@@ -1079,6 +1079,47 @@ body {
     margin-top: 2rem;
 }
 
+/* Project Settings */
+.settings-section {
+    margin-bottom: 1.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    background: var(--bg-secondary);
+}
+
+.settings-section summary {
+    padding: 1rem;
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--text-primary);
+    user-select: none;
+    background: var(--bg-tertiary);
+    border-radius: 0.5rem 0.5rem 0 0;
+}
+
+.settings-section[open] summary {
+    border-bottom: 1px solid var(--border-color);
+    border-radius: 0.5rem 0.5rem 0 0;
+}
+
+.settings-content {
+    padding: 1.5rem;
+}
+
+.terminal-settings h4 {
+    margin: 1rem 0 0.5rem 0;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 1rem;
+}
+
 .project-card.placeholder-card {
     border: 2px dashed var(--border-color);
     background: var(--bg-secondary);
