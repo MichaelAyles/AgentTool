@@ -857,3 +857,304 @@ body {
 #qr-uuid {
     position: relative;
 }
+
+/* Welcome Screen */
+.welcome-screen {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 80vh;
+    padding: 2rem;
+}
+
+.welcome-content {
+    text-align: center;
+    max-width: 600px;
+}
+
+.welcome-content h2 {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    background: linear-gradient(135deg, var(--accent-primary), var(--success-color));
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.welcome-content p {
+    font-size: 1.25rem;
+    color: var(--text-secondary);
+    margin-bottom: 2rem;
+}
+
+/* Dashboard Styles */
+.dashboard {
+    padding: 2rem 0;
+}
+
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.dashboard-header h2 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.dashboard-controls {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.logout-btn {
+    background: var(--error-color);
+    color: white;
+    border: none;
+    border-radius: 0.5rem;
+    padding: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.logout-btn:hover {
+    background: #dc2626;
+    transform: translateY(-1px);
+}
+
+/* Projects Grid */
+.projects-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.project-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 1rem;
+    padding: 2rem;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.project-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.project-card.placeholder-card {
+    border: 2px dashed var(--border-color);
+    background: var(--bg-secondary);
+}
+
+.project-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.project-card h3 {
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
+}
+
+.project-card p {
+    color: var(--text-secondary);
+    margin-bottom: 1.5rem;
+}
+
+.create-first-project-btn {
+    background: var(--accent-primary);
+    color: white;
+    border: none;
+    border-radius: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.create-first-project-btn:hover {
+    background: var(--accent-hover);
+}
+
+/* Terminal Workspace */
+.terminal-workspace {
+    margin-top: 2rem;
+}
+
+.terminal-tabs {
+    display: flex;
+    gap: 0.25rem;
+    margin-bottom: 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.terminal-tab {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-bottom: none;
+    border-radius: 0.5rem 0.5rem 0 0;
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.terminal-tab.active {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+    transform: translateY(1px);
+}
+
+.terminal-tab:hover:not(.active) {
+    background: var(--card-bg);
+}
+
+.terminal-tab-name {
+    font-size: 0.875rem;
+    color: var(--text-primary);
+}
+
+.terminal-tab-close {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 0.25rem;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.terminal-tab-close:hover {
+    background: var(--error-color);
+    color: white;
+}
+
+.terminal-panels {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 0 0.5rem 0.5rem 0.5rem;
+    min-height: 400px;
+}
+
+.terminal-panel {
+    display: none;
+    height: 100%;
+}
+
+.terminal-panel.active {
+    display: block;
+}
+
+/* Login Modal Styles */
+.login-modal-content {
+    max-width: 600px;
+    width: 95%;
+}
+
+.uuid-section {
+    margin-bottom: 2rem;
+}
+
+.uuid-section label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.setup-section h4 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: var(--text-primary);
+}
+
+.setup-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.setup-step {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.setup-step .step-number {
+    background: var(--accent-primary);
+    color: white;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.setup-step .step-content {
+    flex: 1;
+}
+
+.setup-step p {
+    margin-bottom: 0.75rem;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.connect-btn-modal {
+    width: auto;
+    padding: 0.75rem 2rem;
+}
+
+/* Responsive adjustments for new UI */
+@media (max-width: 768px) {
+    .dashboard-header {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+    }
+    
+    .dashboard-controls {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    .projects-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .setup-steps {
+        gap: 1rem;
+    }
+    
+    .setup-step {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .terminal-tabs {
+        overflow-x: auto;
+        padding-bottom: 0.5rem;
+    }
+}

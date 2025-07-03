@@ -15,6 +15,7 @@ class DuckBridgeApp {
         this.initializeTheme();
         this.initializeTagline();
         this.checkUrlParams();
+        this.initializeUI();
     }
     
     initializeElements() {
@@ -38,8 +39,7 @@ class DuckBridgeApp {
         this.connectionTimeSpan = document.getElementById('connection-time');
         this.disconnectBtn = document.getElementById('disconnect-btn');
         
-        // Terminal elements
-        this.terminalSection = document.getElementById('terminal-section');
+        // Legacy elements (kept for compatibility)
         this.terminalContainer = document.getElementById('terminal-container');
         
         // Theme toggle
@@ -51,6 +51,24 @@ class DuckBridgeApp {
         this.qrClose = document.getElementById('qr-close');
         this.qrCanvas = document.getElementById('qr-canvas');
         this.qrUrl = document.getElementById('qr-url');
+        
+        // UI Screen elements
+        this.welcomeScreen = document.getElementById('welcome-screen');
+        this.mainInterface = document.getElementById('main-interface');
+        this.showLoginBtn = document.getElementById('show-login-btn');
+        this.loginModal = document.getElementById('login-modal');
+        this.loginClose = document.getElementById('login-close');
+        this.logoutBtn = document.getElementById('logout-btn');
+        
+        // Project elements
+        this.newProjectBtn = document.getElementById('new-project-btn');
+        this.openProjectBtn = document.getElementById('open-project-btn');
+        this.projectsGrid = document.getElementById('projects-grid');
+        this.createFirstProjectBtn = document.querySelector('.create-first-project-btn');
+        
+        // Terminal workspace elements
+        this.terminalTabs = document.getElementById('terminal-tabs');
+        this.terminalPanels = document.getElementById('terminal-panels');
     }
     
     attachEventListeners() {
@@ -74,6 +92,21 @@ class DuckBridgeApp {
         this.qrModal.addEventListener('click', (e) => {
             if (e.target === this.qrModal) this.hideQrCode();
         });
+        
+        // UI Navigation controls
+        this.showLoginBtn.addEventListener('click', () => this.showLoginModal());
+        this.loginClose.addEventListener('click', () => this.hideLoginModal());
+        this.loginModal.addEventListener('click', (e) => {
+            if (e.target === this.loginModal) this.hideLoginModal();
+        });
+        this.logoutBtn.addEventListener('click', () => this.logout());
+        
+        // Project controls
+        this.newProjectBtn.addEventListener('click', () => this.createNewProject());
+        this.openProjectBtn.addEventListener('click', () => this.openExistingProject());
+        if (this.createFirstProjectBtn) {
+            this.createFirstProjectBtn.addEventListener('click', () => this.createNewProject());
+        }
         
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
@@ -196,13 +229,15 @@ class DuckBridgeApp {
         this.connectionStartTime = Date.now();
         this.reconnectAttempts = 0;
         
-        this.setConnectionState('connected');
-        this.sessionIdSpan.textContent = uuid.substring(0, 8) + '...';
-        this.terminalSection.classList.remove('hidden');
+        // Show main interface
+        this.showMainInterface();
+        
+        // Create first terminal tab if none exist
+        if (this.terminalTabs.children.length === 0) {
+            this.createNewTerminalTab('Main Terminal');
+        }
         
         this.showSuccessMessage('✅ Connected successfully!');
-        this.startConnectionTimer();
-        this.initializeTerminal();
         
         // Store UUID for reconnection
         localStorage.setItem('lastConnectedUUID', uuid);
@@ -233,7 +268,6 @@ class DuckBridgeApp {
         }
         
         this.setConnectionState('disconnected');
-        this.terminalSection.classList.add('hidden');
         
         if (this.connectionTimer) {
             clearInterval(this.connectionTimer);
@@ -593,6 +627,168 @@ class DuckBridgeApp {
     
     hideQrCode() {
         this.qrModal.classList.remove('show');
+    }
+    
+    // UI State Management
+    initializeUI() {
+        // Check if user was previously connected
+        const wasConnected = localStorage.getItem('wasConnected') === 'true';
+        
+        if (wasConnected) {
+            // Show login modal directly for returning users
+            this.showLoginModal();
+        } else {
+            // Show welcome screen for new users
+            this.showWelcomeScreen();
+        }
+    }
+    
+    showWelcomeScreen() {
+        this.welcomeScreen.style.display = 'block';
+        this.mainInterface.style.display = 'none';
+        this.hideLoginModal();
+    }
+    
+    showLoginModal() {
+        this.loginModal.classList.add('show');
+        this.welcomeScreen.style.display = 'none';
+    }
+    
+    hideLoginModal() {
+        this.loginModal.classList.remove('show');
+    }
+    
+    showMainInterface() {
+        this.welcomeScreen.style.display = 'none';
+        this.mainInterface.style.display = 'block';
+        this.hideLoginModal();
+        localStorage.setItem('wasConnected', 'true');
+    }
+    
+    logout() {
+        if (this.wsConnection) {
+            this.wsConnection.close();
+        }
+        
+        // Clear connection state
+        this.sessionId = null;
+        this.connectionStartTime = null;
+        if (this.connectionTimer) {
+            clearInterval(this.connectionTimer);
+            this.connectionTimer = null;
+        }
+        
+        // Clear terminal tabs
+        this.clearAllTerminals();
+        
+        // Reset UI state
+        localStorage.removeItem('wasConnected');
+        this.showWelcomeScreen();
+        
+        this.showSuccessMessage('Disconnected successfully');
+    }
+    
+    // Project Management
+    createNewProject() {
+        // Placeholder for now - will be implemented in later phases
+        this.showSuccessMessage('Project creation coming soon!');
+        
+        // For now, just ensure we have at least one terminal tab
+        if (this.terminalTabs.children.length === 0) {
+            this.createNewTerminalTab('Project Terminal');
+        }
+    }
+    
+    openExistingProject() {
+        // Placeholder for now - will be implemented in later phases
+        this.showSuccessMessage('Project opening coming soon!');
+    }
+    
+    // Terminal Tab Management
+    createNewTerminalTab(name = 'Terminal') {
+        const tabId = 'tab-' + Date.now();
+        const panelId = 'panel-' + Date.now();
+        
+        // Create tab
+        const tab = document.createElement('div');
+        tab.className = 'terminal-tab';
+        tab.dataset.tabId = tabId;
+        tab.innerHTML = `
+            <span class="terminal-tab-name">${name}</span>
+            <button class="terminal-tab-close" data-close="${tabId}">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        `;
+        
+        // Create panel
+        const panel = document.createElement('div');
+        panel.className = 'terminal-panel';
+        panel.id = panelId;
+        panel.innerHTML = `
+            <div class="terminal-container" style="padding: 1rem; height: 400px; background: #000; color: #00ff00; font-family: var(--font-mono);">
+                <div>🦆 ${name} Ready</div>
+                <div>Session: ${this.sessionId || 'Not connected'}</div>
+                <div>Type commands here when connected...</div>
+            </div>
+        `;
+        
+        // Add event listeners
+        tab.addEventListener('click', (e) => {
+            if (!e.target.closest('.terminal-tab-close')) {
+                this.switchToTab(tabId, panelId);
+            }
+        });
+        
+        tab.querySelector('.terminal-tab-close').addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.closeTab(tabId, panelId);
+        });
+        
+        // Add to DOM
+        this.terminalTabs.appendChild(tab);
+        this.terminalPanels.appendChild(panel);
+        
+        // Make this tab active
+        this.switchToTab(tabId, panelId);
+        
+        return { tabId, panelId };
+    }
+    
+    switchToTab(tabId, panelId) {
+        // Remove active class from all tabs and panels
+        document.querySelectorAll('.terminal-tab').forEach(tab => tab.classList.remove('active'));
+        document.querySelectorAll('.terminal-panel').forEach(panel => panel.classList.remove('active'));
+        
+        // Add active class to selected tab and panel
+        document.querySelector(`[data-tab-id="${tabId}"]`).classList.add('active');
+        document.getElementById(panelId).classList.add('active');
+    }
+    
+    closeTab(tabId, panelId) {
+        const tab = document.querySelector(`[data-tab-id="${tabId}"]`);
+        const panel = document.getElementById(panelId);
+        
+        if (tab) tab.remove();
+        if (panel) panel.remove();
+        
+        // If there are remaining tabs, activate the first one
+        const remainingTabs = document.querySelectorAll('.terminal-tab');
+        if (remainingTabs.length > 0) {
+            const firstTab = remainingTabs[0];
+            const firstTabId = firstTab.dataset.tabId;
+            const firstPanel = document.querySelector('.terminal-panel');
+            if (firstPanel) {
+                this.switchToTab(firstTabId, firstPanel.id);
+            }
+        }
+    }
+    
+    clearAllTerminals() {
+        this.terminalTabs.innerHTML = '';
+        this.terminalPanels.innerHTML = '';
     }
 }
 
