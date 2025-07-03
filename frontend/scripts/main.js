@@ -126,6 +126,43 @@ class DuckBridgeApp {
                     e.preventDefault();
                     this.handleConnect();
                 }
+                
+                // Terminal tab navigation shortcuts
+                if (this.isConnected && this.terminals.size > 0) {
+                    // Ctrl/Cmd + number to switch to specific tab
+                    const num = parseInt(e.key);
+                    if (num >= 1 && num <= 9) {
+                        e.preventDefault();
+                        const terminalIds = Array.from(this.terminals.keys());
+                        if (terminalIds[num - 1]) {
+                            this.setActiveTerminal(terminalIds[num - 1]);
+                        }
+                    }
+                    
+                    // Ctrl/Cmd + T to create new terminal
+                    if (e.key === 't') {
+                        e.preventDefault();
+                        this.createNewTerminal();
+                    }
+                    
+                    // Ctrl/Cmd + W to close current terminal
+                    if (e.key === 'w' && this.activeTerminalId) {
+                        e.preventDefault();
+                        this.closeTerminal(this.activeTerminalId);
+                    }
+                    
+                    // Ctrl/Cmd + Tab or Ctrl/Cmd + PageDown for next tab
+                    if ((e.key === 'Tab' && !e.shiftKey) || e.key === 'PageDown') {
+                        e.preventDefault();
+                        this.switchToNextTab();
+                    }
+                    
+                    // Ctrl/Cmd + Shift + Tab or Ctrl/Cmd + PageUp for previous tab
+                    if ((e.key === 'Tab' && e.shiftKey) || e.key === 'PageUp') {
+                        e.preventDefault();
+                        this.switchToPrevTab();
+                    }
+                }
             }
         });
     }
@@ -1441,6 +1478,25 @@ class DuckBridgeApp {
             terminalId: terminalId,
             timestamp: Date.now()
         });
+    }
+    
+    // Tab navigation methods
+    switchToNextTab() {
+        const terminalIds = Array.from(this.terminals.keys());
+        if (terminalIds.length <= 1) return;
+        
+        const currentIndex = terminalIds.indexOf(this.activeTerminalId);
+        const nextIndex = (currentIndex + 1) % terminalIds.length;
+        this.setActiveTerminal(terminalIds[nextIndex]);
+    }
+    
+    switchToPrevTab() {
+        const terminalIds = Array.from(this.terminals.keys());
+        if (terminalIds.length <= 1) return;
+        
+        const currentIndex = terminalIds.indexOf(this.activeTerminalId);
+        const prevIndex = currentIndex <= 0 ? terminalIds.length - 1 : currentIndex - 1;
+        this.setActiveTerminal(terminalIds[prevIndex]);
     }
 }
 
