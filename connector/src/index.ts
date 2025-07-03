@@ -280,6 +280,33 @@ export class DuckBridgeConnector {
       }
     });
 
+    // Scan directory for git repositories
+    this.app.get('/scan-git-repos', (req, res) => {
+      const { path, depth } = req.query;
+      
+      if (!path || typeof path !== 'string') {
+        return res.status(400).json({
+          success: false,
+          error: 'Path parameter is required'
+        });
+      }
+
+      try {
+        const maxDepth = parseInt(depth as string) || 3;
+        const repos = this.projectManager.scanForGitRepositories(path as string, maxDepth);
+        res.json({
+          success: true,
+          repositories: repos,
+          path
+        });
+      } catch (error) {
+        res.status(400).json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to scan for repositories'
+        });
+      }
+    });
+
     // 404 handler
     this.app.use((req, res) => {
       res.status(404).json({

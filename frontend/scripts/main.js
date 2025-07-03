@@ -1726,6 +1726,7 @@ class DuckBridgeApp {
                             <div class="input-with-button">
                                 <input type="text" id="project-path" required placeholder="/path/to/project">
                                 <button type="button" id="browse-path-btn" class="browse-btn">Browse</button>
+                                <button type="button" id="scan-repos-btn" class="scan-btn" title="Scan for Git repositories">🔍</button>
                             </div>
                         </div>
                         
@@ -1822,6 +1823,7 @@ class DuckBridgeApp {
         const pathInput = dialog.querySelector('#project-path');
         const gitUrlInput = dialog.querySelector('#git-url');
         const browseBtn = dialog.querySelector('#browse-path-btn');
+        const scanBtn = dialog.querySelector('#scan-repos-btn');
         
         const closeDialog = () => {
             dialog.remove();
@@ -1868,6 +1870,11 @@ class DuckBridgeApp {
         // Handle browse button
         browseBtn.addEventListener('click', () => {
             this.showRepositoryBrowser(pathInput, projectTypeSelect.value);
+        });
+        
+        // Handle scan button
+        scanBtn.addEventListener('click', () => {
+            this.showGitScanner(pathInput);
         });
         
         closeBtn.addEventListener('click', closeDialog);
@@ -2035,10 +2042,20 @@ class DuckBridgeApp {
         directories.forEach(item => {
             const dirItem = document.createElement('div');
             dirItem.className = `directory-item ${item.isGitRepo ? 'git-repo' : ''}`;
+            
+            let itemInfo = item.isGitRepo ? 'Git Repository' : 'Directory';
+            
+            // Add Git status info if available
+            if (item.gitInfo) {
+                const statusIcon = item.gitInfo.status === 'dirty' ? '⚠️' : '✅';
+                const remoteIcon = item.gitInfo.hasRemote ? '☁️' : '💾';
+                itemInfo = `${statusIcon} ${item.gitInfo.branch} ${remoteIcon}`;
+            }
+            
             dirItem.innerHTML = `
                 <span class="item-icon">${item.isGitRepo ? '📂' : '📁'}</span>
                 <span class="item-name">${item.name}</span>
-                <span class="item-type">${item.isGitRepo ? 'Git Repository' : 'Directory'}</span>
+                <span class="item-type">${itemInfo}</span>
             `;
             
             dirItem.addEventListener('click', () => {
@@ -2102,6 +2119,120 @@ class DuckBridgeApp {
         } catch (error) {
             browserContent.innerHTML = `<div class="error">Failed to load directory: ${error.message}</div>`;
         }
+    }
+    
+    showGitScanner(pathInput) {
+        const scanDialog = document.createElement('div');
+        scanDialog.className = 'modal';
+        scanDialog.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Scan for Git Repositories</h3>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="git-scanner">
+                        <div class="scanner-input">
+                            <label>Scan Directory:</label>
+                            <div class="input-with-button">
+                                <input type="text" id="scan-path" placeholder="/path/to/scan" value="${process.env.HOME || '/'}">
+                                <button id="start-scan" class="primary-btn">Scan</button>
+                            </div>
+                            <small>Will scan up to 3 levels deep for Git repositories</small>
+                        </div>
+                        <div class="scan-results" id="scan-results">
+                            <div class="empty-scan">Enter a path and click Scan to find Git repositories</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(scanDialog);
+        scanDialog.classList.add('show');
+        
+        const closeScanner = () => {
+            scanDialog.remove();
+        };
+        
+        const scanPath = scanDialog.querySelector('#scan-path');
+        const startScanBtn = scanDialog.querySelector('#start-scan');
+        const scanResults = scanDialog.querySelector('#scan-results');
+        const closeBtn = scanDialog.querySelector('.modal-close');
+        
+        closeBtn.addEventListener('click', closeScanner);
+        scanDialog.addEventListener('click', (e) => {
+            if (e.target === scanDialog) closeScanner();
+        });
+        
+        const performScan = async () => {
+            try {
+                scanResults.innerHTML = '<div class="loading">Scanning for Git repositories...</div>';
+                const response = await fetch(`http://localhost:3001/scan-git-repos?path=${encodeURIComponent(scanPath.value)}&depth=3`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.renderScanResults(scanResults, data.repositories, pathInput, closeScanner);
+                } else {
+                    scanResults.innerHTML = `<div class="error">Error: ${data.error}</div>`;
+                }
+            } catch (error) {
+                scanResults.innerHTML = `<div class="error">Failed to scan: ${error.message}</div>`;
+            }
+        };
+        
+        startScanBtn.addEventListener('click', performScan);
+        scanPath.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') performScan();
+        });
+    }
+    
+    renderScanResults(container, repositories, pathInput, closeCallback) {
+        if (repositories.length === 0) {
+            container.innerHTML = '<div class="empty-scan">No Git repositories found in the specified directory</div>';
+            return;
+        }
+        
+        container.innerHTML = `
+            <div class="scan-header">Found ${repositories.length} Git repositories:</div>
+            <div class="scan-list"></div>
+        `;
+        
+        const listContainer = container.querySelector('.scan-list');
+        
+        repositories.forEach(repo => {
+            const repoItem = document.createElement('div');
+            repoItem.className = 'scan-item';
+            
+            const statusIcon = repo.gitInfo.status === 'dirty' ? '⚠️' : '✅';
+            const remoteIcon = repo.gitInfo.hasRemote ? '☁️' : '💾';
+            
+            repoItem.innerHTML = `
+                <div class="scan-item-info">
+                    <div class="scan-item-name">📂 ${repo.name}</div>
+                    <div class="scan-item-path">${repo.path}</div>
+                    <div class="scan-item-status">
+                        ${statusIcon} ${repo.gitInfo.branch} ${remoteIcon}
+                        ${repo.gitInfo.url ? `<span class="scan-item-url">${repo.gitInfo.url}</span>` : ''}
+                    </div>
+                </div>
+                <button class="scan-select-btn">Select</button>
+            `;
+            
+            const selectBtn = repoItem.querySelector('.scan-select-btn');
+            selectBtn.addEventListener('click', () => {
+                pathInput.value = repo.path;
+                // Also update project type to open-git
+                const projectTypeSelect = document.querySelector('#project-type');
+                if (projectTypeSelect) {
+                    projectTypeSelect.value = 'open-git';
+                    projectTypeSelect.dispatchEvent(new Event('change'));
+                }
+                closeCallback();
+            });
+            
+            listContainer.appendChild(repoItem);
+        });
     }
     
     async createProject(projectData) {

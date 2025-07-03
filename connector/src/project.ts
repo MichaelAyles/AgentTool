@@ -246,17 +246,123 @@ export class ProjectManager extends EventEmitter {
   }
 
   private getGitInfo(projectPath: string): GitRepository | undefined {
-    if (this.detectProjectType(projectPath) !== 'git') {
+    if (!this.isGitRepository(projectPath)) {
       return undefined;
     }
 
-    // This is a simplified implementation
-    // In a real implementation, you'd use a git library like 'simple-git'
-    return {
-      url: '',
-      branch: 'main',
-      status: 'clean'
-    };
+    try {
+      const gitConfigPath = path.join(projectPath, '.git', 'config');
+      const headPath = path.join(projectPath, '.git', 'HEAD');
+      
+      let url = '';
+      let branch = 'main';
+      let status: 'clean' | 'dirty' | 'ahead' | 'behind' = 'clean';
+      
+      // Read git config to get remote URL
+      if (fs.existsSync(gitConfigPath)) {
+        const gitConfig = fs.readFileSync(gitConfigPath, 'utf8');
+        const urlMatch = gitConfig.match(/url\s*=\s*(.+)/);
+        if (urlMatch) {
+          url = urlMatch[1].trim();
+        }
+      }
+      
+      // Read current branch
+      if (fs.existsSync(headPath)) {
+        const headContent = fs.readFileSync(headPath, 'utf8').trim();
+        const branchMatch = headContent.match(/ref:\s*refs\/heads\/(.+)/);
+        if (branchMatch) {
+          branch = branchMatch[1];
+        }
+      }
+      
+      // Check for uncommitted changes (simplified)
+      const gitStatus = this.checkGitStatus(projectPath);
+      if (gitStatus.hasChanges) {
+        status = 'dirty';
+      }
+      
+      return {
+        url,
+        branch,
+        status,
+        lastCommit: this.getLastCommitInfo(projectPath)
+      };
+    } catch (error) {
+      console.error('Failed to get git info:', error);
+      return {
+        url: '',
+        branch: 'unknown',
+        status: 'clean'
+      };
+    }
+  }
+  
+  private checkGitStatus(projectPath: string): { hasChanges: boolean; files: string[] } {
+    try {
+      const gitPath = path.join(projectPath, '.git');
+      const indexPath = path.join(gitPath, 'index');
+      
+      // This is a simplified check - in production, use a proper git library
+      // For now, we'll just check if common files have been modified recently
+      const hasChanges = false;
+      const files: string[] = [];
+      
+      // Check for common uncommitted file patterns
+      const workingFiles = fs.readdirSync(projectPath);
+      const gitignorePath = path.join(projectPath, '.gitignore');
+      let gitignorePatterns: string[] = [];
+      
+      if (fs.existsSync(gitignorePath)) {
+        gitignorePatterns = fs.readFileSync(gitignorePath, 'utf8')
+          .split('\n')
+          .filter(line => line.trim() && !line.startsWith('#'))
+          .map(line => line.trim());
+      }
+      
+      // Simple check for modified files (this is a placeholder)
+      // In a real implementation, you'd compare against the git index
+      
+      return { hasChanges, files };
+    } catch (error) {
+      return { hasChanges: false, files: [] };
+    }
+  }
+  
+  private getLastCommitInfo(projectPath: string): GitRepository['lastCommit'] | undefined {
+    try {
+      const gitPath = path.join(projectPath, '.git');
+      const headPath = path.join(gitPath, 'HEAD');
+      
+      if (!fs.existsSync(headPath)) {
+        return undefined;
+      }
+      
+      const headContent = fs.readFileSync(headPath, 'utf8').trim();
+      const refMatch = headContent.match(/ref:\s*(.+)/);
+      
+      if (refMatch) {
+        const refPath = path.join(gitPath, refMatch[1]);
+        if (fs.existsSync(refPath)) {
+          const commitHash = fs.readFileSync(refPath, 'utf8').trim();
+          
+          // Read commit object (simplified)
+          const objectPath = path.join(gitPath, 'objects', commitHash.substring(0, 2), commitHash.substring(2));
+          
+          // For now, return a placeholder
+          return {
+            hash: commitHash.substring(0, 7),
+            message: 'Latest commit',
+            author: 'Unknown',
+            date: new Date()
+          };
+        }
+      }
+      
+      return undefined;
+    } catch (error) {
+      return undefined;
+    }
   }
 
   private getDefaultColor(): string {
@@ -396,6 +502,11 @@ export class ProjectManager extends EventEmitter {
     path: string;
     type: 'directory' | 'file';
     isGitRepo?: boolean;
+    gitInfo?: {
+      branch?: string;
+      status?: string;
+      hasRemote?: boolean;
+    };
   }> {
     try {
       // Validate path exists and is accessible
@@ -413,6 +524,11 @@ export class ProjectManager extends EventEmitter {
         path: string;
         type: 'directory' | 'file';
         isGitRepo?: boolean;
+        gitInfo?: {
+          branch?: string;
+          status?: string;
+          hasRemote?: boolean;
+        };
       }> = [];
 
       const entries = fs.readdirSync(directoryPath, { withFileTypes: true });
@@ -429,12 +545,26 @@ export class ProjectManager extends EventEmitter {
           // Check if this directory is a git repository
           const isGitRepo = this.isGitRepository(itemPath);
           
-          items.push({
+          const item: any = {
             name: entry.name,
             path: itemPath,
             type: 'directory',
             isGitRepo
-          });
+          };
+          
+          // If it's a git repo, get additional info
+          if (isGitRepo) {
+            const gitInfo = this.getGitInfo(itemPath);
+            if (gitInfo) {
+              item.gitInfo = {
+                branch: gitInfo.branch,
+                status: gitInfo.status,
+                hasRemote: !!gitInfo.url
+              };
+            }
+          }
+          
+          items.push(item);
         } else if (entry.isFile()) {
           // Only include certain files for context
           const relevantFiles = ['.gitignore', 'README.md', 'package.json', 'Cargo.toml', 'pyproject.toml', 'go.mod'];
@@ -479,5 +609,72 @@ export class ProjectManager extends EventEmitter {
     } catch {
       return false;
     }
+  }
+
+  // Scan directory tree for Git repositories
+  scanForGitRepositories(rootPath: string, maxDepth: number = 3): Array<{
+    name: string;
+    path: string;
+    gitInfo: {
+      branch: string;
+      status: string;
+      hasRemote: boolean;
+      url?: string;
+    };
+  }> {
+    const repositories: Array<{
+      name: string;
+      path: string;
+      gitInfo: {
+        branch: string;
+        status: string;
+        hasRemote: boolean;
+        url?: string;
+      };
+    }> = [];
+
+    const scanDirectory = (dirPath: string, currentDepth: number) => {
+      if (currentDepth > maxDepth) return;
+
+      try {
+        // Check if current directory is a git repo
+        if (this.isGitRepository(dirPath)) {
+          const gitInfo = this.getGitInfo(dirPath);
+          if (gitInfo) {
+            repositories.push({
+              name: path.basename(dirPath),
+              path: dirPath,
+              gitInfo: {
+                branch: gitInfo.branch,
+                status: gitInfo.status,
+                hasRemote: !!gitInfo.url,
+                url: gitInfo.url
+              }
+            });
+          }
+          // Don't scan subdirectories of git repos
+          return;
+        }
+
+        // Scan subdirectories
+        const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+        for (const entry of entries) {
+          if (entry.isDirectory() && !entry.name.startsWith('.')) {
+            const subPath = path.join(dirPath, entry.name);
+            scanDirectory(subPath, currentDepth + 1);
+          }
+        }
+      } catch (error) {
+        // Skip directories we can't access
+        console.error(`Failed to scan directory ${dirPath}:`, error);
+      }
+    };
+
+    scanDirectory(rootPath, 0);
+    
+    // Sort repositories by path
+    repositories.sort((a, b) => a.path.localeCompare(b.path));
+    
+    return repositories;
   }
 }
