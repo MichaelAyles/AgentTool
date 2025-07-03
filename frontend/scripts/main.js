@@ -169,11 +169,15 @@ class VibeApp {
         }
     }
 
-    handleConnect() {
+    handleConnect(showConnectingState = true) {
         if (!this.validateUuid()) return;
         
         this.clearError();
-        this.setConnectionState('connecting');
+        
+        // Only show connecting state if this is a user-initiated connection or we've connected before
+        if (showConnectingState && (this.hasEverConnected || this.lastConnectionState === 'available')) {
+            this.setConnectionState('connecting');
+        }
         
         const wsUrl = 'ws://localhost:3002';
         
@@ -195,10 +199,14 @@ class VibeApp {
             
             this.wsConnection.onclose = (event) => {
                 console.log('WebSocket disconnected:', event.code, event.reason);
-                // Only set to disconnected if we've connected before and not already manually disconnected
+                // If we've connected before, set to disconnected
                 if (this.hasEverConnected && !this.wasManuallyDisconnected) {
                     this.setConnectionState('disconnected');
                     this.wasManuallyDisconnected = true; // Treat connection loss as disconnected state
+                } else if (!this.hasEverConnected) {
+                    // If never connected, check availability to determine proper state
+                    setTimeout(() => this.checkConnectorAvailability(), 1000);
+                    return; // Don't double-check
                 }
                 // Check availability after a delay
                 setTimeout(() => this.checkConnectorAvailability(), 3000);
@@ -206,10 +214,13 @@ class VibeApp {
             
             this.wsConnection.onerror = (error) => {
                 console.error('WebSocket error:', error);
-                // Only set to disconnected if we've connected before and not already manually disconnected
+                // If we've connected before, set to disconnected
                 if (this.hasEverConnected && !this.wasManuallyDisconnected) {
                     this.setConnectionState('disconnected');
                     this.wasManuallyDisconnected = true;
+                } else if (!this.hasEverConnected) {
+                    // If never connected, check availability to determine proper state
+                    setTimeout(() => this.checkConnectorAvailability(), 1000);
                 }
             };
             
@@ -217,10 +228,14 @@ class VibeApp {
             setTimeout(() => {
                 if (this.wsConnection.readyState === WebSocket.CONNECTING) {
                     this.wsConnection.close();
-                    // Only set to disconnected if we've connected before and not already manually disconnected
+                    // If we've connected before, set to disconnected
                     if (this.hasEverConnected && !this.wasManuallyDisconnected) {
                         this.setConnectionState('disconnected');
                         this.wasManuallyDisconnected = true;
+                    } else if (!this.hasEverConnected) {
+                        // If never connected, check availability to determine proper state
+                        setTimeout(() => this.checkConnectorAvailability(), 1000);
+                        return;
                     }
                     setTimeout(() => this.checkConnectorAvailability(), 2000);
                 }
@@ -228,10 +243,14 @@ class VibeApp {
             
         } catch (error) {
             console.error('Failed to create WebSocket connection:', error);
-            // Only set to disconnected if we've connected before and not already manual disconnected
+            // If we've connected before, set to disconnected
             if (this.hasEverConnected && !this.wasManuallyDisconnected) {
                 this.setConnectionState('disconnected');
                 this.wasManuallyDisconnected = true;
+            } else if (!this.hasEverConnected) {
+                // If never connected, check availability to determine proper state
+                setTimeout(() => this.checkConnectorAvailability(), 1000);
+                return;
             }
             setTimeout(() => this.checkConnectorAvailability(), 2000);
         }
@@ -262,6 +281,10 @@ class VibeApp {
         if (this.hasEverConnected && !this.wasManuallyDisconnected) {
             this.setConnectionState('disconnected');
             this.wasManuallyDisconnected = true;
+        } else if (!this.hasEverConnected) {
+            // If never connected, check availability to determine proper state
+            setTimeout(() => this.checkConnectorAvailability(), 1000);
+            return; // Don't attempt reconnection if never connected
         }
         
         if (this.reconnectAttempts < this.maxReconnectAttempts) {
@@ -270,7 +293,7 @@ class VibeApp {
             const delay = Math.max(3000, 2000 * this.reconnectAttempts);
             setTimeout(() => {
                 console.log(`Reconnecting... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
-                this.handleConnect();
+                this.handleConnect(false); // Don't show connecting state for automatic retries
             }, delay);
         } else {
             // After max reconnect attempts, go back to checking availability
@@ -501,10 +524,14 @@ class VibeApp {
                     
                 case 'auth_error':
                     console.error('Authentication failed:', message.data);
-                    // Only set to disconnected if we've connected before and not already manually disconnected
+                    // If we've connected before, set to disconnected
                     if (this.hasEverConnected && !this.wasManuallyDisconnected) {
                         this.setConnectionState('disconnected');
                         this.wasManuallyDisconnected = true;
+                    } else if (!this.hasEverConnected) {
+                        // If never connected, check availability to determine proper state
+                        setTimeout(() => this.checkConnectorAvailability(), 1000);
+                        return;
                     }
                     setTimeout(() => this.checkConnectorAvailability(), 2000);
                     break;
