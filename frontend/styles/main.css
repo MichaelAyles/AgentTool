@@ -1079,6 +1079,22 @@ body {
     background: var(--card-bg);
 }
 
+.terminal-tab.has-notification {
+    position: relative;
+}
+
+.terminal-tab.has-notification::after {
+    content: '';
+    position: absolute;
+    top: 0.25rem;
+    right: 0.25rem;
+    width: 0.5rem;
+    height: 0.5rem;
+    background: var(--error-color);
+    border-radius: 50%;
+    animation: pulse 1.5s infinite;
+}
+
 .terminal-tab-name {
     font-size: 0.875rem;
     color: var(--text-primary);

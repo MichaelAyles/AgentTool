@@ -4,9 +4,11 @@ import { TerminalManager } from './terminal';
 import { SessionDatabase } from './database';
 
 export interface WebSocketMessage {
-  type: 'auth' | 'terminal_input' | 'terminal_resize' | 'terminal_create' | 'terminal_close' | 'terminal_list' | 'ping' | 'pong';
+  type: 'auth' | 'terminal_input' | 'terminal_resize' | 'terminal_create' | 'terminal_close' | 'terminal_list' | 'terminal_broadcast' | 'ping' | 'pong';
   uuid?: string;
   terminalId?: string;
+  targetTerminalId?: string;
+  sourceTerminalId?: string;
   data?: any;
   timestamp?: number;
 }
@@ -146,6 +148,10 @@ export class WebSocketManager {
 
       case 'terminal_list':
         this.handleTerminalList(client, message);
+        break;
+
+      case 'terminal_broadcast':
+        this.handleTerminalBroadcast(client, message);
         break;
 
       case 'pong':
@@ -354,6 +360,64 @@ export class WebSocketManager {
         }))
       }
     });
+  }
+
+  private handleTerminalBroadcast(client: ConnectedClient, message: WebSocketMessage): void {
+    if (!client.authenticated || !client.uuid) {
+      return;
+    }
+
+    const { terminalId, targetTerminalId, data } = message;
+    
+    if (!terminalId) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Source terminal ID required for broadcast'
+      });
+      return;
+    }
+
+    // Verify source terminal exists and belongs to the user
+    const sourceTerminal = this.terminalManager.getSession(client.uuid, terminalId);
+    if (!sourceTerminal) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Source terminal not found'
+      });
+      return;
+    }
+
+    if (targetTerminalId) {
+      // Send to specific terminal
+      const targetTerminal = this.terminalManager.getSession(client.uuid, targetTerminalId);
+      if (!targetTerminal) {
+        this.sendMessage(client.ws, {
+          type: 'error' as any,
+          data: 'Target terminal not found'
+        });
+        return;
+      }
+
+      this.sendMessage(client.ws, {
+        type: 'terminal_message' as any,
+        terminalId: targetTerminalId,
+        sourceTerminalId: terminalId,
+        data: data
+      });
+    } else {
+      // Broadcast to all other terminals for this user
+      const userTerminals = this.terminalManager.getSessionsByUuid(client.uuid);
+      userTerminals.forEach(terminal => {
+        if (terminal.terminalId !== terminalId) {
+          this.sendMessage(client.ws, {
+            type: 'terminal_message' as any,
+            terminalId: terminal.terminalId,
+            sourceTerminalId: terminalId,
+            data: data
+          });
+        }
+      });
+    }
   }
 
   private setupTerminalListeners(): void {

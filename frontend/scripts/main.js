@@ -532,6 +532,10 @@ class DuckBridgeApp {
                     this.handleTerminalExit(message.terminalId, message.data.exitCode);
                     break;
                     
+                case 'terminal_message':
+                    this.handleTerminalMessage(message.terminalId, message.sourceTerminalId, message.data);
+                    break;
+                    
                 case 'ping':
                     this.sendMessage({
                         type: 'pong',
@@ -668,6 +672,28 @@ class DuckBridgeApp {
             // If this is the active terminal, update the display
             if (terminalId === this.activeTerminalId) {
                 this.appendToTerminal(exitMessage);
+            }
+        }
+    }
+    
+    handleTerminalMessage(terminalId, sourceTerminalId, data) {
+        console.log('Inter-terminal message:', { terminalId, sourceTerminalId, data });
+        
+        const terminal = this.terminals.get(terminalId);
+        const sourceTerminal = this.terminals.get(sourceTerminalId);
+        
+        if (terminal && sourceTerminal) {
+            const message = `\n[Message from ${sourceTerminal.name}]: ${data}\n`;
+            terminal.output += message;
+            
+            // If this is the active terminal, update the display
+            if (terminalId === this.activeTerminalId) {
+                this.appendToTerminal(message);
+            }
+            
+            // Visual notification for non-active terminals
+            if (terminalId !== this.activeTerminalId) {
+                this.showTabNotification(terminalId);
             }
         }
     }
@@ -1326,6 +1352,7 @@ class DuckBridgeApp {
             tab.classList.remove('active');
             if (tab.dataset.tabId === terminalId) {
                 tab.classList.add('active');
+                tab.classList.remove('has-notification'); // Clear notification when switching to tab
             }
         });
         
@@ -1497,6 +1524,37 @@ class DuckBridgeApp {
         const currentIndex = terminalIds.indexOf(this.activeTerminalId);
         const prevIndex = currentIndex <= 0 ? terminalIds.length - 1 : currentIndex - 1;
         this.setActiveTerminal(terminalIds[prevIndex]);
+    }
+    
+    // Inter-terminal communication methods
+    showTabNotification(terminalId) {
+        const tab = document.querySelector(`[data-tab-id="${terminalId}"]`);
+        if (tab && !tab.classList.contains('active')) {
+            tab.classList.add('has-notification');
+            // Auto-remove notification after 10 seconds
+            setTimeout(() => {
+                tab.classList.remove('has-notification');
+            }, 10000);
+        }
+    }
+    
+    sendTerminalMessage(sourceTerminalId, targetTerminalId, message) {
+        this.sendMessage({
+            type: 'terminal_broadcast',
+            terminalId: sourceTerminalId,
+            targetTerminalId: targetTerminalId,
+            data: message,
+            timestamp: Date.now()
+        });
+    }
+    
+    broadcastToAllTerminals(sourceTerminalId, message) {
+        this.sendMessage({
+            type: 'terminal_broadcast',
+            terminalId: sourceTerminalId,
+            data: message,
+            timestamp: Date.now()
+        });
     }
 }
 
