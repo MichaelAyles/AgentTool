@@ -1712,8 +1712,29 @@ class DuckBridgeApp {
                             <input type="text" id="project-name" required placeholder="My Project">
                         </div>
                         <div class="form-group">
+                            <label for="project-type">Project Type *</label>
+                            <select id="project-type" required>
+                                <option value="local">Local Directory</option>
+                                <option value="new-git">New Git Repository</option>
+                                <option value="clone-git">Clone Git Repository</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group" id="project-path-group">
                             <label for="project-path">Project Path *</label>
                             <input type="text" id="project-path" required placeholder="/path/to/project">
+                        </div>
+                        
+                        <div class="form-group" id="git-url-group" style="display: none;">
+                            <label for="git-url">Git Repository URL *</label>
+                            <input type="text" id="git-url" placeholder="https://github.com/user/repo.git">
+                            <small>For cloning an existing repository</small>
+                        </div>
+                        
+                        <div class="form-group" id="git-branch-group" style="display: none;">
+                            <label for="git-branch">Branch (Optional)</label>
+                            <input type="text" id="git-branch" placeholder="main">
+                            <small>Defaults to repository default branch</small>
                         </div>
                         <div class="form-group">
                             <label for="project-description">Description</label>
@@ -1790,10 +1811,47 @@ class DuckBridgeApp {
         const form = dialog.querySelector('#create-project-form');
         const closeBtn = dialog.querySelector('.modal-close');
         const cancelBtn = dialog.querySelector('.cancel-btn');
+        const projectTypeSelect = dialog.querySelector('#project-type');
+        const pathGroup = dialog.querySelector('#project-path-group');
+        const gitUrlGroup = dialog.querySelector('#git-url-group');
+        const gitBranchGroup = dialog.querySelector('#git-branch-group');
+        const pathInput = dialog.querySelector('#project-path');
+        const gitUrlInput = dialog.querySelector('#git-url');
         
         const closeDialog = () => {
             dialog.remove();
         };
+        
+        // Handle project type changes
+        const updateFormFields = () => {
+            const projectType = projectTypeSelect.value;
+            
+            if (projectType === 'clone-git') {
+                pathGroup.style.display = 'block';
+                gitUrlGroup.style.display = 'block';
+                gitBranchGroup.style.display = 'block';
+                pathInput.placeholder = '/local/path/to/clone/to';
+                pathInput.setAttribute('required', 'required');
+                gitUrlInput.setAttribute('required', 'required');
+            } else if (projectType === 'new-git') {
+                pathGroup.style.display = 'block';
+                gitUrlGroup.style.display = 'none';
+                gitBranchGroup.style.display = 'none';
+                pathInput.placeholder = '/path/to/new/git/repo';
+                pathInput.setAttribute('required', 'required');
+                gitUrlInput.removeAttribute('required');
+            } else {
+                pathGroup.style.display = 'block';
+                gitUrlGroup.style.display = 'none';
+                gitBranchGroup.style.display = 'none';
+                pathInput.placeholder = '/path/to/existing/directory';
+                pathInput.setAttribute('required', 'required');
+                gitUrlInput.removeAttribute('required');
+            }
+        };
+        
+        projectTypeSelect.addEventListener('change', updateFormFields);
+        updateFormFields(); // Initialize
         
         closeBtn.addEventListener('click', closeDialog);
         cancelBtn.addEventListener('click', closeDialog);
@@ -1823,6 +1881,9 @@ class DuckBridgeApp {
                 path: dialog.querySelector('#project-path').value,
                 description: dialog.querySelector('#project-description').value,
                 color: dialog.querySelector('#project-color').value,
+                type: dialog.querySelector('#project-type').value,
+                gitUrl: dialog.querySelector('#git-url')?.value || undefined,
+                gitBranch: dialog.querySelector('#git-branch')?.value || undefined,
                 settings: {
                     defaultShell: dialog.querySelector('#project-shell').value || undefined,
                     workingDirectory: dialog.querySelector('#project-working-dir').value || undefined,

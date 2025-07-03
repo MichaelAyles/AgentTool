@@ -1072,6 +1072,14 @@ body {
     min-height: 4rem;
 }
 
+.form-group small {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    font-style: italic;
+}
+
 .form-actions {
     display: flex;
     gap: 1rem;

@@ -11,7 +11,7 @@ export interface Project {
   createdAt: Date;
   lastAccessedAt: Date;
   settings: ProjectSettings;
-  type: 'local' | 'git';
+  type: 'local' | 'git' | 'new-git' | 'clone-git';
   gitRepo?: GitRepository;
 }
 
@@ -54,16 +54,33 @@ export class ProjectManager extends EventEmitter {
   createProject(uuid: string, name: string, projectPath: string, options?: {
     description?: string;
     color?: string;
-    type?: 'local' | 'git';
+    type?: 'local' | 'git' | 'new-git' | 'clone-git';
+    gitUrl?: string;
+    gitBranch?: string;
     settings?: Partial<ProjectSettings>;
   }): Project {
     this.enforceProjectLimits(uuid);
 
     const projectId = `proj_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
     
-    // Validate project path
-    if (!this.isValidProjectPath(projectPath)) {
-      throw new Error('Invalid project path. Path must exist and be accessible.');
+    // Handle different project types
+    const projectType = options?.type || this.detectProjectType(projectPath);
+    
+    // Validate or create project path based on type
+    if (projectType === 'new-git') {
+      // Create new git repository
+      this.createNewGitRepository(projectPath);
+    } else if (projectType === 'clone-git') {
+      // Clone existing repository
+      if (!options?.gitUrl) {
+        throw new Error('Git URL is required for cloning repositories');
+      }
+      this.cloneGitRepository(options.gitUrl, projectPath, options.gitBranch);
+    } else {
+      // Validate existing path
+      if (!this.isValidProjectPath(projectPath)) {
+        throw new Error('Invalid project path. Path must exist and be accessible.');
+      }
     }
 
     // Create project object
@@ -75,7 +92,7 @@ export class ProjectManager extends EventEmitter {
       color: options?.color || this.getDefaultColor(),
       createdAt: new Date(),
       lastAccessedAt: new Date(),
-      type: options?.type || this.detectProjectType(projectPath),
+      type: projectType,
       settings: {
         defaultShell: options?.settings?.defaultShell,
         workingDirectory: projectPath,
@@ -278,5 +295,90 @@ export class ProjectManager extends EventEmitter {
     this.projects.clear();
     this.userProjects.clear();
     this.removeAllListeners();
+  }
+
+  // Git operations
+  private createNewGitRepository(projectPath: string): void {
+    try {
+      // Create directory if it doesn't exist
+      if (!fs.existsSync(projectPath)) {
+        fs.mkdirSync(projectPath, { recursive: true });
+      }
+
+      // Check if directory is empty
+      const files = fs.readdirSync(projectPath);
+      if (files.length > 0) {
+        throw new Error('Directory must be empty to initialize a new Git repository');
+      }
+
+      // Initialize git repository
+      // For now, we'll create a simple marker file
+      // In a real implementation, you'd use a git library or spawn git commands
+      const gitPath = path.join(projectPath, '.git');
+      fs.mkdirSync(gitPath, { recursive: true });
+      
+      // Create a basic git config
+      const gitConfig = `[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = false
+	logallrefupdates = true
+[user]
+	name = DuckBridge User
+	email = user@duckbridge.local
+`;
+      fs.writeFileSync(path.join(gitPath, 'config'), gitConfig);
+      
+      // Create initial README
+      const readmePath = path.join(projectPath, 'README.md');
+      fs.writeFileSync(readmePath, `# ${path.basename(projectPath)}\n\nCreated with DuckBridge\n`);
+      
+      console.log(`Created new Git repository at: ${projectPath}`);
+    } catch (error) {
+      throw new Error(`Failed to create Git repository: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  private cloneGitRepository(gitUrl: string, projectPath: string, branch?: string): void {
+    try {
+      // Create parent directory if it doesn't exist
+      const parentDir = path.dirname(projectPath);
+      if (!fs.existsSync(parentDir)) {
+        fs.mkdirSync(parentDir, { recursive: true });
+      }
+
+      // For now, we'll create a mock clone
+      // In a real implementation, you'd use a git library or spawn git clone commands
+      if (!fs.existsSync(projectPath)) {
+        fs.mkdirSync(projectPath, { recursive: true });
+      }
+
+      // Create mock git structure
+      const gitPath = path.join(projectPath, '.git');
+      fs.mkdirSync(gitPath, { recursive: true });
+      
+      // Store clone information
+      const gitConfig = `[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = false
+	logallrefupdates = true
+[remote "origin"]
+	url = ${gitUrl}
+	fetch = +refs/heads/*:refs/remotes/origin/*
+[branch "${branch || 'main'}"]
+	remote = origin
+	merge = refs/heads/${branch || 'main'}
+`;
+      fs.writeFileSync(path.join(gitPath, 'config'), gitConfig);
+      
+      // Create README indicating this is a clone
+      const readmePath = path.join(projectPath, 'README.md');
+      fs.writeFileSync(readmePath, `# Cloned Repository\n\nCloned from: ${gitUrl}\nBranch: ${branch || 'main'}\nCloned with DuckBridge\n`);
+      
+      console.log(`Cloned repository ${gitUrl} to: ${projectPath}`);
+    } catch (error) {
+      throw new Error(`Failed to clone repository: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 }

@@ -160,11 +160,18 @@ export class DuckBridgeConnector {
 
     this.app.post('/projects/:uuid', (req, res) => {
       const { uuid } = req.params;
-      const { name, path, description, color, type, settings } = req.body;
+      const { name, path, description, color, type, gitUrl, gitBranch, settings } = req.body;
 
       if (!name || !path) {
         return res.status(400).json({
           error: 'Missing required fields: name and path'
+        });
+      }
+
+      // Validate Git requirements
+      if (type === 'clone-git' && !gitUrl) {
+        return res.status(400).json({
+          error: 'Git URL is required for cloning repositories'
         });
       }
 
@@ -173,6 +180,8 @@ export class DuckBridgeConnector {
           description,
           color,
           type,
+          gitUrl,
+          gitBranch,
           settings
         });
 
