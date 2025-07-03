@@ -254,6 +254,32 @@ export class DuckBridgeConnector {
       });
     });
 
+    // Directory browsing endpoint
+    this.app.get('/browse-directory', (req, res) => {
+      const { path, type } = req.query;
+      
+      if (!path || typeof path !== 'string') {
+        return res.status(400).json({
+          success: false,
+          error: 'Path parameter is required'
+        });
+      }
+
+      try {
+        const items = this.projectManager.browseDirectory(path as string, type as string);
+        res.json({
+          success: true,
+          items,
+          path
+        });
+      } catch (error) {
+        res.status(400).json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to browse directory'
+        });
+      }
+    });
+
     // 404 handler
     this.app.use((req, res) => {
       res.status(404).json({

@@ -11,7 +11,7 @@ export interface Project {
   createdAt: Date;
   lastAccessedAt: Date;
   settings: ProjectSettings;
-  type: 'local' | 'git' | 'new-git' | 'clone-git';
+  type: 'local' | 'git' | 'new-git' | 'clone-git' | 'open-git';
   gitRepo?: GitRepository;
 }
 
@@ -54,7 +54,7 @@ export class ProjectManager extends EventEmitter {
   createProject(uuid: string, name: string, projectPath: string, options?: {
     description?: string;
     color?: string;
-    type?: 'local' | 'git' | 'new-git' | 'clone-git';
+    type?: 'local' | 'git' | 'new-git' | 'clone-git' | 'open-git';
     gitUrl?: string;
     gitBranch?: string;
     settings?: Partial<ProjectSettings>;
@@ -76,6 +76,14 @@ export class ProjectManager extends EventEmitter {
         throw new Error('Git URL is required for cloning repositories');
       }
       this.cloneGitRepository(options.gitUrl, projectPath, options.gitBranch);
+    } else if (projectType === 'open-git') {
+      // Validate existing git repository
+      if (!this.isValidProjectPath(projectPath)) {
+        throw new Error('Invalid project path. Path must exist and be accessible.');
+      }
+      if (!this.isGitRepository(projectPath)) {
+        throw new Error('The selected directory is not a Git repository.');
+      }
     } else {
       // Validate existing path
       if (!this.isValidProjectPath(projectPath)) {
@@ -379,6 +387,97 @@ export class ProjectManager extends EventEmitter {
       console.log(`Cloned repository ${gitUrl} to: ${projectPath}`);
     } catch (error) {
       throw new Error(`Failed to clone repository: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  // Directory browsing for repository selection
+  browseDirectory(directoryPath: string, projectType?: string): Array<{
+    name: string;
+    path: string;
+    type: 'directory' | 'file';
+    isGitRepo?: boolean;
+  }> {
+    try {
+      // Validate path exists and is accessible
+      if (!fs.existsSync(directoryPath)) {
+        throw new Error('Directory does not exist');
+      }
+
+      const stats = fs.statSync(directoryPath);
+      if (!stats.isDirectory()) {
+        throw new Error('Path is not a directory');
+      }
+
+      const items: Array<{
+        name: string;
+        path: string;
+        type: 'directory' | 'file';
+        isGitRepo?: boolean;
+      }> = [];
+
+      const entries = fs.readdirSync(directoryPath, { withFileTypes: true });
+
+      for (const entry of entries) {
+        // Skip hidden files and directories unless they're git-related
+        if (entry.name.startsWith('.') && entry.name !== '.git') {
+          continue;
+        }
+
+        const itemPath = path.join(directoryPath, entry.name);
+        
+        if (entry.isDirectory()) {
+          // Check if this directory is a git repository
+          const isGitRepo = this.isGitRepository(itemPath);
+          
+          items.push({
+            name: entry.name,
+            path: itemPath,
+            type: 'directory',
+            isGitRepo
+          });
+        } else if (entry.isFile()) {
+          // Only include certain files for context
+          const relevantFiles = ['.gitignore', 'README.md', 'package.json', 'Cargo.toml', 'pyproject.toml', 'go.mod'];
+          
+          if (relevantFiles.includes(entry.name)) {
+            items.push({
+              name: entry.name,
+              path: itemPath,
+              type: 'file'
+            });
+          }
+        }
+      }
+
+      // Sort items: directories first, then by name
+      items.sort((a, b) => {
+        if (a.type !== b.type) {
+          return a.type === 'directory' ? -1 : 1;
+        }
+        
+        // If both are directories, prioritize git repos
+        if (a.type === 'directory' && projectType === 'open-git') {
+          if (a.isGitRepo && !b.isGitRepo) return -1;
+          if (!a.isGitRepo && b.isGitRepo) return 1;
+        }
+        
+        return a.name.localeCompare(b.name);
+      });
+
+      return items;
+    } catch (error) {
+      throw new Error(`Failed to browse directory: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  // Enhanced git repository detection
+  private isGitRepository(directoryPath: string): boolean {
+    try {
+      const gitPath = path.join(directoryPath, '.git');
+      const stats = fs.statSync(gitPath);
+      return stats.isDirectory();
+    } catch {
+      return false;
     }
   }
 }

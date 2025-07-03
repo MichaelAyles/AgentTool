@@ -1715,6 +1715,7 @@ class DuckBridgeApp {
                             <label for="project-type">Project Type *</label>
                             <select id="project-type" required>
                                 <option value="local">Local Directory</option>
+                                <option value="open-git">Open Existing Git Repository</option>
                                 <option value="new-git">New Git Repository</option>
                                 <option value="clone-git">Clone Git Repository</option>
                             </select>
@@ -1722,7 +1723,10 @@ class DuckBridgeApp {
                         
                         <div class="form-group" id="project-path-group">
                             <label for="project-path">Project Path *</label>
-                            <input type="text" id="project-path" required placeholder="/path/to/project">
+                            <div class="input-with-button">
+                                <input type="text" id="project-path" required placeholder="/path/to/project">
+                                <button type="button" id="browse-path-btn" class="browse-btn">Browse</button>
+                            </div>
                         </div>
                         
                         <div class="form-group" id="git-url-group" style="display: none;">
@@ -1817,6 +1821,7 @@ class DuckBridgeApp {
         const gitBranchGroup = dialog.querySelector('#git-branch-group');
         const pathInput = dialog.querySelector('#project-path');
         const gitUrlInput = dialog.querySelector('#git-url');
+        const browseBtn = dialog.querySelector('#browse-path-btn');
         
         const closeDialog = () => {
             dialog.remove();
@@ -1840,6 +1845,13 @@ class DuckBridgeApp {
                 pathInput.placeholder = '/path/to/new/git/repo';
                 pathInput.setAttribute('required', 'required');
                 gitUrlInput.removeAttribute('required');
+            } else if (projectType === 'open-git') {
+                pathGroup.style.display = 'block';
+                gitUrlGroup.style.display = 'none';
+                gitBranchGroup.style.display = 'none';
+                pathInput.placeholder = '/path/to/existing/git/repository';
+                pathInput.setAttribute('required', 'required');
+                gitUrlInput.removeAttribute('required');
             } else {
                 pathGroup.style.display = 'block';
                 gitUrlGroup.style.display = 'none';
@@ -1852,6 +1864,11 @@ class DuckBridgeApp {
         
         projectTypeSelect.addEventListener('change', updateFormFields);
         updateFormFields(); // Initialize
+        
+        // Handle browse button
+        browseBtn.addEventListener('click', () => {
+            this.showRepositoryBrowser(pathInput, projectTypeSelect.value);
+        });
         
         closeBtn.addEventListener('click', closeDialog);
         cancelBtn.addEventListener('click', closeDialog);
@@ -1906,6 +1923,185 @@ class DuckBridgeApp {
         
         // Focus name input
         dialog.querySelector('#project-name').focus();
+    }
+    
+    showRepositoryBrowser(pathInput, projectType) {
+        const browserDialog = document.createElement('div');
+        browserDialog.className = 'modal';
+        browserDialog.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Browse for ${projectType === 'open-git' ? 'Git Repository' : 'Directory'}</h3>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="repository-browser">
+                        <div class="browser-toolbar">
+                            <input type="text" id="browser-path" placeholder="/path/to/browse" value="${process.env.HOME || '/'}">
+                            <button id="browser-refresh" class="secondary-btn">Refresh</button>
+                        </div>
+                        <div class="browser-content" id="browser-content">
+                            <div class="loading">Loading directories...</div>
+                        </div>
+                        <div class="browser-actions">
+                            <button type="button" class="primary-btn" id="select-directory">Select This Directory</button>
+                            <button type="button" class="secondary-btn" id="cancel-browse">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(browserDialog);
+        browserDialog.classList.add('show');
+        
+        const closeBrowser = () => {
+            browserDialog.remove();
+        };
+        
+        const browserPath = browserDialog.querySelector('#browser-path');
+        const browserContent = browserDialog.querySelector('#browser-content');
+        const refreshBtn = browserDialog.querySelector('#browser-refresh');
+        const selectBtn = browserDialog.querySelector('#select-directory');
+        const cancelBtn = browserDialog.querySelector('#cancel-browse');
+        const closeBtn = browserDialog.querySelector('.modal-close');
+        
+        closeBtn.addEventListener('click', closeBrowser);
+        cancelBtn.addEventListener('click', closeBrowser);
+        
+        selectBtn.addEventListener('click', () => {
+            const selectedPath = browserPath.value;
+            pathInput.value = selectedPath;
+            closeBrowser();
+        });
+        
+        const loadDirectory = async (path) => {
+            try {
+                browserContent.innerHTML = '<div class="loading">Loading...</div>';
+                const response = await fetch(`http://localhost:3001/browse-directory?path=${encodeURIComponent(path)}&type=${projectType}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.renderDirectoryListing(browserContent, data.items, path, projectType);
+                    browserPath.value = path;
+                } else {
+                    browserContent.innerHTML = `<div class="error">Error: ${data.error}</div>`;
+                }
+            } catch (error) {
+                browserContent.innerHTML = `<div class="error">Failed to load directory: ${error.message}</div>`;
+            }
+        };
+        
+        refreshBtn.addEventListener('click', () => {
+            loadDirectory(browserPath.value);
+        });
+        
+        browserPath.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                loadDirectory(browserPath.value);
+            }
+        });
+        
+        // Load initial directory
+        loadDirectory(browserPath.value);
+    }
+    
+    renderDirectoryListing(container, items, currentPath, projectType) {
+        container.innerHTML = '';
+        
+        // Add parent directory link if not at root
+        if (currentPath !== '/') {
+            const parentPath = currentPath.split('/').slice(0, -1).join('/') || '/';
+            const parentItem = document.createElement('div');
+            parentItem.className = 'directory-item parent-dir';
+            parentItem.innerHTML = `
+                <span class="item-icon">⬆️</span>
+                <span class="item-name">..</span>
+                <span class="item-type">Parent Directory</span>
+            `;
+            parentItem.addEventListener('click', () => {
+                const browserPath = document.querySelector('#browser-path');
+                browserPath.value = parentPath;
+                this.loadDirectory(parentPath);
+            });
+            container.appendChild(parentItem);
+        }
+        
+        // Group directories and files
+        const directories = items.filter(item => item.type === 'directory');
+        const files = items.filter(item => item.type === 'file');
+        
+        // Show directories first
+        directories.forEach(item => {
+            const dirItem = document.createElement('div');
+            dirItem.className = `directory-item ${item.isGitRepo ? 'git-repo' : ''}`;
+            dirItem.innerHTML = `
+                <span class="item-icon">${item.isGitRepo ? '📂' : '📁'}</span>
+                <span class="item-name">${item.name}</span>
+                <span class="item-type">${item.isGitRepo ? 'Git Repository' : 'Directory'}</span>
+            `;
+            
+            dirItem.addEventListener('click', () => {
+                if (projectType === 'open-git' && item.isGitRepo) {
+                    // Select this git repository
+                    const pathInput = document.querySelector('#project-path');
+                    const browserPath = document.querySelector('#browser-path');
+                    pathInput.value = item.path;
+                    browserPath.value = item.path;
+                } else {
+                    // Navigate into directory
+                    const browserPath = document.querySelector('#browser-path');
+                    browserPath.value = item.path;
+                    this.loadDirectory(item.path);
+                }
+            });
+            
+            container.appendChild(dirItem);
+        });
+        
+        // Show relevant files for context
+        if (projectType === 'open-git') {
+            const gitFiles = files.filter(file => 
+                file.name === '.gitignore' || 
+                file.name === 'README.md' || 
+                file.name === 'package.json' ||
+                file.name === 'Cargo.toml'
+            );
+            
+            gitFiles.forEach(item => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'directory-item file-item';
+                fileItem.innerHTML = `
+                    <span class="item-icon">📄</span>
+                    <span class="item-name">${item.name}</span>
+                    <span class="item-type">File</span>
+                `;
+                container.appendChild(fileItem);
+            });
+        }
+        
+        if (container.children.length === 0) {
+            container.innerHTML = '<div class="empty-directory">Empty directory</div>';
+        }
+    }
+    
+    async loadDirectory(path) {
+        const browserContent = document.querySelector('#browser-content');
+        const projectType = document.querySelector('#project-type').value;
+        
+        try {
+            browserContent.innerHTML = '<div class="loading">Loading...</div>';
+            const response = await fetch(`http://localhost:3001/browse-directory?path=${encodeURIComponent(path)}&type=${projectType}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                this.renderDirectoryListing(browserContent, data.items, path, projectType);
+            } else {
+                browserContent.innerHTML = `<div class="error">Error: ${data.error}</div>`;
+            }
+        } catch (error) {
+            browserContent.innerHTML = `<div class="error">Failed to load directory: ${error.message}</div>`;
+        }
     }
     
     async createProject(projectData) {
