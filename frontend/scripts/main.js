@@ -1,5 +1,5 @@
-// Vibe Coding Frontend Application
-class VibeApp {
+// DuckBridge Frontend Application
+class DuckBridgeApp {
     constructor() {
         this.wsConnection = null;
         this.sessionId = null;
@@ -13,6 +13,8 @@ class VibeApp {
         this.attachEventListeners();
         this.updateUuidDisplay();
         this.initializeTheme();
+        this.initializeTagline();
+        this.checkUrlParams();
     }
     
     initializeElements() {
@@ -42,6 +44,13 @@ class VibeApp {
         
         // Theme toggle
         this.themeToggle = document.getElementById('theme-toggle');
+        
+        // QR Code elements
+        this.qrCodeBtn = document.getElementById('qr-code-btn');
+        this.qrModal = document.getElementById('qr-modal');
+        this.qrClose = document.getElementById('qr-close');
+        this.qrCanvas = document.getElementById('qr-canvas');
+        this.qrUrl = document.getElementById('qr-url');
     }
     
     attachEventListeners() {
@@ -58,6 +67,13 @@ class VibeApp {
         
         // Theme toggle
         this.themeToggle.addEventListener('click', () => this.toggleTheme());
+        
+        // QR Code controls
+        this.qrCodeBtn.addEventListener('click', () => this.showQrCode());
+        this.qrClose.addEventListener('click', () => this.hideQrCode());
+        this.qrModal.addEventListener('click', (e) => {
+            if (e.target === this.qrModal) this.hideQrCode();
+        });
         
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
@@ -152,25 +168,26 @@ class VibeApp {
             
             this.wsConnection.onclose = (event) => {
                 console.log('WebSocket disconnected:', event.code, event.reason);
-                this.handleConnectionError('Connection closed');
+                this.setConnectionState('disconnected');
+                setTimeout(() => this.checkConnectorAvailability(), 3000);
             };
             
             this.wsConnection.onerror = (error) => {
                 console.error('WebSocket error:', error);
-                this.handleConnectionError('Unable to connect to desktop connector. Make sure it is running on localhost:3002');
+                this.setConnectionState('disconnected');
             };
             
             // Connection timeout
             setTimeout(() => {
                 if (this.wsConnection.readyState === WebSocket.CONNECTING) {
                     this.wsConnection.close();
-                    this.handleConnectionError('Connection timeout. Make sure desktop connector is running.');
+                    this.setConnectionState('disconnected');
                 }
             }, 10000);
             
         } catch (error) {
             console.error('Failed to create WebSocket connection:', error);
-            this.handleConnectionError('Failed to create connection');
+            this.setConnectionState('disconnected');
         }
     }
     
@@ -202,6 +219,12 @@ class VibeApp {
                 this.handleConnect();
             }, 2000 * this.reconnectAttempts);
         }
+    }
+    
+    checkConnectorAvailability() {
+        // Simple check to see if connector is available again
+        // This is a placeholder - could be enhanced with actual health check
+        console.log('Checking connector availability...');
     }
     
     disconnect() {
@@ -349,7 +372,7 @@ class VibeApp {
         terminalInput.focus();
         
         // Initial terminal message
-        this.appendToTerminal(`🚀 Vibe Coding Terminal Connected\n`);
+        this.appendToTerminal(`🦆 DuckBridge Terminal Connected\n`);
         this.appendToTerminal(`Session: ${this.sessionId}\n`);
         this.appendToTerminal(`Platform: ${navigator.platform}\n`);
         this.appendToTerminal(`Waiting for shell to initialize...\n\n`);
@@ -474,15 +497,112 @@ class VibeApp {
             }, 1000);
         }
     }
+    
+    // Initialize tagline with random selection
+    initializeTagline() {
+        const taglines = [
+            "Get your ducks in a row with AI",
+            "Bridge the gap between code and creativity",
+            "Where rubber duck debugging meets real AI",
+            "Swimming upstream with artificial intelligence",
+            "Flocking together for better development",
+            "Making waves in the AI development pool",
+            "Ducking complexity, embracing simplicity",
+            "Paddle through code with AI assistance",
+            "Feathering your nest with smart tools",
+            "Migrate your workflow to the cloud",
+            "Quack the code with intelligent insights",
+            "Building nest-level development experiences"
+        ];
+        
+        const taglineElement = document.getElementById('tagline');
+        if (taglineElement) {
+            const randomTagline = taglines[Math.floor(Math.random() * taglines.length)];
+            taglineElement.textContent = randomTagline;
+        }
+    }
+    
+    // Check URL parameters for UUID
+    checkUrlParams() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const uuidParam = urlParams.get('uuid');
+        if (uuidParam && this.validateUuidString(uuidParam)) {
+            this.currentUuid = uuidParam;
+            this.updateUuidDisplay();
+        }
+    }
+    
+    // Helper method to validate UUID string format
+    validateUuidString(uuid) {
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        return uuidRegex.test(uuid);
+    }
+    
+    // QR Code functionality
+    showQrCode() {
+        console.log('QR Code button clicked');
+        const url = `https://vibe.theduck.chat?uuid=${this.currentUuid}`;
+        
+        if (typeof QRCode === 'undefined') {
+            console.log('QRCode library not available, using fallback');
+            this.showFallbackQrCode(url);
+            return;
+        }
+        
+        try {
+            this.generateQrCode(url);
+            this.qrUrl.textContent = url;
+            this.qrModal.classList.add('show');
+        } catch (error) {
+            console.error('Failed to generate QR code:', error);
+            this.showFallbackQrCode(url);
+        }
+    }
+    
+    generateQrCode(url) {
+        // Clear previous QR code
+        this.qrCanvas.width = 0;
+        this.qrCanvas.height = 0;
+        
+        QRCode.toCanvas(this.qrCanvas, url, {
+            width: 200,
+            height: 200,
+            margin: 2,
+            color: {
+                dark: '#000000',
+                light: '#ffffff'
+            }
+        }, (error) => {
+            if (error) {
+                console.error('QR code generation error:', error);
+                this.showFallbackQrCode(url);
+            }
+        });
+    }
+    
+    showFallbackQrCode(url) {
+        const fallbackUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
+        
+        // Replace canvas with image
+        const container = document.getElementById('qr-code-container');
+        container.innerHTML = `<img src="${fallbackUrl}" alt="QR Code" style="width: 200px; height: 200px; border-radius: 0.5rem;">`;
+        
+        this.qrUrl.textContent = url;
+        this.qrModal.classList.add('show');
+    }
+    
+    hideQrCode() {
+        this.qrModal.classList.remove('show');
+    }
 }
 
 // Global functions
 function showAbout() {
-    alert('Vibe Coding - Remote Terminal Access\\n\\nBuilt with ❤️ for developers\\n\\nConnect to your local terminal from anywhere with secure WebSocket connections.');
+    alert('DuckBridge - Remote Terminal Access\\n\\nBuilt with 🦆 for developers\\n\\nConnect to your local terminal from anywhere with secure WebSocket connections.');
 }
 
 // Initialize the application when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    const app = new VibeApp();
+    const app = new DuckBridgeApp();
     app.checkStoredConnection();
 });

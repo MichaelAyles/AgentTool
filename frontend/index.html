@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vibe Coding - Remote Terminal Access</title>
+    <title>DuckBridge - Remote Terminal Access</title>
     <link rel="stylesheet" href="/styles/main.css">
 </head>
 <body>
@@ -12,8 +12,8 @@
         <header class="header">
             <div class="header-content">
                 <div class="logo">
-                    <h1>Vibe Coding</h1>
-                    <p class="tagline">Remote terminal access made simple</p>
+                    <h1>🦆 DuckBridge</h1>
+                    <p class="tagline" id="tagline">Get your ducks in a row with AI</p>
                 </div>
                 <div class="header-controls">
                     <button id="theme-toggle" class="theme-toggle" title="Toggle theme">
@@ -53,6 +53,16 @@
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
                                         <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                                    </svg>
+                                </button>
+                                <button id="qr-code-btn" class="icon-btn" title="Show QR Code">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="3" y="3" width="5" height="5"/>
+                                        <rect x="16" y="3" width="5" height="5"/>
+                                        <rect x="3" y="16" width="5" height="5"/>
+                                        <path d="m21 16-3.5-3.5-2.5 2.5"/>
+                                        <path d="m14 12 1 1"/>
+                                        <path d="m12 21 1-1"/>
                                     </svg>
                                 </button>
                             </div>
@@ -125,7 +135,7 @@
 
         <!-- Footer -->
         <footer class="footer">
-            <p>&copy; 2025 Vibe Coding. Built with ❤️ for developers.</p>
+            <p>&copy; 2025 DuckBridge. Built with 🦆 for developers.</p>
             <div class="footer-links">
                 <a href="https://github.com/MichaelAyles/AgentTool" target="_blank">GitHub</a>
                 <a href="#" onclick="showAbout()">About</a>
@@ -133,6 +143,24 @@
         </footer>
     </div>
 
+    <!-- QR Code Modal -->
+    <div id="qr-modal" class="qr-modal">
+        <div class="qr-modal-content">
+            <div class="qr-modal-header">
+                <h3>QR Code for Mobile Access</h3>
+                <button id="qr-close" class="qr-close">&times;</button>
+            </div>
+            <div class="qr-modal-body">
+                <div id="qr-code-container" class="qr-code-container">
+                    <canvas id="qr-canvas"></canvas>
+                </div>
+                <p id="qr-url" class="qr-url"></p>
+                <p class="qr-instructions">Scan this QR code with your mobile device to access DuckBridge</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <script src="/scripts/main.js"></script>
 </body>
 </html>
