@@ -4,8 +4,9 @@ import { TerminalManager } from './terminal';
 import { SessionDatabase } from './database';
 
 export interface WebSocketMessage {
-  type: 'auth' | 'terminal_input' | 'terminal_resize' | 'ping' | 'pong';
+  type: 'auth' | 'terminal_input' | 'terminal_resize' | 'terminal_create' | 'terminal_close' | 'terminal_list' | 'ping' | 'pong';
   uuid?: string;
+  terminalId?: string;
   data?: any;
   timestamp?: number;
 }
@@ -135,6 +136,18 @@ export class WebSocketManager {
         this.handleTerminalResize(client, message);
         break;
 
+      case 'terminal_create':
+        this.handleTerminalCreate(client, message);
+        break;
+
+      case 'terminal_close':
+        this.handleTerminalClose(client, message);
+        break;
+
+      case 'terminal_list':
+        this.handleTerminalList(client, message);
+        break;
+
       case 'pong':
         client.lastPing = Date.now();
         break;
@@ -194,8 +207,11 @@ export class WebSocketManager {
       this.database.updateSessionStatus(uuid, 'active');
     }
 
-    // Create terminal session
-    this.terminalManager.createSession(uuid);
+    // Check if user already has terminals, if not create an initial one
+    const existingTerminals = this.terminalManager.getSessionsByUuid(uuid);
+    if (existingTerminals.length === 0) {
+      this.terminalManager.createSession(uuid, undefined, 'Terminal 1', 'blue');
+    }
 
     console.log(`✅ Client authenticated with UUID: ${uuid}`);
 
@@ -209,14 +225,10 @@ export class WebSocketManager {
       }
     });
 
-    // Send terminal ready signal
-    this.sendMessage(client.ws, {
-      type: 'terminal_ready' as any,
-      data: {
-        cols: 80,
-        rows: 24
-      }
-    });
+    // Send current terminal list
+    setTimeout(() => {
+      this.handleTerminalList(client, { type: 'terminal_list' });
+    }, 100);
   }
 
   private handleTerminalInput(client: ConnectedClient, message: WebSocketMessage): void {
@@ -224,10 +236,20 @@ export class WebSocketManager {
       return;
     }
 
-    const { data } = message;
+    const { terminalId, data } = message;
+    if (!terminalId) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Terminal ID required for input'
+      });
+      return;
+    }
+
     if (typeof data === 'string') {
-      this.terminalManager.writeToSession(client.uuid, data);
-      this.database.updateSessionActivity(client.uuid);
+      const success = this.terminalManager.writeToSession(client.uuid, terminalId, data);
+      if (success) {
+        this.database.updateSessionActivity(client.uuid);
+      }
     }
   }
 
@@ -236,31 +258,121 @@ export class WebSocketManager {
       return;
     }
 
-    const { data } = message;
-    if (data && typeof data.cols === 'number' && typeof data.rows === 'number') {
-      this.terminalManager.resizeSession(client.uuid, data.cols, data.rows);
+    const { terminalId, data } = message;
+    if (!terminalId) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Terminal ID required for resize'
+      });
+      return;
     }
+
+    if (data && typeof data.cols === 'number' && typeof data.rows === 'number') {
+      this.terminalManager.resizeSession(client.uuid, terminalId, data.cols, data.rows);
+    }
+  }
+
+  private handleTerminalCreate(client: ConnectedClient, message: WebSocketMessage): void {
+    if (!client.authenticated || !client.uuid) {
+      return;
+    }
+
+    try {
+      const { terminalId, data } = message;
+      const name = data?.name || undefined;
+      const color = data?.color || undefined;
+      
+      const session = this.terminalManager.createSession(client.uuid, terminalId, name, color);
+      
+      this.sendMessage(client.ws, {
+        type: 'terminal_created' as any,
+        terminalId: session.terminalId,
+        data: {
+          id: session.id,
+          terminalId: session.terminalId,
+          name: session.name,
+          color: session.color,
+          createdAt: session.createdAt
+        }
+      });
+    } catch (error) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: `Failed to create terminal: ${error}`
+      });
+    }
+  }
+
+  private handleTerminalClose(client: ConnectedClient, message: WebSocketMessage): void {
+    if (!client.authenticated || !client.uuid) {
+      return;
+    }
+
+    const { terminalId } = message;
+    if (!terminalId) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Terminal ID required for close'
+      });
+      return;
+    }
+
+    const success = this.terminalManager.terminateSession(client.uuid, terminalId);
+    
+    this.sendMessage(client.ws, {
+      type: 'terminal_closed' as any,
+      terminalId,
+      data: {
+        success,
+        terminalId
+      }
+    });
+  }
+
+  private handleTerminalList(client: ConnectedClient, message: WebSocketMessage): void {
+    if (!client.authenticated || !client.uuid) {
+      return;
+    }
+
+    const sessions = this.terminalManager.getSessionsByUuid(client.uuid);
+    
+    this.sendMessage(client.ws, {
+      type: 'terminal_list' as any,
+      data: {
+        terminals: sessions.map(session => ({
+          id: session.id,
+          terminalId: session.terminalId,
+          name: session.name,
+          color: session.color,
+          isActive: session.isActive,
+          createdAt: session.createdAt,
+          lastActivity: session.lastActivity
+        }))
+      }
+    });
   }
 
   private setupTerminalListeners(): void {
     // Forward terminal output to WebSocket clients
-    this.terminalManager.on('data', (uuid: string, data: string) => {
+    this.terminalManager.on('data', (uuid: string, terminalId: string, data: string) => {
       const client = this.clients.get(uuid);
       if (client) {
         this.sendMessage(client.ws, {
           type: 'terminal_output' as any,
+          terminalId,
           data
         });
       }
     });
 
     // Handle terminal exit
-    this.terminalManager.on('exit', (uuid: string, exitCode: number) => {
+    this.terminalManager.on('exit', (uuid: string, terminalId: string, exitCode: number) => {
       const client = this.clients.get(uuid);
       if (client) {
         this.sendMessage(client.ws, {
           type: 'terminal_exit' as any,
-          data: { exitCode }
+          terminalId,
+          data: { exitCode, terminalId }
         });
         this.database.updateSessionStatus(uuid, 'terminated');
       }

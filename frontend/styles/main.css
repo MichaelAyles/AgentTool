@@ -1020,6 +1020,28 @@ body {
     gap: 0.25rem;
     margin-bottom: 0;
     border-bottom: 1px solid var(--border-color);
+    align-items: center;
+}
+
+.new-terminal-btn {
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    padding: 0.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    transition: all 0.2s ease;
+    margin-left: 0.5rem;
+}
+
+.new-terminal-btn:hover {
+    background: var(--accent-primary);
+    color: white;
+    border-color: var(--accent-primary);
+    transform: translateY(-1px);
 }
 
 .terminal-tab {

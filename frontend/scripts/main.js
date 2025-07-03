@@ -9,6 +9,11 @@ class DuckBridgeApp {
         this.maxReconnectAttempts = 5;
         this.currentUuid = this.generateUUID();
         
+        // Multi-terminal support
+        this.terminals = new Map(); // terminalId -> terminal data
+        this.activeTerminalId = null;
+        this.terminalCounter = 1;
+        
         this.initializeElements();
         this.attachEventListeners();
         this.updateUuidDisplay();
@@ -69,6 +74,7 @@ class DuckBridgeApp {
         // Terminal workspace elements
         this.terminalTabs = document.getElementById('terminal-tabs');
         this.terminalPanels = document.getElementById('terminal-panels');
+        this.newTerminalBtn = document.getElementById('new-terminal-btn');
     }
     
     attachEventListeners() {
@@ -106,6 +112,11 @@ class DuckBridgeApp {
         this.openProjectBtn.addEventListener('click', () => this.openExistingProject());
         if (this.createFirstProjectBtn) {
             this.createFirstProjectBtn.addEventListener('click', () => this.createNewProject());
+        }
+        
+        // Terminal controls
+        if (this.newTerminalBtn) {
+            this.newTerminalBtn.addEventListener('click', () => this.createNewTerminal());
         }
         
         // Keyboard shortcuts
@@ -416,9 +427,10 @@ class DuckBridgeApp {
                 }
                 
                 // Send key data to terminal
-                if (keyData) {
+                if (keyData && this.activeTerminalId) {
                     this.sendMessage({
                         type: 'terminal_input',
+                        terminalId: this.activeTerminalId,
                         data: keyData,
                         timestamp: Date.now()
                     });
@@ -459,21 +471,24 @@ class DuckBridgeApp {
                     this.handleConnectionError(`Authentication failed: ${message.data}`);
                     break;
                     
-                case 'terminal_output':
-                    this.appendToTerminal(message.data);
-                    // Clear the input field if we receive output (shell is echoing)
-                    const terminalInput = document.getElementById('terminal-input');
-                    if (terminalInput && message.data.includes('\n')) {
-                        terminalInput.value = '';
-                    }
+                case 'terminal_list':
+                    this.handleTerminalList(message.data.terminals);
                     break;
                     
-                case 'terminal_ready':
-                    console.log('Terminal ready');
+                case 'terminal_created':
+                    this.handleTerminalCreated(message.terminalId, message.data);
+                    break;
+                    
+                case 'terminal_closed':
+                    this.handleTerminalClosed(message.terminalId);
+                    break;
+                    
+                case 'terminal_output':
+                    this.handleTerminalOutput(message.terminalId, message.data);
                     break;
                     
                 case 'terminal_exit':
-                    this.appendToTerminal(`\nProcess exited with code ${message.data.exitCode}\n`);
+                    this.handleTerminalExit(message.terminalId, message.data.exitCode);
                     break;
                     
                 case 'ping':
@@ -486,11 +501,115 @@ class DuckBridgeApp {
                 case 'pong':
                     break;
                     
+                case 'error':
+                    console.error('WebSocket error:', message.data);
+                    break;
+                    
                 default:
                     console.warn('Unknown message type:', message.type);
             }
         } catch (error) {
             console.error('Failed to parse WebSocket message:', error);
+        }
+    }
+    
+    // Multi-terminal message handlers
+    handleTerminalList(terminals) {
+        console.log('Received terminal list:', terminals);
+        
+        // Clear existing terminals
+        this.terminals.clear();
+        
+        // Populate terminals
+        terminals.forEach(terminal => {
+            this.terminals.set(terminal.terminalId, {
+                id: terminal.id,
+                terminalId: terminal.terminalId,
+                name: terminal.name || 'Terminal',
+                color: terminal.color || 'blue',
+                isActive: terminal.isActive,
+                output: '',
+                createdAt: new Date(terminal.createdAt),
+                lastActivity: new Date(terminal.lastActivity)
+            });
+        });
+        
+        // Update UI
+        this.updateTerminalTabs();
+        
+        // Set active terminal if none is set
+        if (!this.activeTerminalId && terminals.length > 0) {
+            this.setActiveTerminal(terminals[0].terminalId);
+        }
+    }
+    
+    handleTerminalCreated(terminalId, data) {
+        console.log('Terminal created:', terminalId, data);
+        
+        this.terminals.set(terminalId, {
+            id: data.id,
+            terminalId: terminalId,
+            name: data.name || 'Terminal',
+            color: data.color || 'blue',
+            isActive: true,
+            output: '',
+            createdAt: new Date(data.createdAt),
+            lastActivity: new Date()
+        });
+        
+        this.updateTerminalTabs();
+        this.setActiveTerminal(terminalId);
+    }
+    
+    handleTerminalClosed(terminalId) {
+        console.log('Terminal closed:', terminalId);
+        
+        this.terminals.delete(terminalId);
+        
+        // If this was the active terminal, switch to another one
+        if (this.activeTerminalId === terminalId) {
+            const remainingTerminals = Array.from(this.terminals.keys());
+            this.activeTerminalId = remainingTerminals.length > 0 ? remainingTerminals[0] : null;
+        }
+        
+        this.updateTerminalTabs();
+        if (this.activeTerminalId) {
+            this.setActiveTerminal(this.activeTerminalId);
+        }
+    }
+    
+    handleTerminalOutput(terminalId, data) {
+        const terminal = this.terminals.get(terminalId);
+        if (terminal) {
+            terminal.output += data;
+            terminal.lastActivity = new Date();
+            
+            // If this is the active terminal, update the display
+            if (terminalId === this.activeTerminalId) {
+                this.appendToTerminal(data);
+                
+                // Clear the input field if we receive output (shell is echoing)
+                const terminalInput = document.getElementById('terminal-input');
+                if (terminalInput && data.includes('\n')) {
+                    terminalInput.value = '';
+                }
+            }
+        }
+    }
+    
+    handleTerminalExit(terminalId, exitCode) {
+        console.log('Terminal exited:', terminalId, 'code:', exitCode);
+        
+        const terminal = this.terminals.get(terminalId);
+        if (terminal) {
+            terminal.isActive = false;
+            const exitMessage = `\nProcess exited with code ${exitCode}\n`;
+            terminal.output += exitMessage;
+            
+            // If this is the active terminal, update the display
+            if (terminalId === this.activeTerminalId) {
+                this.appendToTerminal(exitMessage);
+            }
         }
     }
     
@@ -1014,6 +1133,292 @@ class DuckBridgeApp {
     clearAllTerminals() {
         this.terminalTabs.innerHTML = '';
         this.terminalPanels.innerHTML = '';
+    }
+    
+    // Multi-terminal management methods
+    updateTerminalTabs() {
+        const tabsContainer = this.terminalTabs;
+        if (!tabsContainer) return;
+        
+        // Clear existing tabs
+        tabsContainer.innerHTML = '';
+        
+        // Create tabs for each terminal
+        this.terminals.forEach((terminal, terminalId) => {
+            this.createTabElement(terminalId, terminal.name, terminal.color);
+        });
+        
+        // Create terminal panels container if needed
+        this.ensureTerminalPanels();
+    }
+    
+    createTabElement(terminalId, name, color) {
+        const tab = document.createElement('div');
+        tab.className = `terminal-tab color-${color}`;
+        tab.dataset.tabId = terminalId;
+        tab.dataset.color = color;
+        
+        tab.innerHTML = `
+            <span class="terminal-tab-name">${name}</span>
+            <button class="terminal-tab-edit" title="Edit tab">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                    <path d="m18.5 2.5 a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+            </button>
+            <button class="terminal-tab-close" title="Close tab">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        `;
+        
+        this.terminalTabs.appendChild(tab);
+        this.attachMultiTerminalTabListeners(tab, terminalId);
+        
+        return tab;
+    }
+    
+    ensureTerminalPanels() {
+        const panelsContainer = this.terminalPanels;
+        if (!panelsContainer) return;
+        
+        // Remove panels for terminals that no longer exist
+        const existingPanels = panelsContainer.querySelectorAll('.terminal-panel');
+        existingPanels.forEach(panel => {
+            const terminalId = panel.id.replace('panel-', '');
+            if (!this.terminals.has(terminalId)) {
+                panel.remove();
+            }
+        });
+        
+        // Create panels for new terminals
+        this.terminals.forEach((terminal, terminalId) => {
+            if (!document.getElementById(`panel-${terminalId}`)) {
+                this.createTerminalPanel(terminalId);
+            }
+        });
+    }
+    
+    createTerminalPanel(terminalId) {
+        const panel = document.createElement('div');
+        panel.className = 'terminal-panel';
+        panel.id = `panel-${terminalId}`;
+        panel.innerHTML = `
+            <div id="terminal-output-${terminalId}" class="terminal-container"></div>
+        `;
+        
+        this.terminalPanels.appendChild(panel);
+        this.setupTerminalPanelInput(panel, terminalId);
+        return panel;
+    }
+    
+    setupTerminalPanelInput(panel, terminalId) {
+        const outputElement = panel.querySelector(`#terminal-output-${terminalId}`);
+        if (!outputElement) return;
+        
+        // Make the output element focusable and handle keyboard input
+        outputElement.setAttribute('tabindex', '0');
+        outputElement.style.outline = 'none';
+        
+        outputElement.addEventListener('keydown', (e) => {
+            if (!this.activeTerminalId || this.activeTerminalId !== terminalId) return;
+            
+            let keyData = null;
+            
+            // Handle special keys
+            if (e.key === 'Enter') {
+                keyData = '\r';
+            } else if (e.key === 'Backspace') {
+                keyData = '\u007f';
+            } else if (e.key === 'Tab') {
+                e.preventDefault();
+                keyData = '\t';
+            } else if (e.ctrlKey && e.key === 'c') {
+                e.preventDefault();
+                keyData = '\u0003';
+            } else if (e.ctrlKey && e.key === 'd') {
+                e.preventDefault();
+                keyData = '\u0004';
+            } else if (e.key.length === 1) {
+                keyData = e.key;
+            }
+            
+            // Send key data to terminal
+            if (keyData) {
+                this.sendMessage({
+                    type: 'terminal_input',
+                    terminalId: terminalId,
+                    data: keyData,
+                    timestamp: Date.now()
+                });
+            }
+        });
+    }
+    
+    setActiveTerminal(terminalId) {
+        if (!this.terminals.has(terminalId)) return;
+        
+        this.activeTerminalId = terminalId;
+        
+        // Update tab states
+        document.querySelectorAll('.terminal-tab').forEach(tab => {
+            tab.classList.remove('active');
+            if (tab.dataset.tabId === terminalId) {
+                tab.classList.add('active');
+            }
+        });
+        
+        // Update panel states
+        document.querySelectorAll('.terminal-panel').forEach(panel => {
+            panel.classList.remove('active');
+            if (panel.id === `panel-${terminalId}`) {
+                panel.classList.add('active');
+            }
+        });
+        
+        // Restore terminal output and focus
+        const terminal = this.terminals.get(terminalId);
+        const outputElement = document.getElementById(`terminal-output-${terminalId}`);
+        if (outputElement && terminal) {
+            outputElement.textContent = terminal.output;
+            outputElement.scrollTop = outputElement.scrollHeight;
+            outputElement.focus();
+        }
+    }
+    
+    attachMultiTerminalTabListeners(tab, terminalId) {
+        tab.addEventListener('click', (e) => {
+            if (!e.target.closest('.terminal-tab-close') && !e.target.closest('.terminal-tab-edit')) {
+                this.setActiveTerminal(terminalId);
+            }
+        });
+        
+        const editBtn = tab.querySelector('.terminal-tab-edit');
+        if (editBtn) {
+            editBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.editTerminalTab(terminalId);
+            });
+        }
+        
+        const closeBtn = tab.querySelector('.terminal-tab-close');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.closeTerminal(terminalId);
+            });
+        }
+    }
+    
+    editTerminalTab(terminalId) {
+        const tab = document.querySelector(`[data-tab-id="${terminalId}"]`);
+        const terminal = this.terminals.get(terminalId);
+        if (!tab || !terminal) return;
+        
+        const nameSpan = tab.querySelector('.terminal-tab-name');
+        const currentName = nameSpan.textContent;
+        const currentColor = tab.dataset.color;
+        
+        // Store original content
+        const originalContent = tab.innerHTML;
+        
+        // Create inline editor
+        const editor = document.createElement('div');
+        editor.className = 'tab-editor';
+        editor.innerHTML = `
+            <input type="text" class="tab-name-input" value="${currentName}" placeholder="Tab name">
+            <select class="tab-color-select">
+                <option value="blue" ${currentColor === 'blue' ? 'selected' : ''}>Blue</option>
+                <option value="green" ${currentColor === 'green' ? 'selected' : ''}>Green</option>
+                <option value="purple" ${currentColor === 'purple' ? 'selected' : ''}>Purple</option>
+                <option value="orange" ${currentColor === 'orange' ? 'selected' : ''}>Orange</option>
+                <option value="red" ${currentColor === 'red' ? 'selected' : ''}>Red</option>
+                <option value="pink" ${currentColor === 'pink' ? 'selected' : ''}>Pink</option>
+                <option value="indigo" ${currentColor === 'indigo' ? 'selected' : ''}>Indigo</option>
+                <option value="teal" ${currentColor === 'teal' ? 'selected' : ''}>Teal</option>
+            </select>
+            <button class="tab-save-btn" title="Save">✓</button>
+            <button class="tab-cancel-btn" title="Cancel">✕</button>
+        `;
+        
+        tab.innerHTML = '';
+        tab.appendChild(editor);
+        
+        const nameInput = editor.querySelector('.tab-name-input');
+        const colorSelect = editor.querySelector('.tab-color-select');
+        const saveBtn = editor.querySelector('.tab-save-btn');
+        const cancelBtn = editor.querySelector('.tab-cancel-btn');
+        
+        nameInput.focus();
+        
+        const saveChanges = () => {
+            const newName = nameInput.value.trim() || currentName;
+            const newColor = colorSelect.value;
+            
+            // Update local state
+            terminal.name = newName;
+            terminal.color = newColor;
+            
+            // Restore tab with new values
+            tab.innerHTML = originalContent;
+            tab.querySelector('.terminal-tab-name').textContent = newName;
+            tab.className = `terminal-tab color-${newColor}`;
+            tab.dataset.color = newColor;
+            
+            this.attachMultiTerminalTabListeners(tab, terminalId);
+            this.saveTabState();
+        };
+        
+        const cancelChanges = () => {
+            tab.innerHTML = originalContent;
+            this.attachMultiTerminalTabListeners(tab, terminalId);
+        };
+        
+        // Event listeners
+        saveBtn.addEventListener('click', saveChanges);
+        cancelBtn.addEventListener('click', cancelChanges);
+        nameInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') saveChanges();
+            if (e.key === 'Escape') cancelChanges();
+        });
+        
+        colorSelect.addEventListener('change', () => {
+            tab.className = `terminal-tab color-${colorSelect.value}`;
+        });
+    }
+    
+    createNewTerminal(name, color) {
+        if (!name) {
+            name = `Terminal ${this.terminalCounter++}`;
+        }
+        
+        if (!color) {
+            const colors = ['blue', 'green', 'purple', 'orange', 'red', 'pink', 'indigo', 'teal'];
+            const usedColors = Array.from(this.terminals.values()).map(t => t.color);
+            color = colors.find(c => !usedColors.includes(c)) || colors[0];
+        }
+        
+        this.sendMessage({
+            type: 'terminal_create',
+            data: { name, color },
+            timestamp: Date.now()
+        });
+    }
+    
+    closeTerminal(terminalId) {
+        // Don't close if it's the last terminal
+        if (this.terminals.size <= 1) {
+            alert('Cannot close the last terminal. Create a new one first.');
+            return;
+        }
+        
+        this.sendMessage({
+            type: 'terminal_close',
+            terminalId: terminalId,
+            timestamp: Date.now()
+        });
     }
 }
 

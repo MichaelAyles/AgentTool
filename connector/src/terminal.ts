@@ -4,17 +4,33 @@ import { MockPty, mockSpawn } from './mock-terminal';
 
 export interface TerminalSession {
   id: string;
+  terminalId: string;
   uuid: string;
   ptyProcess: MockPty;
   isActive: boolean;
   createdAt: Date;
   lastActivity: Date;
+  name?: string;
+  color?: string;
 }
 
 export class TerminalManager extends EventEmitter {
   private sessions: Map<string, TerminalSession> = new Map();
+  private sessionsByUuid: Map<string, Set<string>> = new Map();
 
-  createSession(uuid: string): TerminalSession {
+  createSession(uuid: string, terminalId?: string, name?: string, color?: string): TerminalSession {
+    // Generate terminal ID if not provided
+    if (!terminalId) {
+      terminalId = `term_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+    }
+
+    const sessionKey = `${uuid}:${terminalId}`;
+    
+    // Check if terminal already exists
+    if (this.sessions.has(sessionKey)) {
+      throw new Error(`Terminal ${terminalId} already exists for session ${uuid}`);
+    }
+
     // Determine the shell based on platform
     const shell = this.getDefaultShell();
     const args = this.getDefaultArgs();
@@ -30,40 +46,51 @@ export class TerminalManager extends EventEmitter {
 
     const session: TerminalSession = {
       id: `terminal_${Date.now()}`,
+      terminalId,
       uuid,
       ptyProcess,
       isActive: true,
       createdAt: new Date(),
-      lastActivity: new Date()
+      lastActivity: new Date(),
+      name: name || `Terminal ${terminalId.split('_')[1]?.substring(0, 4) || ''}`,
+      color: color || 'blue'
     };
 
     // Handle PTY data output
     ptyProcess.onData((data: string) => {
       session.lastActivity = new Date();
-      this.emit('data', uuid, data);
+      this.emit('data', uuid, terminalId, data);
     });
 
     // Handle PTY exit
     ptyProcess.onExit((exitCode: number, signal?: number) => {
-      console.log(`Terminal session ${uuid} exited with code ${exitCode}`);
+      console.log(`Terminal session ${uuid}:${terminalId} exited with code ${exitCode}`);
       session.isActive = false;
-      this.emit('exit', uuid, exitCode, signal);
+      this.emit('exit', uuid, terminalId, exitCode, signal);
     });
 
-    this.sessions.set(uuid, session);
+    this.sessions.set(sessionKey, session);
+    
+    // Track session by UUID for easy lookup
+    if (!this.sessionsByUuid.has(uuid)) {
+      this.sessionsByUuid.set(uuid, new Set());
+    }
+    this.sessionsByUuid.get(uuid)!.add(terminalId);
     
     // Send initial prompt
     setTimeout(() => {
-      this.emit('data', uuid, `\r\n🦆 DuckBridge Terminal Connected\r\n`);
-      this.emit('data', uuid, `Session ID: ${uuid.substring(0, 8)}...\r\n`);
-      this.emit('data', uuid, `Platform: ${platform()}\r\n\r\n`);
+      this.emit('data', uuid, terminalId, `\r\n🦆 DuckBridge Terminal Connected\r\n`);
+      this.emit('data', uuid, terminalId, `Terminal ID: ${terminalId}\r\n`);
+      this.emit('data', uuid, terminalId, `Session ID: ${uuid.substring(0, 8)}...\r\n`);
+      this.emit('data', uuid, terminalId, `Platform: ${platform()}\r\n\r\n`);
     }, 100);
 
     return session;
   }
 
-  writeToSession(uuid: string, data: string): boolean {
-    const session = this.sessions.get(uuid);
+  writeToSession(uuid: string, terminalId: string, data: string): boolean {
+    const sessionKey = `${uuid}:${terminalId}`;
+    const session = this.sessions.get(sessionKey);
     if (!session || !session.isActive) {
       return false;
     }
@@ -73,8 +100,9 @@ export class TerminalManager extends EventEmitter {
     return true;
   }
 
-  resizeSession(uuid: string, cols: number, rows: number): boolean {
-    const session = this.sessions.get(uuid);
+  resizeSession(uuid: string, terminalId: string, cols: number, rows: number): boolean {
+    const sessionKey = `${uuid}:${terminalId}`;
+    const session = this.sessions.get(sessionKey);
     if (!session || !session.isActive) {
       return false;
     }
@@ -83,23 +111,69 @@ export class TerminalManager extends EventEmitter {
     return true;
   }
 
-  terminateSession(uuid: string): boolean {
-    const session = this.sessions.get(uuid);
-    if (!session) {
-      return false;
-    }
+  terminateSession(uuid: string, terminalId?: string): boolean {
+    if (terminalId) {
+      // Terminate specific terminal
+      const sessionKey = `${uuid}:${terminalId}`;
+      const session = this.sessions.get(sessionKey);
+      if (!session) {
+        return false;
+      }
 
-    if (session.isActive) {
-      session.ptyProcess.kill();
-      session.isActive = false;
-    }
+      if (session.isActive) {
+        session.ptyProcess.kill();
+        session.isActive = false;
+      }
 
-    this.sessions.delete(uuid);
-    return true;
+      this.sessions.delete(sessionKey);
+      
+      // Remove from UUID tracking
+      const terminalSet = this.sessionsByUuid.get(uuid);
+      if (terminalSet) {
+        terminalSet.delete(terminalId);
+        if (terminalSet.size === 0) {
+          this.sessionsByUuid.delete(uuid);
+        }
+      }
+      
+      return true;
+    } else {
+      // Terminate all terminals for UUID (legacy support)
+      const terminalSet = this.sessionsByUuid.get(uuid);
+      if (!terminalSet) {
+        return false;
+      }
+
+      let terminated = false;
+      for (const tid of terminalSet) {
+        terminated = this.terminateSession(uuid, tid) || terminated;
+      }
+      
+      return terminated;
+    }
   }
 
-  getSession(uuid: string): TerminalSession | undefined {
-    return this.sessions.get(uuid);
+  getSession(uuid: string, terminalId: string): TerminalSession | undefined {
+    const sessionKey = `${uuid}:${terminalId}`;
+    return this.sessions.get(sessionKey);
+  }
+
+  getSessionsByUuid(uuid: string): TerminalSession[] {
+    const terminalSet = this.sessionsByUuid.get(uuid);
+    if (!terminalSet) {
+      return [];
+    }
+
+    const sessions: TerminalSession[] = [];
+    for (const terminalId of terminalSet) {
+      const sessionKey = `${uuid}:${terminalId}`;
+      const session = this.sessions.get(sessionKey);
+      if (session) {
+        sessions.push(session);
+      }
+    }
+
+    return sessions;
   }
 
   getAllSessions(): TerminalSession[] {
@@ -114,12 +188,12 @@ export class TerminalManager extends EventEmitter {
     const now = new Date();
     const maxIdleTime = 30 * 60 * 1000; // 30 minutes
 
-    for (const [uuid, session] of this.sessions.entries()) {
+    for (const [sessionKey, session] of this.sessions.entries()) {
       const idleTime = now.getTime() - session.lastActivity.getTime();
       
       if (idleTime > maxIdleTime && session.isActive) {
-        console.log(`Cleaning up idle terminal session: ${uuid}`);
-        this.terminateSession(uuid);
+        console.log(`Cleaning up idle terminal session: ${sessionKey}`);
+        this.terminateSession(session.uuid, session.terminalId);
       }
     }
   }
@@ -149,10 +223,12 @@ export class TerminalManager extends EventEmitter {
 
   destroy(): void {
     // Clean up all sessions
-    for (const uuid of this.sessions.keys()) {
-      this.terminateSession(uuid);
+    for (const session of this.sessions.values()) {
+      this.terminateSession(session.uuid, session.terminalId);
     }
     
+    this.sessions.clear();
+    this.sessionsByUuid.clear();
     this.removeAllListeners();
   }
 }
