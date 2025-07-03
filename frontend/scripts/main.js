@@ -156,15 +156,15 @@ class DuckBridgeApp {
             return;
         }
         
+        console.log('Generating QR code for URL');
+        const url = `https://vibe.theduck.chat?uuid=${this.currentUuid}`;
+        
         // Check if QRCode library is loaded
         if (typeof QRCode === 'undefined') {
             console.error('QRCode library not available');
-            this.showError('QR code library not loaded. Please refresh the page.');
+            this.showFallbackQrCode(url);
             return;
         }
-        
-        console.log('Generating QR code for URL');
-        const url = `https://vibe.theduck.chat?uuid=${this.currentUuid}`;
         this.generateQrCode(url);
         this.qrUrl.textContent = url;
         this.qrModal.classList.add('show');
@@ -209,6 +209,35 @@ class DuckBridgeApp {
             this.showError('QR code generation failed: ' + error.message);
             this.hideQrCode();
         }
+    }
+    
+    showFallbackQrCode(url) {
+        // Show modal with external QR code link when library fails
+        const qrServiceUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
+        
+        // Create an image element instead of canvas
+        const img = document.createElement('img');
+        img.src = qrServiceUrl;
+        img.style.borderRadius = '0.5rem';
+        img.style.background = 'white';
+        img.style.padding = '1rem';
+        img.alt = 'QR Code';
+        
+        // Clear canvas and insert image
+        this.qrCanvas.style.display = 'none';
+        this.qrCanvas.parentNode.insertBefore(img, this.qrCanvas);
+        
+        this.qrUrl.textContent = url;
+        this.qrModal.classList.add('show');
+        
+        // Close on Escape key
+        const escapeHandler = (e) => {
+            if (e.key === 'Escape') {
+                this.hideQrCode();
+                document.removeEventListener('keydown', escapeHandler);
+            }
+        };
+        document.addEventListener('keydown', escapeHandler);
     }
     
     async copyInstallCommand() {
