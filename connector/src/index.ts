@@ -3,10 +3,12 @@ import cors from 'cors';
 import { v4 as uuidv4 } from 'uuid';
 import { TerminalManager } from './terminal';
 import { WebSocketManager } from './websocket';
-import { SessionDatabase } from './database';
+import { SessionDatabase, FileDatabase } from './database';
 import { ProjectManager } from './project';
 import { ToolDetectionService } from './tools';
 import { CommandRoutingEngine } from './routing';
+import { LayoutManager } from './layout';
+import { CollaborationManager } from './collaboration';
 import { AgentSystem } from './agents/agent-system';
 import { AgentMessageBus } from './agents/message-bus';
 import { AgentTask } from './agents/types';
@@ -16,9 +18,12 @@ export class DuckBridgeConnector {
   private terminalManager: TerminalManager;
   private websocketManager: WebSocketManager;
   private database: SessionDatabase;
+  private fileDatabase: FileDatabase;
   private projectManager: ProjectManager;
   private toolDetectionService: ToolDetectionService;
   private commandRoutingEngine: CommandRoutingEngine;
+  private layoutManager: LayoutManager;
+  private collaborationManager: CollaborationManager;
   private agentSystem: AgentSystem;
   private messageBus: AgentMessageBus;
   private httpPort: number;
@@ -32,10 +37,13 @@ export class DuckBridgeConnector {
 
     // Initialize components
     this.database = new SessionDatabase();
+    this.fileDatabase = new FileDatabase();
     this.terminalManager = new TerminalManager();
     this.projectManager = new ProjectManager();
     this.toolDetectionService = new ToolDetectionService();
     this.commandRoutingEngine = new CommandRoutingEngine(this.toolDetectionService);
+    this.layoutManager = new LayoutManager(this.fileDatabase);
+    this.collaborationManager = new CollaborationManager(this.fileDatabase);
     this.websocketManager = new WebSocketManager(this.wsPort, this.terminalManager, this.database);
     
     // Initialize agent system components
@@ -48,8 +56,10 @@ export class DuckBridgeConnector {
       healthCheckInterval: 30000
     });
     
-    // Set the routing engine on the WebSocket manager
+    // Set the routing engine and layout manager on the WebSocket manager
     this.websocketManager.setCommandRoutingEngine(this.commandRoutingEngine);
+    this.websocketManager.setLayoutManager(this.layoutManager);
+    this.websocketManager.setCollaborationManager(this.collaborationManager);
 
     // Setup Express app
     this.app = express();
@@ -738,6 +748,339 @@ export class DuckBridgeConnector {
       }
     });
 
+    // Layout Management API endpoints
+    this.app.get('/layouts/:uuid', (req, res) => {
+      try {
+        const { uuid } = req.params;
+        const layouts = this.layoutManager.getAllLayouts(uuid);
+        res.json({
+          success: true,
+          layouts
+        });
+      } catch (error) {
+        res.status(500).json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to get layouts'
+        });
+      }
+    });
+
+    this.app.get('/layouts/:uuid/current', (req, res) => {
+      try {
+        const { uuid } = req.params;
+        const layout = this.layoutManager.getCurrentLayout(uuid);
+        const state = this.layoutManager.getLayoutState(uuid);
+        res.json({
+          success: true,
+          layout,
+          state
+        });
+      } catch (error) {
+        res.status(500).json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to get current layout'
+        });
+      }
+    });
+
+    this.app.get('/layouts/:uuid/:layoutId', (req, res) => {
+      try {
+        const { uuid, layoutId } = req.params;
+        const layout = this.layoutManager.getLayout(uuid, layoutId);
+        if (!layout) {
+          return res.status(404).json({
+            success: false,
+            error: 'Layout not found'
+          });
+        }
+        res.json({
+          success: true,
+          layout
+        });
+      } catch (error) {
+        res.status(500).json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to get layout'
+        });
+      }
+    });
+
+    this.app.post('/layouts/:uuid', (req, res) => {
+      try {
+        const { uuid } = req.params;
+        const { name, ...config } = req.body;
+        
+        if (!name) {
+          return res.status(400).json({
+            success: false,
+            error: 'Layout name is required'
+          });
+        }
+
+        const layout = this.layoutManager.createLayout(uuid, name, config);
+        res.json({
+          success: true,
+          layout
+        });
+      } catch (error) {
+        res.status(500).json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to create layout'
+        });
+      }
+    });
+
+    this.app.put('/layouts/:uuid/:layoutId', (req, res) => {
+      try {
+        const { uuid, layoutId } = req.params;
+        const updates = req.body;
+
+        const success = this.layoutManager.updateLayout(uuid, layoutId, updates);
+        if (!success) {
+          return res.status(404).json({
+            success: false,
+            error: 'Layout not found'
+          });
+        }
+
+        const layout = this.layoutManager.getLayout(uuid, layoutId);
+        res.json({
+          success: true,
+          layout
+        });
+      } catch (error) {
+        res.status(500).json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to update layout'
+        });
+      }
+    });
+
+    this.app.delete('/layouts/:uuid/:layoutId', (req, res) => {
+      try {
+        const { uuid, layoutId } = req.params;
+        const success = this.layoutManager.deleteLayout(uuid, layoutId);
+        res.json({
+          success,
+          message: success ? 'Layout deleted' : 'Layout not found'
+        });
+      } catch (error) {
+        res.status(500).json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to delete layout'
+        });
+      }
+    });
+
+    this.app.post('/layouts/:uuid/set/:layoutId', (req, res) => {
+      try {
+        const { uuid, layoutId } = req.params;
+        const success = this.layoutManager.setCurrentLayout(uuid, layoutId);
+        if (!success) {
+          return res.status(404).json({
+            success: false,
+            error: 'Layout not found'
+          });
+        }
+        res.json({
+          success: true,
+          message: 'Layout set as current'
+        });
+      } catch (error) {
+        res.status(500).json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to set current layout'
+        });
+      }
+    });
+
+    this.app.get('/layouts/:uuid/state', (req, res) => {
+      try {
+        const { uuid } = req.params;
+        const state = this.layoutManager.getLayoutState(uuid);
+        res.json({
+          success: true,
+          state
+        });
+      } catch (error) {
+        res.status(500).json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to get layout state'
+        });
+      }
+    });
+
+    this.app.put('/layouts/:uuid/state', (req, res) => {
+      try {
+        const { uuid } = req.params;
+        const updates = req.body;
+        const success = this.layoutManager.updateLayoutState(uuid, updates);
+        res.json({
+          success,
+          message: success ? 'Layout state updated' : 'Failed to update state'
+        });
+      } catch (error) {
+        res.status(500).json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to update layout state'
+        });
+      }
+    });
+
+    this.app.post('/layouts/:uuid/pane/:paneId/assign/:terminalId', (req, res) => {
+      try {
+        const { uuid, paneId, terminalId } = req.params;
+        const success = this.layoutManager.assignTerminalToPane(uuid, paneId, terminalId);
+        res.json({
+          success,
+          message: success ? 'Terminal assigned to pane' : 'Failed to assign terminal'
+        });
+      } catch (error) {
+        res.status(500).json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to assign terminal to pane'
+        });
+      }
+    });
+
+    this.app.delete('/layouts/:uuid/pane/:paneId/terminal', (req, res) => {
+      try {
+        const { uuid, paneId } = req.params;
+        const success = this.layoutManager.removeTerminalFromPane(uuid, paneId);
+        res.json({
+          success,
+          message: success ? 'Terminal removed from pane' : 'Failed to remove terminal'
+        });
+      } catch (error) {
+        res.status(500).json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to remove terminal from pane'
+        });
+      }
+    });
+
+    this.app.post('/layouts/:uuid/comparison', (req, res) => {
+      try {
+        const { uuid } = req.params;
+        const { enabled, panes } = req.body;
+        
+        if (typeof enabled !== 'boolean') {
+          return res.status(400).json({
+            success: false,
+            error: 'Enabled flag is required'
+          });
+        }
+
+        const success = this.layoutManager.setComparisonMode(uuid, enabled, panes || []);
+        res.json({
+          success,
+          message: success ? 'Comparison mode updated' : 'Failed to update comparison mode'
+        });
+      } catch (error) {
+        res.status(500).json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to set comparison mode'
+        });
+      }
+    });
+
+    this.app.post('/layouts/:uuid/sync-scroll', (req, res) => {
+      try {
+        const { uuid } = req.params;
+        const { enabled } = req.body;
+        
+        if (typeof enabled !== 'boolean') {
+          return res.status(400).json({
+            success: false,
+            error: 'Enabled flag is required'
+          });
+        }
+
+        const success = this.layoutManager.setSyncScrolling(uuid, enabled);
+        res.json({
+          success,
+          message: success ? 'Sync scrolling updated' : 'Failed to update sync scrolling'
+        });
+      } catch (error) {
+        res.status(500).json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to set sync scrolling'
+        });
+      }
+    });
+
+    this.app.get('/layouts/:uuid/:layoutId/export', (req, res) => {
+      try {
+        const { uuid, layoutId } = req.params;
+        const exportData = this.layoutManager.exportLayout(uuid, layoutId);
+        
+        if (!exportData) {
+          return res.status(404).json({
+            success: false,
+            error: 'Layout not found'
+          });
+        }
+
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Content-Disposition', `attachment; filename="layout-${layoutId}.json"`);
+        res.send(exportData);
+      } catch (error) {
+        res.status(500).json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to export layout'
+        });
+      }
+    });
+
+    this.app.post('/layouts/:uuid/import', (req, res) => {
+      try {
+        const { uuid } = req.params;
+        const { layoutData } = req.body;
+        
+        if (!layoutData) {
+          return res.status(400).json({
+            success: false,
+            error: 'Layout data is required'
+          });
+        }
+
+        const layout = this.layoutManager.importLayout(uuid, layoutData);
+        if (!layout) {
+          return res.status(400).json({
+            success: false,
+            error: 'Invalid layout data'
+          });
+        }
+
+        res.json({
+          success: true,
+          layout,
+          message: 'Layout imported successfully'
+        });
+      } catch (error) {
+        res.status(500).json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to import layout'
+        });
+      }
+    });
+
+    this.app.get('/layouts/:uuid/statistics', (req, res) => {
+      try {
+        const { uuid } = req.params;
+        const statistics = this.layoutManager.getLayoutStatistics(uuid);
+        res.json({
+          success: true,
+          statistics
+        });
+      } catch (error) {
+        res.status(500).json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to get layout statistics'
+        });
+      }
+    });
+
     // AI Agent System API endpoints
     this.app.get('/agents', (req, res) => {
       try {
@@ -1169,6 +1512,7 @@ export class DuckBridgeConnector {
       this.websocketManager.destroy();
       this.terminalManager.destroy();
       this.projectManager.destroy();
+      this.layoutManager.destroy();
       this.database.close();
       
       // Cleanup all routing engine processes and history

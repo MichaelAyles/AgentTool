@@ -41,6 +41,12 @@ class DuckBridgeApp {
         
         // Initialize agent dashboard
         this.agentDashboard = new AgentDashboard(this);
+        
+        // Initialize layout manager
+        this.layoutManager = new LayoutManager(this);
+        
+        // Initialize collaboration manager
+        this.collaborationManager = new CollaborationManager(this);
     }
     
     initializeElements() {
@@ -4861,6 +4867,992 @@ class CommandRoutingManager {
     clearToolHistory(tool) {
         this.toolHistories.delete(tool);
         this.updateToolHistoryUI(tool);
+    }
+}
+
+// Layout Management System
+class LayoutManager {
+    constructor(app) {
+        this.app = app;
+        this.currentLayout = null;
+        this.layoutState = null;
+        this.availableLayouts = [];
+        this.layoutPresets = [];
+        this.comparisonMode = false;
+        this.syncScrolling = false;
+        this.resizeHandlers = new Map();
+        
+        this.initializeElements();
+        this.attachEventListeners();
+        this.initializeLayoutPresets();
+        this.loadLayoutState();
+    }
+    
+    initializeElements() {
+        // Layout Control Elements
+        this.layoutPresetsBtn = document.getElementById('layout-presets-btn');
+        this.layoutPresetsDropdown = document.getElementById('layout-presets-dropdown');
+        this.presetList = document.getElementById('preset-list');
+        this.toggleSplitViewBtn = document.getElementById('toggle-split-view');
+        this.toggleHorizontalSplitBtn = document.getElementById('toggle-horizontal-split');
+        this.toggleComparisonModeBtn = document.getElementById('toggle-comparison-mode');
+        this.toggleSyncScrollBtn = document.getElementById('toggle-sync-scroll');
+        this.layoutSettingsBtn = document.getElementById('layout-settings-btn');
+        
+        // Layout Container Elements
+        this.layoutPanesContainer = document.getElementById('layout-panes-container');
+        this.comparisonModeOverlay = document.getElementById('comparison-mode-overlay');
+        this.syncScrollToggle = document.getElementById('sync-scroll-toggle');
+        this.exitComparisonModeBtn = document.getElementById('exit-comparison-mode');
+        
+        // Modal Elements
+        this.layoutManagerModal = document.getElementById('layout-manager-modal');
+        this.layoutManagerClose = document.getElementById('layout-manager-close');
+        this.saveLayoutModal = document.getElementById('save-layout-modal');
+        this.saveLayoutClose = document.getElementById('save-layout-close');
+        this.importLayoutModal = document.getElementById('import-layout-modal');
+        this.importLayoutClose = document.getElementById('import-layout-close');
+        
+        // Action Elements
+        this.saveCurrentLayoutBtn = document.getElementById('save-current-layout-btn');
+        this.manageLayoutsBtn = document.getElementById('manage-layouts-btn');
+        this.createLayoutBtn = document.getElementById('create-layout-btn');
+        this.importLayoutBtn = document.getElementById('import-layout-btn');
+        this.resetLayoutsBtn = document.getElementById('reset-layouts-btn');
+        
+        // Form Elements
+        this.layoutNameInput = document.getElementById('layout-name-input');
+        this.layoutDescriptionInput = document.getElementById('layout-description-input');
+        this.confirmSaveLayoutBtn = document.getElementById('confirm-save-layout');
+        this.cancelSaveLayoutBtn = document.getElementById('cancel-save-layout');
+        
+        this.layoutDataInput = document.getElementById('layout-data-input');
+        this.layoutFileInput = document.getElementById('layout-file-input');
+        this.confirmImportLayoutBtn = document.getElementById('confirm-import-layout');
+        this.cancelImportLayoutBtn = document.getElementById('cancel-import-layout');
+        
+        // Stats Elements
+        this.totalLayoutsSpan = document.getElementById('total-layouts');
+        this.customLayoutsSpan = document.getElementById('custom-layouts');
+        this.currentLayoutNameSpan = document.getElementById('current-layout-name');
+        this.layoutsGrid = document.getElementById('layouts-grid');
+    }
+    
+    attachEventListeners() {
+        // Layout Control Listeners
+        this.layoutPresetsBtn?.addEventListener('click', () => this.toggleLayoutPresetsDropdown());
+        this.toggleSplitViewBtn?.addEventListener('click', () => this.toggleVerticalSplit());
+        this.toggleHorizontalSplitBtn?.addEventListener('click', () => this.toggleHorizontalSplit());
+        this.toggleComparisonModeBtn?.addEventListener('click', () => this.toggleComparisonMode());
+        this.toggleSyncScrollBtn?.addEventListener('click', () => this.toggleSyncScrolling());
+        this.layoutSettingsBtn?.addEventListener('click', () => this.openLayoutManager());
+        
+        // Modal Listeners
+        this.layoutManagerClose?.addEventListener('click', () => this.closeLayoutManager());
+        this.saveLayoutClose?.addEventListener('click', () => this.closeSaveLayoutModal());
+        this.importLayoutClose?.addEventListener('click', () => this.closeImportLayoutModal());
+        
+        // Action Listeners
+        this.saveCurrentLayoutBtn?.addEventListener('click', () => this.openSaveLayoutModal());
+        this.manageLayoutsBtn?.addEventListener('click', () => this.openLayoutManager());
+        this.createLayoutBtn?.addEventListener('click', () => this.openSaveLayoutModal());
+        this.importLayoutBtn?.addEventListener('click', () => this.openImportLayoutModal());
+        this.resetLayoutsBtn?.addEventListener('click', () => this.resetLayouts());
+        
+        // Form Listeners
+        this.confirmSaveLayoutBtn?.addEventListener('click', () => this.saveCurrentLayout());
+        this.cancelSaveLayoutBtn?.addEventListener('click', () => this.closeSaveLayoutModal());
+        this.confirmImportLayoutBtn?.addEventListener('click', () => this.importLayout());
+        this.cancelImportLayoutBtn?.addEventListener('click', () => this.closeImportLayoutModal());
+        
+        // File input listener
+        this.layoutFileInput?.addEventListener('change', (e) => this.handleLayoutFile(e));
+        this.layoutDataInput?.addEventListener('input', () => this.validateLayoutData());
+        
+        // Comparison mode listeners
+        this.syncScrollToggle?.addEventListener('click', () => this.toggleSyncScrolling());
+        this.exitComparisonModeBtn?.addEventListener('click', () => this.exitComparisonMode());
+        
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!this.layoutPresetsBtn?.contains(e.target) && !this.layoutPresetsDropdown?.contains(e.target)) {
+                this.closeLayoutPresetsDropdown();
+            }
+        });
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => this.handleKeyboardShortcuts(e));
+        
+        // Window resize listener
+        window.addEventListener('resize', () => this.handleWindowResize());
+    }
+    
+    initializeLayoutPresets() {
+        this.layoutPresets = [
+            {
+                id: 'single-pane',
+                name: 'Single Pane',
+                description: 'One terminal pane',
+                type: 'preset',
+                orientation: 'horizontal',
+                panes: [{ id: 'main', x: 0, y: 0, width: 100, height: 100 }]
+            },
+            {
+                id: 'vertical-split',
+                name: 'Vertical Split',
+                description: 'Two panes side by side',
+                type: 'preset',
+                orientation: 'vertical',
+                panes: [
+                    { id: 'left', x: 0, y: 0, width: 50, height: 100 },
+                    { id: 'right', x: 50, y: 0, width: 50, height: 100 }
+                ]
+            },
+            {
+                id: 'horizontal-split',
+                name: 'Horizontal Split',
+                description: 'Two panes stacked',
+                type: 'preset',
+                orientation: 'horizontal',
+                panes: [
+                    { id: 'top', x: 0, y: 0, width: 100, height: 50 },
+                    { id: 'bottom', x: 0, y: 50, width: 100, height: 50 }
+                ]
+            },
+            {
+                id: 'three-pane-vertical',
+                name: '3-Pane Vertical',
+                description: 'Three panes side by side',
+                type: 'preset',
+                orientation: 'vertical',
+                panes: [
+                    { id: 'left', x: 0, y: 0, width: 33.33, height: 100 },
+                    { id: 'center', x: 33.33, y: 0, width: 33.33, height: 100 },
+                    { id: 'right', x: 66.66, y: 0, width: 33.34, height: 100 }
+                ]
+            },
+            {
+                id: 'four-pane-grid',
+                name: '4-Pane Grid',
+                description: '2x2 grid layout',
+                type: 'preset',
+                orientation: 'grid',
+                panes: [
+                    { id: 'top-left', x: 0, y: 0, width: 50, height: 50 },
+                    { id: 'top-right', x: 50, y: 0, width: 50, height: 50 },
+                    { id: 'bottom-left', x: 0, y: 50, width: 50, height: 50 },
+                    { id: 'bottom-right', x: 50, y: 50, width: 50, height: 50 }
+                ]
+            }
+        ];
+        
+        this.populatePresetsDropdown();
+    }
+    
+    populatePresetsDropdown() {
+        if (!this.presetList) return;
+        
+        this.presetList.innerHTML = '';
+        
+        this.layoutPresets.forEach(preset => {
+            const presetElement = document.createElement('div');
+            presetElement.className = 'preset-item';
+            presetElement.dataset.layoutId = preset.id;
+            
+            presetElement.innerHTML = `
+                <div class="preset-preview ${preset.id}"></div>
+                <div class="preset-info">
+                    <div class="preset-name">${preset.name}</div>
+                    <div class="preset-description">${preset.description}</div>
+                </div>
+            `;
+            
+            presetElement.addEventListener('click', () => {
+                this.applyLayout(preset);
+                this.closeLayoutPresetsDropdown();
+            });
+            
+            this.presetList.appendChild(presetElement);
+        });
+    }
+    
+    async loadLayoutState() {
+        try {
+            // Load from localStorage first
+            const savedState = localStorage.getItem(`layoutState_${this.app.currentUuid}`);
+            if (savedState) {
+                this.layoutState = JSON.parse(savedState);
+            }
+            
+            // Load from server if connected
+            if (this.app.isConnected) {
+                const response = await this.sendLayoutMessage('layout_get');
+                if (response && response.layout) {
+                    this.currentLayout = response.layout;
+                    this.applyLayoutToUI(response.layout);
+                }
+                
+                const stateResponse = await this.sendLayoutMessage('layout_state');
+                if (stateResponse && stateResponse.state) {
+                    this.layoutState = stateResponse.state;
+                }
+                
+                this.loadAvailableLayouts();
+            } else {
+                // Apply default layout if no saved state
+                if (!this.layoutState) {
+                    this.applyLayout(this.layoutPresets[0]); // Single pane default
+                }
+            }
+        } catch (error) {
+            console.error('Error loading layout state:', error);
+            this.applyLayout(this.layoutPresets[0]); // Fallback to single pane
+        }
+    }
+    
+    async loadAvailableLayouts() {
+        try {
+            const response = await this.sendLayoutMessage('layout_list');
+            if (response && response.layouts) {
+                this.availableLayouts = response.layouts;
+                this.updateLayoutManagerUI();
+            }
+        } catch (error) {
+            console.error('Error loading available layouts:', error);
+        }
+    }
+    
+    sendLayoutMessage(type, data = {}) {
+        if (!this.app.wsConnection) {
+            return Promise.reject(new Error('No WebSocket connection'));
+        }
+        
+        return new Promise((resolve, reject) => {
+            const messageId = `layout_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            
+            const message = {
+                type,
+                uuid: this.app.currentUuid,
+                ...data,
+                messageId
+            };
+            
+            // Store the resolver for this message
+            if (!this.app.layoutMessageResolvers) {
+                this.app.layoutMessageResolvers = new Map();
+            }
+            this.app.layoutMessageResolvers.set(messageId, { resolve, reject });
+            
+            // Set timeout
+            setTimeout(() => {
+                if (this.app.layoutMessageResolvers.has(messageId)) {
+                    this.app.layoutMessageResolvers.delete(messageId);
+                    reject(new Error('Layout message timeout'));
+                }
+            }, 10000);
+            
+            this.app.wsConnection.send(JSON.stringify(message));
+        });
+    }
+    
+    handleLayoutMessage(message) {
+        // Handle layout-related WebSocket messages
+        switch (message.type) {
+            case 'layout_changed':
+                this.handleLayoutChanged(message.data);
+                break;
+            case 'layout_state_updated':
+                this.handleLayoutStateUpdated(message.data);
+                break;
+            case 'layout_pane_resized':
+                this.handlePaneResized(message.paneId, message.data);
+                break;
+            case 'layout_comparison_changed':
+                this.handleComparisonModeChanged(message.data);
+                break;
+            default:
+                // Handle response messages
+                if (message.messageId && this.app.layoutMessageResolvers) {
+                    const resolver = this.app.layoutMessageResolvers.get(message.messageId);
+                    if (resolver) {
+                        this.app.layoutMessageResolvers.delete(message.messageId);
+                        resolver.resolve(message.data || message);
+                    }
+                }
+                break;
+        }
+    }
+    
+    handleLayoutChanged(data) {
+        if (data.layout) {
+            this.currentLayout = data.layout;
+            this.applyLayoutToUI(data.layout);
+        }
+        if (data.state) {
+            this.layoutState = data.state;
+        }
+        this.saveLayoutState();
+    }
+    
+    handleLayoutStateUpdated(data) {
+        if (data.state) {
+            this.layoutState = { ...this.layoutState, ...data.state };
+            this.saveLayoutState();
+        }
+    }
+    
+    handlePaneResized(paneId, data) {
+        const pane = document.querySelector(`[data-pane-id="${paneId}"]`);
+        if (pane && data.width && data.height) {
+            pane.style.width = `${data.width}%`;
+            pane.style.height = `${data.height}%`;
+        }
+    }
+    
+    handleComparisonModeChanged(data) {
+        this.comparisonMode = data.enabled;
+        this.updateComparisonModeUI();
+    }
+    
+    applyLayout(layout) {
+        if (!layout) return;
+        
+        this.currentLayout = layout;
+        this.applyLayoutToUI(layout);
+        
+        // Send to server if connected
+        if (this.app.isConnected) {
+            this.sendLayoutMessage('layout_set', { layoutId: layout.id });
+        }
+        
+        this.saveLayoutState();
+    }
+    
+    applyLayoutToUI(layout) {
+        if (!this.layoutPanesContainer || !layout) return;
+        
+        // Apply layout class to container
+        this.layoutPanesContainer.className = `layout-panes-container ${layout.id}`;
+        
+        // Clear existing panes
+        this.layoutPanesContainer.innerHTML = '';
+        
+        // Create panes based on layout
+        layout.panes.forEach((paneConfig, index) => {
+            const pane = this.createLayoutPane(paneConfig, index === 0);
+            this.layoutPanesContainer.appendChild(pane);
+        });
+        
+        // Update active state for controls
+        this.updateControlStates(layout);
+        
+        // Update current layout name
+        if (this.currentLayoutNameSpan) {
+            this.currentLayoutNameSpan.textContent = layout.name;
+        }
+    }
+    
+    createLayoutPane(paneConfig, isActive = false) {
+        const pane = document.createElement('div');
+        pane.className = `layout-pane${isActive ? ' active' : ''}${paneConfig.terminalId ? '' : ' placeholder'}`;
+        pane.dataset.paneId = paneConfig.id;
+        pane.style.gridArea = this.calculateGridArea(paneConfig);
+        
+        if (paneConfig.terminalId) {
+            // Pane with terminal
+            pane.innerHTML = `
+                <div class="pane-header">
+                    <div class="pane-title">${paneConfig.name || `Terminal ${paneConfig.id}`}</div>
+                    <div class="pane-controls">
+                        <button class="pane-control-btn" data-action="split-vertical" title="Split Vertically">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="8" height="18"/>
+                                <rect x="13" y="3" width="8" height="18"/>
+                            </svg>
+                        </button>
+                        <button class="pane-control-btn" data-action="split-horizontal" title="Split Horizontally">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="18" height="8"/>
+                                <rect x="3" y="13" width="18" height="8"/>
+                            </svg>
+                        </button>
+                        <button class="pane-control-btn" data-action="close" title="Close Pane">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="18" y1="6" x2="6" y2="18"/>
+                                <line x1="6" y1="6" x2="18" y2="18"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="pane-content">
+                    <div class="terminal-panels">
+                        <!-- Terminal content will be moved here -->
+                    </div>
+                </div>
+                <div class="resize-handle resize-handle-right" data-direction="right"></div>
+                <div class="resize-handle resize-handle-bottom" data-direction="bottom"></div>
+                <div class="resize-handle resize-handle-corner" data-direction="corner"></div>
+            `;
+        } else {
+            // Placeholder pane
+            pane.innerHTML = `
+                <div class="placeholder-content">
+                    <div class="placeholder-icon">📱</div>
+                    <div class="placeholder-text">Drop a terminal here or click to assign</div>
+                </div>
+            `;
+        }
+        
+        // Add event listeners
+        this.attachPaneEventListeners(pane);
+        
+        return pane;
+    }
+    
+    attachPaneEventListeners(pane) {
+        // Pane controls
+        const controls = pane.querySelectorAll('.pane-control-btn');
+        controls.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const action = btn.dataset.action;
+                const paneId = pane.dataset.paneId;
+                this.handlePaneAction(action, paneId);
+            });
+        });
+        
+        // Resize handles
+        const resizeHandles = pane.querySelectorAll('.resize-handle');
+        resizeHandles.forEach(handle => {
+            handle.addEventListener('mousedown', (e) => {
+                this.startResize(e, pane, handle.dataset.direction);
+            });
+        });
+        
+        // Pane click for activation
+        pane.addEventListener('click', () => {
+            this.setActivePane(pane.dataset.paneId);
+        });
+        
+        // Placeholder click for terminal assignment
+        if (pane.classList.contains('placeholder')) {
+            pane.addEventListener('click', () => {
+                this.showTerminalAssignmentDialog(pane.dataset.paneId);
+            });
+        }
+    }
+    
+    calculateGridArea(paneConfig) {
+        // Convert percentage-based coordinates to CSS grid area
+        // This is a simplified version - in practice, you'd want more sophisticated grid calculation
+        const col = Math.round(paneConfig.x / 50) + 1;
+        const row = Math.round(paneConfig.y / 50) + 1;
+        const colSpan = Math.max(1, Math.round(paneConfig.width / 50));
+        const rowSpan = Math.max(1, Math.round(paneConfig.height / 50));
+        
+        return `${row} / ${col} / ${row + rowSpan} / ${col + colSpan}`;
+    }
+    
+    updateControlStates(layout) {
+        // Update button active states based on current layout
+        const buttons = [
+            { element: this.toggleSplitViewBtn, layouts: ['vertical-split'] },
+            { element: this.toggleHorizontalSplitBtn, layouts: ['horizontal-split'] },
+        ];
+        
+        buttons.forEach(({ element, layouts }) => {
+            if (element) {
+                element.classList.toggle('active', layouts.includes(layout.id));
+            }
+        });
+        
+        // Update comparison mode button
+        if (this.toggleComparisonModeBtn) {
+            this.toggleComparisonModeBtn.classList.toggle('active', this.comparisonMode);
+        }
+        
+        // Update sync scroll button
+        if (this.toggleSyncScrollBtn) {
+            this.toggleSyncScrollBtn.classList.toggle('active', this.syncScrolling);
+        }
+    }
+    
+    // Layout Actions
+    toggleVerticalSplit() {
+        const isActive = this.currentLayout?.id === 'vertical-split';
+        const targetLayout = isActive ? this.layoutPresets[0] : this.layoutPresets[1]; // single-pane or vertical-split
+        this.applyLayout(targetLayout);
+    }
+    
+    toggleHorizontalSplit() {
+        const isActive = this.currentLayout?.id === 'horizontal-split';
+        const targetLayout = isActive ? this.layoutPresets[0] : this.layoutPresets[2]; // single-pane or horizontal-split
+        this.applyLayout(targetLayout);
+    }
+    
+    toggleComparisonMode() {
+        this.comparisonMode = !this.comparisonMode;
+        this.updateComparisonModeUI();
+        
+        if (this.app.isConnected) {
+            this.sendLayoutMessage('layout_comparison', {
+                enabled: this.comparisonMode,
+                panes: this.getSelectedPanes()
+            });
+        }
+    }
+    
+    toggleSyncScrolling() {
+        this.syncScrolling = !this.syncScrolling;
+        this.updateSyncScrollUI();
+        
+        if (this.app.isConnected) {
+            this.sendLayoutMessage('layout_sync_scroll', {
+                enabled: this.syncScrolling
+            });
+        }
+    }
+    
+    updateComparisonModeUI() {
+        if (this.comparisonModeOverlay) {
+            this.comparisonModeOverlay.style.display = this.comparisonMode ? 'block' : 'none';
+        }
+        
+        if (this.toggleComparisonModeBtn) {
+            this.toggleComparisonModeBtn.classList.toggle('active', this.comparisonMode);
+        }
+    }
+    
+    updateSyncScrollUI() {
+        if (this.toggleSyncScrollBtn) {
+            this.toggleSyncScrollBtn.classList.toggle('active', this.syncScrolling);
+        }
+        
+        if (this.syncScrollToggle) {
+            this.syncScrollToggle.classList.toggle('active', this.syncScrolling);
+        }
+    }
+    
+    exitComparisonMode() {
+        this.comparisonMode = false;
+        this.updateComparisonModeUI();
+        
+        if (this.app.isConnected) {
+            this.sendLayoutMessage('layout_comparison', {
+                enabled: false,
+                panes: []
+            });
+        }
+    }
+    
+    getSelectedPanes() {
+        // Return array of currently visible pane IDs
+        const panes = this.layoutPanesContainer?.querySelectorAll('.layout-pane');
+        return Array.from(panes || []).map(pane => pane.dataset.paneId);
+    }
+    
+    // UI Management
+    toggleLayoutPresetsDropdown() {
+        if (!this.layoutPresetsDropdown) return;
+        
+        const isVisible = this.layoutPresetsDropdown.style.display !== 'none';
+        this.layoutPresetsDropdown.style.display = isVisible ? 'none' : 'block';
+    }
+    
+    closeLayoutPresetsDropdown() {
+        if (this.layoutPresetsDropdown) {
+            this.layoutPresetsDropdown.style.display = 'none';
+        }
+    }
+    
+    openLayoutManager() {
+        if (this.layoutManagerModal) {
+            this.layoutManagerModal.style.display = 'block';
+            this.loadAvailableLayouts();
+        }
+    }
+    
+    closeLayoutManager() {
+        if (this.layoutManagerModal) {
+            this.layoutManagerModal.style.display = 'none';
+        }
+    }
+    
+    openSaveLayoutModal() {
+        if (this.saveLayoutModal) {
+            this.saveLayoutModal.style.display = 'block';
+            this.generateLayoutPreview();
+        }
+    }
+    
+    closeSaveLayoutModal() {
+        if (this.saveLayoutModal) {
+            this.saveLayoutModal.style.display = 'none';
+            this.clearSaveLayoutForm();
+        }
+    }
+    
+    openImportLayoutModal() {
+        if (this.importLayoutModal) {
+            this.importLayoutModal.style.display = 'block';
+        }
+    }
+    
+    closeImportLayoutModal() {
+        if (this.importLayoutModal) {
+            this.importLayoutModal.style.display = 'none';
+            this.clearImportLayoutForm();
+        }
+    }
+    
+    // Save/Load State
+    saveLayoutState() {
+        if (this.app.currentUuid && this.layoutState) {
+            localStorage.setItem(`layoutState_${this.app.currentUuid}`, JSON.stringify(this.layoutState));
+        }
+    }
+    
+    // Keyboard Shortcuts
+    handleKeyboardShortcuts(e) {
+        if (e.ctrlKey || e.metaKey) {
+            switch (e.key) {
+                case '1':
+                    e.preventDefault();
+                    this.applyLayout(this.layoutPresets[0]); // Single pane
+                    break;
+                case '2':
+                    e.preventDefault();
+                    this.applyLayout(this.layoutPresets[1]); // Vertical split
+                    break;
+                case '3':
+                    e.preventDefault();
+                    this.applyLayout(this.layoutPresets[2]); // Horizontal split
+                    break;
+                case '4':
+                    e.preventDefault();
+                    this.applyLayout(this.layoutPresets[3]); // Three pane
+                    break;
+                case 'g':
+                    e.preventDefault();
+                    this.applyLayout(this.layoutPresets[4]); // Four pane grid
+                    break;
+                case 'm':
+                    e.preventDefault();
+                    this.toggleComparisonMode();
+                    break;
+                case 's':
+                    if (e.shiftKey) {
+                        e.preventDefault();
+                        this.openSaveLayoutModal();
+                    }
+                    break;
+            }
+        }
+    }
+    
+    // Window Resize Handler
+    handleWindowResize() {
+        // Recalculate pane sizes on window resize
+        if (this.currentLayout && this.layoutPanesContainer) {
+            // This would typically recalculate responsive grid areas
+            // For now, we'll just trigger a layout refresh
+            this.applyLayoutToUI(this.currentLayout);
+        }
+    }
+    
+    // Placeholder implementations for remaining methods
+    handlePaneAction(action, paneId) {
+        console.log(`Pane action: ${action} on pane ${paneId}`);
+        // TODO: Implement pane actions (split, close, etc.)
+    }
+    
+    setActivePane(paneId) {
+        // Update active pane state
+        const panes = this.layoutPanesContainer?.querySelectorAll('.layout-pane');
+        panes?.forEach(pane => {
+            pane.classList.toggle('active', pane.dataset.paneId === paneId);
+        });
+    }
+    
+    showTerminalAssignmentDialog(paneId) {
+        console.log(`Show terminal assignment dialog for pane ${paneId}`);
+        // TODO: Implement terminal assignment dialog
+    }
+    
+    startResize(e, pane, direction) {
+        console.log(`Start resize: ${direction} on pane ${pane.dataset.paneId}`);
+        // TODO: Implement resize functionality
+    }
+    
+    updateLayoutManagerUI() {
+        // Update layout manager modal with available layouts
+        if (this.totalLayoutsSpan) {
+            this.totalLayoutsSpan.textContent = this.availableLayouts.length;
+        }
+        
+        if (this.customLayoutsSpan) {
+            const customCount = this.availableLayouts.filter(l => l.type === 'custom').length;
+            this.customLayoutsSpan.textContent = customCount;
+        }
+        
+        this.populateLayoutsGrid();
+    }
+    
+    populateLayoutsGrid() {
+        if (!this.layoutsGrid) return;
+        
+        this.layoutsGrid.innerHTML = '';
+        
+        [...this.layoutPresets, ...this.availableLayouts].forEach(layout => {
+            const card = this.createLayoutCard(layout);
+            this.layoutsGrid.appendChild(card);
+        });
+    }
+    
+    createLayoutCard(layout) {
+        const card = document.createElement('div');
+        card.className = `layout-card ${layout.id === this.currentLayout?.id ? 'active' : ''}`;
+        card.dataset.layoutId = layout.id;
+        
+        card.innerHTML = `
+            <div class="layout-preview-mini ${layout.id}"></div>
+            <div class="layout-name">${layout.name}</div>
+            <div class="layout-description">${layout.description || ''}</div>
+            <div class="layout-meta">
+                <span class="layout-type">${layout.type === 'preset' ? 'Preset' : 'Custom'}</span>
+                <span class="layout-panes">${layout.panes?.length || 0} panes</span>
+            </div>
+            <div class="layout-actions">
+                <button class="layout-action-btn" data-action="apply" title="Apply Layout">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="20,6 9,17 4,12"/>
+                    </svg>
+                </button>
+                ${layout.type === 'custom' ? `
+                    <button class="layout-action-btn" data-action="export" title="Export Layout">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="7,10 12,15 17,10"/>
+                            <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                    </button>
+                    <button class="layout-action-btn" data-action="delete" title="Delete Layout">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 6h18"/>
+                            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                        </svg>
+                    </button>
+                ` : ''}
+            </div>
+        `;
+        
+        // Add event listeners
+        card.addEventListener('click', () => {
+            this.applyLayout(layout);
+            this.closeLayoutManager();
+        });
+        
+        const actionBtns = card.querySelectorAll('.layout-action-btn');
+        actionBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.handleLayoutCardAction(btn.dataset.action, layout);
+            });
+        });
+        
+        return card;
+    }
+    
+    handleLayoutCardAction(action, layout) {
+        switch (action) {
+            case 'apply':
+                this.applyLayout(layout);
+                this.closeLayoutManager();
+                break;
+            case 'export':
+                this.exportLayout(layout);
+                break;
+            case 'delete':
+                this.deleteLayout(layout);
+                break;
+        }
+    }
+    
+    generateLayoutPreview() {
+        // Generate preview of current layout for save modal
+        const preview = document.getElementById('layout-preview');
+        if (preview && this.currentLayout) {
+            preview.innerHTML = `
+                <div class="preview-layout ${this.currentLayout.id}">
+                    <div class="preview-text">${this.currentLayout.name} Layout</div>
+                    <div class="preview-panes">${this.currentLayout.panes?.length || 0} panes</div>
+                </div>
+            `;
+        }
+    }
+    
+    clearSaveLayoutForm() {
+        if (this.layoutNameInput) this.layoutNameInput.value = '';
+        if (this.layoutDescriptionInput) this.layoutDescriptionInput.value = '';
+    }
+    
+    clearImportLayoutForm() {
+        if (this.layoutDataInput) this.layoutDataInput.value = '';
+        if (this.layoutFileInput) this.layoutFileInput.value = '';
+        if (this.confirmImportLayoutBtn) this.confirmImportLayoutBtn.disabled = true;
+    }
+    
+    validateLayoutData() {
+        // Validate JSON layout data in import modal
+        const data = this.layoutDataInput?.value;
+        if (!data) {
+            this.confirmImportLayoutBtn.disabled = true;
+            return;
+        }
+        
+        try {
+            const layout = JSON.parse(data);
+            const isValid = layout.name && layout.panes && Array.isArray(layout.panes);
+            this.confirmImportLayoutBtn.disabled = !isValid;
+            
+            if (isValid) {
+                document.getElementById('layout-validation').style.display = 'block';
+                document.getElementById('imported-layout-info').textContent = 
+                    `Layout: ${layout.name} (${layout.panes.length} panes)`;
+            }
+        } catch (e) {
+            this.confirmImportLayoutBtn.disabled = true;
+            document.getElementById('layout-validation').style.display = 'none';
+        }
+    }
+    
+    handleLayoutFile(e) {
+        const file = e.target.files[0];
+        if (file && file.type === 'application/json') {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                this.layoutDataInput.value = e.target.result;
+                this.validateLayoutData();
+            };
+            reader.readAsText(file);
+        }
+    }
+    
+    async saveCurrentLayout() {
+        const name = this.layoutNameInput?.value?.trim();
+        const description = this.layoutDescriptionInput?.value?.trim();
+        
+        if (!name) {
+            this.showError('layout-name-error', 'Layout name is required');
+            return;
+        }
+        
+        try {
+            const layoutData = {
+                name,
+                description,
+                orientation: this.currentLayout?.orientation || 'horizontal',
+                panes: this.currentLayout?.panes || []
+            };
+            
+            if (this.app.isConnected) {
+                await this.sendLayoutMessage('layout_create', layoutData);
+            }
+            
+            this.closeSaveLayoutModal();
+            this.loadAvailableLayouts();
+        } catch (error) {
+            console.error('Error saving layout:', error);
+            this.showError('layout-name-error', 'Failed to save layout');
+        }
+    }
+    
+    async importLayout() {
+        const data = this.layoutDataInput?.value;
+        if (!data) return;
+        
+        try {
+            if (this.app.isConnected) {
+                await this.sendLayoutMessage('layout_import', { layoutData: data });
+            }
+            
+            this.closeImportLayoutModal();
+            this.loadAvailableLayouts();
+        } catch (error) {
+            console.error('Error importing layout:', error);
+            this.showError('layout-data-error', 'Failed to import layout');
+        }
+    }
+    
+    async exportLayout(layout) {
+        try {
+            if (this.app.isConnected) {
+                const response = await this.sendLayoutMessage('layout_export', { layoutId: layout.id });
+                if (response.exportData) {
+                    this.downloadFile(`${layout.name}.json`, response.exportData);
+                }
+            }
+        } catch (error) {
+            console.error('Error exporting layout:', error);
+        }
+    }
+    
+    async deleteLayout(layout) {
+        if (confirm(`Are you sure you want to delete the layout "${layout.name}"?`)) {
+            try {
+                if (this.app.isConnected) {
+                    await this.sendLayoutMessage('layout_delete', { layoutId: layout.id });
+                }
+                this.loadAvailableLayouts();
+            } catch (error) {
+                console.error('Error deleting layout:', error);
+            }
+        }
+    }
+    
+    async resetLayouts() {
+        if (confirm('This will reset all layouts to defaults. Are you sure?')) {
+            try {
+                // Clear custom layouts and reset to defaults
+                if (this.app.isConnected) {
+                    // Delete all custom layouts
+                    const customLayouts = this.availableLayouts.filter(l => l.type === 'custom');
+                    for (const layout of customLayouts) {
+                        await this.sendLayoutMessage('layout_delete', { layoutId: layout.id });
+                    }
+                }
+                
+                // Apply single pane layout
+                this.applyLayout(this.layoutPresets[0]);
+                this.loadAvailableLayouts();
+            } catch (error) {
+                console.error('Error resetting layouts:', error);
+            }
+        }
+    }
+    
+    showError(elementId, message) {
+        const errorElement = document.getElementById(elementId);
+        if (errorElement) {
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+            setTimeout(() => {
+                errorElement.style.display = 'none';
+            }, 5000);
+        }
+    }
+    
+    downloadFile(filename, content) {
+        const blob = new Blob([content], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
     }
 }
 

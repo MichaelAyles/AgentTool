@@ -325,40 +325,147 @@
                             </button>
                         </div>
                         <div class="workspace-controls">
-                            <button class="workspace-control-btn" id="toggle-split-view" title="Toggle Split View">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <rect x="3" y="3" width="8" height="18"/>
-                                    <rect x="13" y="3" width="8" height="18"/>
-                                </svg>
-                            </button>
-                            <button class="workspace-control-btn" id="toggle-horizontal-split" title="Toggle Horizontal Split">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <rect x="3" y="3" width="18" height="8"/>
-                                    <rect x="3" y="13" width="18" height="8"/>
-                                </svg>
-                            </button>
-                            <button class="workspace-control-btn" id="toggle-layout-mode" title="Toggle Layout Mode">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <rect x="3" y="3" width="7" height="9"/>
-                                    <rect x="14" y="3" width="7" height="5"/>
-                                    <rect x="14" y="12" width="7" height="9"/>
-                                    <rect x="3" y="16" width="7" height="5"/>
-                                </svg>
-                            </button>
+                            <div class="layout-controls-group">
+                                <button class="workspace-control-btn" id="layout-presets-btn" title="Layout Presets">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="3" y="3" width="7" height="9"/>
+                                        <rect x="14" y="3" width="7" height="5"/>
+                                        <rect x="14" y="12" width="7" height="9"/>
+                                        <rect x="3" y="16" width="7" height="5"/>
+                                    </svg>
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M6 9l6 6 6-6"/>
+                                    </svg>
+                                </button>
+                                <button class="workspace-control-btn" id="toggle-split-view" title="Vertical Split">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="3" y="3" width="8" height="18"/>
+                                        <rect x="13" y="3" width="8" height="18"/>
+                                    </svg>
+                                </button>
+                                <button class="workspace-control-btn" id="toggle-horizontal-split" title="Horizontal Split">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="3" y="3" width="18" height="8"/>
+                                        <rect x="3" y="13" width="18" height="8"/>
+                                    </svg>
+                                </button>
+                                <button class="workspace-control-btn" id="toggle-comparison-mode" title="Toggle Comparison Mode">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="2" y="3" width="8" height="18"/>
+                                        <rect x="14" y="3" width="8" height="18"/>
+                                        <path d="m8 12 4 0"/>
+                                        <path d="m10 10 2 2-2 2"/>
+                                    </svg>
+                                </button>
+                                <button class="workspace-control-btn" id="toggle-sync-scroll" title="Toggle Synchronized Scrolling">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M12 5v14"/>
+                                        <path d="m19 12-7 7-7-7"/>
+                                        <path d="M5 8l7-7 7 7"/>
+                                    </svg>
+                                </button>
+                                <button class="workspace-control-btn" id="layout-settings-btn" title="Layout Settings">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="12" r="3"/>
+                                        <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            
+                            <!-- Layout Presets Dropdown -->
+                            <div class="layout-presets-dropdown" id="layout-presets-dropdown" style="display: none;">
+                                <div class="dropdown-header">Layout Presets</div>
+                                <div class="preset-list" id="preset-list">
+                                    <!-- Preset items will be populated here -->
+                                </div>
+                                <div class="dropdown-separator"></div>
+                                <div class="dropdown-actions">
+                                    <button class="dropdown-action-btn" id="save-current-layout-btn">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                                            <polyline points="17,21 17,13 7,13 7,21"/>
+                                            <polyline points="7,3 7,8 15,8"/>
+                                        </svg>
+                                        Save Current Layout
+                                    </button>
+                                    <button class="dropdown-action-btn" id="manage-layouts-btn">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                            <path d="M9 9h6v6H9z"/>
+                                        </svg>
+                                        Manage Layouts
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="terminal-header-info" id="terminal-header-info">
                         <!-- Repository status info will be displayed here -->
                     </div>
                     <div class="terminal-workspace-container" id="terminal-workspace-container">
-                        <div class="terminal-panels" id="terminal-panels">
-                            <!-- Terminal panels will be dynamically added here -->
+                        <!-- Layout Panes Container -->
+                        <div class="layout-panes-container" id="layout-panes-container">
+                            <!-- Layout panes will be dynamically added here -->
+                            <div class="layout-pane" id="layout-pane-main" data-pane-id="main">
+                                <div class="pane-header">
+                                    <div class="pane-title">Main Terminal</div>
+                                    <div class="pane-controls">
+                                        <button class="pane-control-btn" data-action="split-vertical" title="Split Vertically">
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <rect x="3" y="3" width="8" height="18"/>
+                                                <rect x="13" y="3" width="8" height="18"/>
+                                            </svg>
+                                        </button>
+                                        <button class="pane-control-btn" data-action="split-horizontal" title="Split Horizontally">
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <rect x="3" y="3" width="18" height="8"/>
+                                                <rect x="3" y="13" width="18" height="8"/>
+                                            </svg>
+                                        </button>
+                                        <button class="pane-control-btn" data-action="close" title="Close Pane">
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <line x1="18" y1="6" x2="6" y2="18"/>
+                                                <line x1="6" y1="6" x2="18" y2="18"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="pane-content">
+                                    <div class="terminal-panels" id="terminal-panels">
+                                        <!-- Terminal panels will be dynamically added here -->
+                                    </div>
+                                </div>
+                                <!-- Resize handles -->
+                                <div class="resize-handle resize-handle-right" data-direction="right"></div>
+                                <div class="resize-handle resize-handle-bottom" data-direction="bottom"></div>
+                                <div class="resize-handle resize-handle-corner" data-direction="corner"></div>
+                            </div>
                         </div>
-                        <div class="terminal-panels secondary" id="terminal-panels-secondary" style="display: none;">
-                            <!-- Secondary terminal panels for split view -->
+                        
+                        <!-- Comparison Mode Overlay -->
+                        <div class="comparison-mode-overlay" id="comparison-mode-overlay" style="display: none;">
+                            <div class="comparison-header">
+                                <div class="comparison-title">Terminal Comparison Mode</div>
+                                <div class="comparison-controls">
+                                    <button class="comparison-control-btn" id="sync-scroll-toggle">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M12 5v14"/>
+                                            <path d="m19 12-7 7-7-7"/>
+                                            <path d="M5 8l7-7 7 7"/>
+                                        </svg>
+                                        Sync Scroll
+                                    </button>
+                                    <button class="comparison-control-btn" id="exit-comparison-mode">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <line x1="18" y1="6" x2="6" y2="18"/>
+                                            <line x1="6" y1="6" x2="18" y2="18"/>
+                                        </svg>
+                                        Exit Comparison
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="split-view-divider" id="split-view-divider" style="display: none;"></div>
                 </section>
             </div>
         </main>
@@ -552,10 +659,182 @@
         </div>
     </div>
 
+    <!-- Layout Management Modal -->
+    <div id="layout-manager-modal" class="modal">
+        <div class="modal-content layout-manager-modal-content">
+            <div class="modal-header">
+                <h3>Layout Manager</h3>
+                <button id="layout-manager-close" class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Layout Statistics -->
+                <div class="layout-stats-section">
+                    <div class="layout-stat-cards">
+                        <div class="layout-stat-card">
+                            <div class="stat-icon">📐</div>
+                            <div class="stat-content">
+                                <div class="stat-number" id="total-layouts">0</div>
+                                <div class="stat-label">Total Layouts</div>
+                            </div>
+                        </div>
+                        <div class="layout-stat-card">
+                            <div class="stat-icon">🎨</div>
+                            <div class="stat-content">
+                                <div class="stat-number" id="custom-layouts">0</div>
+                                <div class="stat-label">Custom Layouts</div>
+                            </div>
+                        </div>
+                        <div class="layout-stat-card">
+                            <div class="stat-icon">⚡</div>
+                            <div class="stat-content">
+                                <div class="stat-number" id="current-layout-name">Single Pane</div>
+                                <div class="stat-label">Current Layout</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Layout Categories -->
+                <div class="layout-categories-section">
+                    <div class="category-tabs">
+                        <button class="category-tab active" data-category="all">All Layouts</button>
+                        <button class="category-tab" data-category="preset">Presets</button>
+                        <button class="category-tab" data-category="custom">Custom</button>
+                        <button class="category-tab" data-category="recent">Recent</button>
+                    </div>
+                    
+                    <div class="layouts-grid" id="layouts-grid">
+                        <!-- Layouts will be dynamically added here -->
+                    </div>
+                </div>
+
+                <!-- Layout Actions -->
+                <div class="layout-actions-section">
+                    <div class="action-buttons">
+                        <button class="action-btn primary" id="create-layout-btn">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"/>
+                                <line x1="5" y1="12" x2="19" y2="12"/>
+                            </svg>
+                            Create Custom Layout
+                        </button>
+                        <button class="action-btn secondary" id="import-layout-btn">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14,2 14,8 20,8"/>
+                                <line x1="16" y1="13" x2="8" y2="13"/>
+                                <line x1="16" y1="17" x2="8" y2="17"/>
+                                <polyline points="10,9 9,9 8,9"/>
+                            </svg>
+                            Import Layout
+                        </button>
+                        <button class="action-btn secondary" id="reset-layouts-btn">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="23 4 23 10 17 10"/>
+                                <polyline points="1 20 1 14 7 14"/>
+                                <path d="m3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                            </svg>
+                            Reset to Defaults
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Layout Detail Panel -->
+                <div class="layout-detail-panel" id="layout-detail-panel" style="display: none;">
+                    <div class="layout-detail-header">
+                        <button class="back-to-layouts-btn" id="back-to-layouts-btn">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M19 12H5M12 19l-7-7 7-7"/>
+                            </svg>
+                            Back to Layouts
+                        </button>
+                    </div>
+                    <div class="layout-detail-content" id="layout-detail-content">
+                        <!-- Layout details will be dynamically added here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Save Layout Modal -->
+    <div id="save-layout-modal" class="modal">
+        <div class="modal-content save-layout-modal-content">
+            <div class="modal-header">
+                <h3>Save Current Layout</h3>
+                <button id="save-layout-close" class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="layout-name-input">Layout Name</label>
+                    <input type="text" id="layout-name-input" class="form-input" placeholder="Enter layout name..." maxlength="50">
+                    <div class="error-message" id="layout-name-error"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="layout-description-input">Description (Optional)</label>
+                    <textarea id="layout-description-input" class="form-textarea" placeholder="Describe this layout..." rows="3" maxlength="200"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>Layout Preview</label>
+                    <div class="layout-preview" id="layout-preview">
+                        <!-- Preview will be generated here -->
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button id="cancel-save-layout" class="secondary-btn">Cancel</button>
+                    <button id="confirm-save-layout" class="primary-btn">Save Layout</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Layout Modal -->
+    <div id="import-layout-modal" class="modal">
+        <div class="modal-content import-layout-modal-content">
+            <div class="modal-header">
+                <h3>Import Layout</h3>
+                <button id="import-layout-close" class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="layout-data-input">Layout Data (JSON)</label>
+                    <textarea id="layout-data-input" class="form-textarea layout-json-input" placeholder="Paste layout JSON data here..." rows="10"></textarea>
+                    <div class="error-message" id="layout-data-error"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Or upload a layout file:</label>
+                    <input type="file" id="layout-file-input" accept=".json" class="file-input">
+                </div>
+                
+                <div class="layout-validation" id="layout-validation" style="display: none;">
+                    <div class="validation-status">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20,6 9,17 4,12"/>
+                        </svg>
+                        Layout validated successfully
+                    </div>
+                    <div class="layout-info" id="imported-layout-info">
+                        <!-- Layout info will be shown here -->
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button id="cancel-import-layout" class="secondary-btn">Cancel</button>
+                    <button id="confirm-import-layout" class="primary-btn" disabled>Import Layout</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Agent Dashboard Modal (included from agent-dashboard.js) -->
 
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <script src="/scripts/main.js"></script>
     <script src="/scripts/agent-dashboard.js"></script>
+    <script src="/scripts/collaboration-manager.js"></script>
 </body>
 </html>

@@ -3,9 +3,11 @@ import { IncomingMessage } from 'http';
 import { TerminalManager } from './terminal';
 import { SessionDatabase } from './database';
 import { CommandRoutingEngine } from './routing';
+import { LayoutManager } from './layout';
+import { CollaborationManager } from './collaboration';
 
 export interface WebSocketMessage {
-  type: 'auth' | 'terminal_input' | 'terminal_resize' | 'terminal_create' | 'terminal_close' | 'terminal_list' | 'terminal_broadcast' | 'ping' | 'pong' | 'command_route' | 'command_history' | 'tool_history' | 'command_parse' | 'agent_output';
+  type: 'auth' | 'terminal_input' | 'terminal_resize' | 'terminal_create' | 'terminal_close' | 'terminal_list' | 'terminal_broadcast' | 'ping' | 'pong' | 'command_route' | 'command_history' | 'tool_history' | 'command_parse' | 'agent_output' | 'layout_get' | 'layout_set' | 'layout_create' | 'layout_update' | 'layout_delete' | 'layout_list' | 'layout_state' | 'layout_pane_assign' | 'layout_pane_remove' | 'layout_comparison' | 'layout_sync_scroll' | 'layout_export' | 'layout_import' | 'session_share' | 'session_join' | 'session_leave' | 'cursor_position' | 'comment_add' | 'comment_update' | 'comment_delete' | 'recording_start' | 'recording_stop' | 'recording_play';
   uuid?: string;
   terminalId?: string;
   targetTerminalId?: string;
@@ -15,6 +17,13 @@ export interface WebSocketMessage {
   command?: string;
   tool?: string;
   workingDirectory?: string;
+  layoutId?: string;
+  paneId?: string;
+  sessionId?: string;
+  userId?: string;
+  cursorPosition?: { line: number; column: number };
+  commentId?: string;
+  recordingId?: string;
 }
 
 export interface ConnectedClient {
@@ -30,6 +39,8 @@ export class WebSocketManager {
   private terminalManager: TerminalManager;
   private database: SessionDatabase;
   private commandRoutingEngine: CommandRoutingEngine | null = null;
+  private layoutManager: LayoutManager | null = null;
+  private collaborationManager: CollaborationManager | null = null;
   private pingInterval!: NodeJS.Timeout;
 
   constructor(port: number, terminalManager: TerminalManager, database: SessionDatabase) {
@@ -92,6 +103,159 @@ export class WebSocketManager {
               result: data.result,
               duration: data.duration
             }
+          });
+        }
+      });
+    }
+  }
+
+  public setCollaborationManager(manager: CollaborationManager): void {
+    this.collaborationManager = manager;
+    
+    // Setup collaboration manager listeners
+    if (this.collaborationManager) {
+      this.collaborationManager.on('sessionCreated', (session) => {
+        this.broadcastToParticipants(session.id, {
+          type: 'session_share',
+          sessionId: session.id,
+          data: session
+        });
+      });
+
+      this.collaborationManager.on('userJoined', ({ sessionId, userId, session }) => {
+        this.broadcastToParticipants(sessionId, {
+          type: 'session_join',
+          sessionId,
+          userId,
+          data: { userId, session }
+        });
+      });
+
+      this.collaborationManager.on('userLeft', ({ sessionId, userId, session }) => {
+        this.broadcastToParticipants(sessionId, {
+          type: 'session_leave',
+          sessionId,
+          userId,
+          data: { userId, session }
+        });
+      });
+
+      this.collaborationManager.on('cursorMoved', (position) => {
+        this.broadcastToParticipants(position.sessionId, {
+          type: 'cursor_position',
+          sessionId: position.sessionId,
+          userId: position.userId,
+          cursorPosition: { line: position.line, column: position.column },
+          data: position
+        });
+      });
+
+      this.collaborationManager.on('commentAdded', (comment) => {
+        this.broadcastToParticipants(comment.sessionId, {
+          type: 'comment_add',
+          sessionId: comment.sessionId,
+          commentId: comment.id,
+          data: comment
+        });
+      });
+
+      this.collaborationManager.on('commentUpdated', (comment) => {
+        this.broadcastToParticipants(comment.sessionId, {
+          type: 'comment_update',
+          sessionId: comment.sessionId,
+          commentId: comment.id,
+          data: comment
+        });
+      });
+
+      this.collaborationManager.on('commentDeleted', ({ commentId, sessionId }) => {
+        this.broadcastToParticipants(sessionId, {
+          type: 'comment_delete',
+          sessionId,
+          commentId,
+          data: { commentId }
+        });
+      });
+
+      this.collaborationManager.on('recordingStarted', (recording) => {
+        this.broadcastToParticipants(recording.sessionId, {
+          type: 'recording_start',
+          sessionId: recording.sessionId,
+          recordingId: recording.id,
+          data: recording
+        });
+      });
+
+      this.collaborationManager.on('recordingStopped', (recording) => {
+        this.broadcastToParticipants(recording.sessionId, {
+          type: 'recording_stop',
+          sessionId: recording.sessionId,
+          recordingId: recording.id,
+          data: recording
+        });
+      });
+    }
+  }
+
+  private broadcastToParticipants(sessionId: string, message: Partial<WebSocketMessage>): void {
+    if (!this.collaborationManager) return;
+    
+    const session = this.collaborationManager.getSharedSession(sessionId);
+    if (!session) return;
+
+    // Ensure message has required type field
+    if (!message.type) return;
+
+    for (const participantUuid of session.participants) {
+      const client = this.clients.get(participantUuid);
+      if (client) {
+        this.sendMessage(client.ws, message as WebSocketMessage);
+      }
+    }
+  }
+
+  public setLayoutManager(manager: LayoutManager): void {
+    this.layoutManager = manager;
+    
+    // Setup layout manager listeners
+    if (this.layoutManager) {
+      this.layoutManager.on('layoutChanged', (uuid, layout, state) => {
+        const client = this.clients.get(uuid);
+        if (client) {
+          this.sendMessage(client.ws, {
+            type: 'layout_changed' as any,
+            data: { layout, state }
+          });
+        }
+      });
+
+      this.layoutManager.on('layoutStateUpdated', (uuid, state) => {
+        const client = this.clients.get(uuid);
+        if (client) {
+          this.sendMessage(client.ws, {
+            type: 'layout_state_updated' as any,
+            data: { state }
+          });
+        }
+      });
+
+      this.layoutManager.on('paneSizeUpdated', (uuid, paneId, width, height) => {
+        const client = this.clients.get(uuid);
+        if (client) {
+          this.sendMessage(client.ws, {
+            type: 'layout_pane_resized' as any,
+            paneId,
+            data: { width, height }
+          });
+        }
+      });
+
+      this.layoutManager.on('comparisonModeChanged', (uuid, enabled, panes) => {
+        const client = this.clients.get(uuid);
+        if (client) {
+          this.sendMessage(client.ws, {
+            type: 'layout_comparison_changed' as any,
+            data: { enabled, panes }
           });
         }
       });
@@ -210,6 +374,98 @@ export class WebSocketManager {
 
       case 'tool_history':
         this.handleToolHistory(client, message);
+        break;
+
+      case 'layout_get':
+        this.handleLayoutGet(client, message);
+        break;
+
+      case 'layout_set':
+        this.handleLayoutSet(client, message);
+        break;
+
+      case 'layout_create':
+        this.handleLayoutCreate(client, message);
+        break;
+
+      case 'layout_update':
+        this.handleLayoutUpdate(client, message);
+        break;
+
+      case 'layout_delete':
+        this.handleLayoutDelete(client, message);
+        break;
+
+      case 'layout_list':
+        this.handleLayoutList(client, message);
+        break;
+
+      case 'layout_state':
+        this.handleLayoutState(client, message);
+        break;
+
+      case 'layout_pane_assign':
+        this.handleLayoutPaneAssign(client, message);
+        break;
+
+      case 'layout_pane_remove':
+        this.handleLayoutPaneRemove(client, message);
+        break;
+
+      case 'layout_comparison':
+        this.handleLayoutComparison(client, message);
+        break;
+
+      case 'layout_sync_scroll':
+        this.handleLayoutSyncScroll(client, message);
+        break;
+
+      case 'layout_export':
+        this.handleLayoutExport(client, message);
+        break;
+
+      case 'layout_import':
+        this.handleLayoutImport(client, message);
+        break;
+
+      case 'session_share':
+        this.handleSessionShare(client, message);
+        break;
+
+      case 'session_join':
+        this.handleSessionJoin(client, message);
+        break;
+
+      case 'session_leave':
+        this.handleSessionLeave(client, message);
+        break;
+
+      case 'cursor_position':
+        this.handleCursorPosition(client, message);
+        break;
+
+      case 'comment_add':
+        this.handleCommentAdd(client, message);
+        break;
+
+      case 'comment_update':
+        this.handleCommentUpdate(client, message);
+        break;
+
+      case 'comment_delete':
+        this.handleCommentDelete(client, message);
+        break;
+
+      case 'recording_start':
+        this.handleRecordingStart(client, message);
+        break;
+
+      case 'recording_stop':
+        this.handleRecordingStop(client, message);
+        break;
+
+      case 'recording_play':
+        this.handleRecordingPlay(client, message);
         break;
 
       case 'pong':
@@ -688,6 +944,640 @@ export class WebSocketManager {
         }
       });
     }
+  }
+
+  private handleLayoutGet(client: ConnectedClient, message: WebSocketMessage): void {
+    if (!client.authenticated || !client.uuid) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Authentication required for layout operations'
+      });
+      return;
+    }
+
+    if (!this.layoutManager) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Layout manager not available'
+      });
+      return;
+    }
+
+    const { layoutId } = message;
+    if (layoutId) {
+      const layout = this.layoutManager.getLayout(client.uuid, layoutId);
+      this.sendMessage(client.ws, {
+        type: 'layout_get_result' as any,
+        layoutId,
+        data: { layout }
+      });
+    } else {
+      const currentLayout = this.layoutManager.getCurrentLayout(client.uuid);
+      this.sendMessage(client.ws, {
+        type: 'layout_get_result' as any,
+        data: { layout: currentLayout }
+      });
+    }
+  }
+
+  private handleLayoutSet(client: ConnectedClient, message: WebSocketMessage): void {
+    if (!client.authenticated || !client.uuid) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Authentication required for layout operations'
+      });
+      return;
+    }
+
+    if (!this.layoutManager) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Layout manager not available'
+      });
+      return;
+    }
+
+    const { layoutId } = message;
+    if (!layoutId) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Layout ID required'
+      });
+      return;
+    }
+
+    const success = this.layoutManager.setCurrentLayout(client.uuid, layoutId);
+    this.sendMessage(client.ws, {
+      type: 'layout_set_result' as any,
+      layoutId,
+      data: { success }
+    });
+  }
+
+  private handleLayoutCreate(client: ConnectedClient, message: WebSocketMessage): void {
+    if (!client.authenticated || !client.uuid) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Authentication required for layout operations'
+      });
+      return;
+    }
+
+    if (!this.layoutManager) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Layout manager not available'
+      });
+      return;
+    }
+
+    const { data } = message;
+    if (!data || !data.name) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Layout name required'
+      });
+      return;
+    }
+
+    try {
+      const layout = this.layoutManager.createLayout(client.uuid, data.name, data);
+      this.sendMessage(client.ws, {
+        type: 'layout_create_result' as any,
+        data: { layout }
+      });
+    } catch (error) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: {
+          error: error instanceof Error ? error.message : 'Failed to create layout'
+        }
+      });
+    }
+  }
+
+  private handleLayoutUpdate(client: ConnectedClient, message: WebSocketMessage): void {
+    if (!client.authenticated || !client.uuid) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Authentication required for layout operations'
+      });
+      return;
+    }
+
+    if (!this.layoutManager) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Layout manager not available'
+      });
+      return;
+    }
+
+    const { layoutId, data } = message;
+    if (!layoutId) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Layout ID required'
+      });
+      return;
+    }
+
+    const success = this.layoutManager.updateLayout(client.uuid, layoutId, data);
+    this.sendMessage(client.ws, {
+      type: 'layout_update_result' as any,
+      layoutId,
+      data: { success }
+    });
+  }
+
+  private handleLayoutDelete(client: ConnectedClient, message: WebSocketMessage): void {
+    if (!client.authenticated || !client.uuid) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Authentication required for layout operations'
+      });
+      return;
+    }
+
+    if (!this.layoutManager) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Layout manager not available'
+      });
+      return;
+    }
+
+    const { layoutId } = message;
+    if (!layoutId) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Layout ID required'
+      });
+      return;
+    }
+
+    const success = this.layoutManager.deleteLayout(client.uuid, layoutId);
+    this.sendMessage(client.ws, {
+      type: 'layout_delete_result' as any,
+      layoutId,
+      data: { success }
+    });
+  }
+
+  private handleLayoutList(client: ConnectedClient, message: WebSocketMessage): void {
+    if (!client.authenticated || !client.uuid) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Authentication required for layout operations'
+      });
+      return;
+    }
+
+    if (!this.layoutManager) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Layout manager not available'
+      });
+      return;
+    }
+
+    const layouts = this.layoutManager.getAllLayouts(client.uuid);
+    this.sendMessage(client.ws, {
+      type: 'layout_list_result' as any,
+      data: { layouts }
+    });
+  }
+
+  private handleLayoutState(client: ConnectedClient, message: WebSocketMessage): void {
+    if (!client.authenticated || !client.uuid) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Authentication required for layout operations'
+      });
+      return;
+    }
+
+    if (!this.layoutManager) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Layout manager not available'
+      });
+      return;
+    }
+
+    const { data } = message;
+    if (data) {
+      // Update state
+      const success = this.layoutManager.updateLayoutState(client.uuid, data);
+      this.sendMessage(client.ws, {
+        type: 'layout_state_result' as any,
+        data: { success }
+      });
+    } else {
+      // Get current state
+      const state = this.layoutManager.getLayoutState(client.uuid);
+      this.sendMessage(client.ws, {
+        type: 'layout_state_result' as any,
+        data: { state }
+      });
+    }
+  }
+
+  private handleLayoutPaneAssign(client: ConnectedClient, message: WebSocketMessage): void {
+    if (!client.authenticated || !client.uuid) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Authentication required for layout operations'
+      });
+      return;
+    }
+
+    if (!this.layoutManager) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Layout manager not available'
+      });
+      return;
+    }
+
+    const { paneId, terminalId } = message;
+    if (!paneId || !terminalId) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Pane ID and terminal ID required'
+      });
+      return;
+    }
+
+    const success = this.layoutManager.assignTerminalToPane(client.uuid, paneId, terminalId);
+    this.sendMessage(client.ws, {
+      type: 'layout_pane_assign_result' as any,
+      paneId,
+      terminalId,
+      data: { success }
+    });
+  }
+
+  private handleLayoutPaneRemove(client: ConnectedClient, message: WebSocketMessage): void {
+    if (!client.authenticated || !client.uuid) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Authentication required for layout operations'
+      });
+      return;
+    }
+
+    if (!this.layoutManager) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Layout manager not available'
+      });
+      return;
+    }
+
+    const { paneId } = message;
+    if (!paneId) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Pane ID required'
+      });
+      return;
+    }
+
+    const success = this.layoutManager.removeTerminalFromPane(client.uuid, paneId);
+    this.sendMessage(client.ws, {
+      type: 'layout_pane_remove_result' as any,
+      paneId,
+      data: { success }
+    });
+  }
+
+  private handleLayoutComparison(client: ConnectedClient, message: WebSocketMessage): void {
+    if (!client.authenticated || !client.uuid) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Authentication required for layout operations'
+      });
+      return;
+    }
+
+    if (!this.layoutManager) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Layout manager not available'
+      });
+      return;
+    }
+
+    const { data } = message;
+    if (!data) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Comparison mode data required'
+      });
+      return;
+    }
+
+    const success = this.layoutManager.setComparisonMode(client.uuid, data.enabled, data.panes || []);
+    this.sendMessage(client.ws, {
+      type: 'layout_comparison_result' as any,
+      data: { success }
+    });
+  }
+
+  private handleLayoutSyncScroll(client: ConnectedClient, message: WebSocketMessage): void {
+    if (!client.authenticated || !client.uuid) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Authentication required for layout operations'
+      });
+      return;
+    }
+
+    if (!this.layoutManager) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Layout manager not available'
+      });
+      return;
+    }
+
+    const { data } = message;
+    if (typeof data?.enabled !== 'boolean') {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Sync scroll enabled flag required'
+      });
+      return;
+    }
+
+    const success = this.layoutManager.setSyncScrolling(client.uuid, data.enabled);
+    this.sendMessage(client.ws, {
+      type: 'layout_sync_scroll_result' as any,
+      data: { success }
+    });
+  }
+
+  private handleLayoutExport(client: ConnectedClient, message: WebSocketMessage): void {
+    if (!client.authenticated || !client.uuid) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Authentication required for layout operations'
+      });
+      return;
+    }
+
+    if (!this.layoutManager) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Layout manager not available'
+      });
+      return;
+    }
+
+    const { layoutId } = message;
+    if (!layoutId) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Layout ID required'
+      });
+      return;
+    }
+
+    const exportData = this.layoutManager.exportLayout(client.uuid, layoutId);
+    this.sendMessage(client.ws, {
+      type: 'layout_export_result' as any,
+      layoutId,
+      data: { exportData }
+    });
+  }
+
+  private handleLayoutImport(client: ConnectedClient, message: WebSocketMessage): void {
+    if (!client.authenticated || !client.uuid) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Authentication required for layout operations'
+      });
+      return;
+    }
+
+    if (!this.layoutManager) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Layout manager not available'
+      });
+      return;
+    }
+
+    const { data } = message;
+    if (!data || !data.layoutData) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Layout data required'
+      });
+      return;
+    }
+
+    const layout = this.layoutManager.importLayout(client.uuid, data.layoutData);
+    this.sendMessage(client.ws, {
+      type: 'layout_import_result' as any,
+      data: { layout, success: !!layout }
+    });
+  }
+
+  // Collaboration Message Handlers
+  private handleSessionShare(client: ConnectedClient, message: WebSocketMessage): void {
+    if (!client.authenticated || !client.uuid) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Authentication required for collaboration'
+      });
+      return;
+    }
+
+    if (!this.collaborationManager) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Collaboration manager not available'
+      });
+      return;
+    }
+
+    const { terminalId, name, description, permissions } = message.data || {};
+    if (!terminalId || !name) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Terminal ID and session name required'
+      });
+      return;
+    }
+
+    try {
+      const session = this.collaborationManager.createSharedSession(
+        terminalId,
+        client.uuid,
+        name,
+        description,
+        permissions
+      );
+
+      this.sendMessage(client.ws, {
+        type: 'session_share_result' as any,
+        data: { session, success: true }
+      });
+    } catch (error) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: `Failed to create shared session: ${error}`
+      });
+    }
+  }
+
+  private handleSessionJoin(client: ConnectedClient, message: WebSocketMessage): void {
+    if (!client.authenticated || !client.uuid) return;
+    if (!this.collaborationManager) return;
+
+    const { sessionId } = message;
+    if (!sessionId) return;
+
+    const success = this.collaborationManager.joinSharedSession(sessionId, client.uuid);
+    this.sendMessage(client.ws, {
+      type: 'session_join_result' as any,
+      data: { sessionId, success }
+    });
+  }
+
+  private handleSessionLeave(client: ConnectedClient, message: WebSocketMessage): void {
+    if (!client.authenticated || !client.uuid) return;
+    if (!this.collaborationManager) return;
+
+    const { sessionId } = message;
+    if (!sessionId) return;
+
+    const success = this.collaborationManager.leaveSharedSession(sessionId, client.uuid);
+    this.sendMessage(client.ws, {
+      type: 'session_leave_result' as any,
+      data: { sessionId, success }
+    });
+  }
+
+  private handleCursorPosition(client: ConnectedClient, message: WebSocketMessage): void {
+    if (!client.authenticated || !client.uuid) return;
+    if (!this.collaborationManager) return;
+
+    const { sessionId, cursorPosition } = message;
+    if (!sessionId || !cursorPosition) return;
+
+    this.collaborationManager.updateCursorPosition(
+      sessionId,
+      client.uuid,
+      cursorPosition.line,
+      cursorPosition.column
+    );
+  }
+
+  private handleCommentAdd(client: ConnectedClient, message: WebSocketMessage): void {
+    if (!client.authenticated || !client.uuid) return;
+    if (!this.collaborationManager) return;
+
+    const { sessionId, data } = message;
+    if (!sessionId || !data?.content) return;
+
+    try {
+      const comment = this.collaborationManager.addComment(
+        sessionId,
+        client.uuid,
+        data.content,
+        data.position
+      );
+
+      this.sendMessage(client.ws, {
+        type: 'comment_add_result' as any,
+        data: { comment, success: true }
+      });
+    } catch (error) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: `Failed to add comment: ${error}`
+      });
+    }
+  }
+
+  private handleCommentUpdate(client: ConnectedClient, message: WebSocketMessage): void {
+    if (!client.authenticated || !client.uuid) return;
+    if (!this.collaborationManager) return;
+
+    const { commentId, data } = message;
+    if (!commentId || !data) return;
+
+    const success = this.collaborationManager.updateComment(commentId, client.uuid, data);
+    this.sendMessage(client.ws, {
+      type: 'comment_update_result' as any,
+      data: { commentId, success }
+    });
+  }
+
+  private handleCommentDelete(client: ConnectedClient, message: WebSocketMessage): void {
+    if (!client.authenticated || !client.uuid) return;
+    if (!this.collaborationManager) return;
+
+    const { commentId } = message;
+    if (!commentId) return;
+
+    const success = this.collaborationManager.deleteComment(commentId, client.uuid);
+    this.sendMessage(client.ws, {
+      type: 'comment_delete_result' as any,
+      data: { commentId, success }
+    });
+  }
+
+  private handleRecordingStart(client: ConnectedClient, message: WebSocketMessage): void {
+    if (!client.authenticated || !client.uuid) return;
+    if (!this.collaborationManager) return;
+
+    const { sessionId, data } = message;
+    if (!sessionId || !data?.name) return;
+
+    try {
+      const recording = this.collaborationManager.startRecording(sessionId, client.uuid, data.name);
+      this.sendMessage(client.ws, {
+        type: 'recording_start_result' as any,
+        data: { recording, success: true }
+      });
+    } catch (error) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: `Failed to start recording: ${error}`
+      });
+    }
+  }
+
+  private handleRecordingStop(client: ConnectedClient, message: WebSocketMessage): void {
+    if (!client.authenticated || !client.uuid) return;
+    if (!this.collaborationManager) return;
+
+    const { sessionId } = message;
+    if (!sessionId) return;
+
+    const recording = this.collaborationManager.stopRecording(sessionId, client.uuid);
+    this.sendMessage(client.ws, {
+      type: 'recording_stop_result' as any,
+      data: { recording, success: !!recording }
+    });
+  }
+
+  private handleRecordingPlay(client: ConnectedClient, message: WebSocketMessage): void {
+    if (!client.authenticated || !client.uuid) return;
+    if (!this.collaborationManager) return;
+
+    const { recordingId } = message;
+    if (!recordingId) return;
+
+    const recording = this.collaborationManager.getRecording(recordingId);
+    this.sendMessage(client.ws, {
+      type: 'recording_play_result' as any,
+      data: { recording, success: !!recording }
+    });
   }
 
   private setupTerminalListeners(): void {
