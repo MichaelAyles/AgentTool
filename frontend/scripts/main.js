@@ -83,6 +83,14 @@ class DuckBridgeApp {
         this.qrCanvas = document.getElementById('qr-canvas');
         this.qrUrl = document.getElementById('qr-url');
         
+        // Header connection status elements
+        this.connectionStatusBtn = document.getElementById('connection-status-btn');
+        this.connectionDot = document.getElementById('connection-dot');
+        this.connectionText = document.getElementById('connection-text');
+        
+        // Recording toggle button
+        this.recordingToggleBtn = document.getElementById('recording-toggle-btn');
+        
         // UI Screen elements
         this.welcomeScreen = document.getElementById('welcome-screen');
         this.mainInterface = document.getElementById('main-interface');
@@ -181,6 +189,16 @@ class DuckBridgeApp {
             if (e.target === this.loginModal) this.hideLoginModal();
         });
         this.logoutBtn.addEventListener('click', () => this.logout());
+        
+        // Connection status button
+        if (this.connectionStatusBtn) {
+            this.connectionStatusBtn.addEventListener('click', () => this.showLoginModal());
+        }
+        
+        // Recording toggle button
+        if (this.recordingToggleBtn) {
+            this.recordingToggleBtn.addEventListener('click', () => this.toggleRecordingControls());
+        }
         
         // Project controls
         this.newProjectBtn.addEventListener('click', () => this.showCreateProjectDialog());
@@ -511,6 +529,29 @@ class DuckBridgeApp {
         // Update connection status for tool manager
         const wasConnected = this.isConnected;
         this.isConnected = (state === 'connected');
+        
+        // Show/hide recording toggle button based on connection status
+        if (this.recordingToggleBtn) {
+            this.recordingToggleBtn.style.display = this.isConnected ? 'flex' : 'none';
+        }
+        
+        // Update header connection status indicator
+        if (this.connectionDot && this.connectionText) {
+            this.connectionDot.className = `connection-dot ${state}`;
+            
+            switch (state) {
+                case 'connecting':
+                    this.connectionText.textContent = 'Connecting...';
+                    break;
+                case 'connected':
+                    this.connectionText.textContent = 'Connected';
+                    break;
+                case 'disconnected':
+                default:
+                    this.connectionText.textContent = 'Disconnected';
+                    break;
+            }
+        }
         
         switch (state) {
             case 'connecting':
@@ -5853,6 +5894,12 @@ class LayoutManager {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+    }
+    
+    toggleRecordingControls() {
+        if (this.collaborationManager) {
+            this.collaborationManager.toggleRecordingControls();
+        }
     }
 }
 

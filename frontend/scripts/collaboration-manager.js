@@ -201,6 +201,47 @@ class CollaborationManager {
         document.getElementById('stop-recording').addEventListener('click', () => {
             this.stopRecording();
         });
+        
+        // Add close button to recording controls
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'recording-close-btn';
+        closeBtn.innerHTML = '&times;';
+        closeBtn.title = 'Close Recording Controls';
+        recordingControls.querySelector('.recording-header').appendChild(closeBtn);
+        
+        closeBtn.addEventListener('click', () => {
+            this.hideRecordingControls();
+        });
+    }
+    
+    toggleRecordingControls() {
+        const controls = document.getElementById('recording-controls');
+        if (controls) {
+            if (controls.classList.contains('visible')) {
+                this.hideRecordingControls();
+            } else {
+                this.showRecordingControls();
+            }
+        }
+    }
+    
+    showRecordingControls() {
+        const controls = document.getElementById('recording-controls');
+        if (controls) {
+            controls.classList.add('visible');
+            setTimeout(() => controls.classList.add('show'), 10);
+        }
+    }
+    
+    hideRecordingControls() {
+        const controls = document.getElementById('recording-controls');
+        if (controls) {
+            controls.classList.remove('show');
+            controls.classList.add('hide');
+            setTimeout(() => {
+                controls.classList.remove('visible', 'hide');
+            }, 300);
+        }
     }
     
     initializeCursorTracking() {

@@ -17,11 +17,30 @@
                     <p class="tagline" id="tagline">Get your ducks in a row with AI</p>
                 </div>
                 <div class="header-controls">
+                    <div class="connection-status-indicator" id="connection-status-indicator">
+                        <button id="connection-status-btn" class="header-btn connection-status-btn" title="Connection Status">
+                            <div class="connection-dot disconnected" id="connection-dot"></div>
+                            <span class="connection-text" id="connection-text">Disconnected</span>
+                        </button>
+                    </div>
                     <button id="agent-dashboard-btn" class="header-btn" title="AI Agent Dashboard">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M12 2L13.09 8.26L22 9L13.09 9.74L12 16L10.91 9.74L2 9L10.91 8.26L12 2Z"/>
                             <path d="M8 17L9 19.5L8 22L7 19.5L8 17Z"/>
                             <path d="M16 17L17 19.5L16 22L15 19.5L16 17Z"/>
+                        </svg>
+                    </button>
+                    <button id="recording-toggle-btn" class="header-btn" title="Session Recording" style="display: none;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3"/>
+                            <path d="m12 1 0 6"/>
+                            <path d="m12 17 0 6"/>
+                            <path d="m1 12 6 0"/>
+                            <path d="m17 12 6 0"/>
+                            <path d="m4.2 4.2 4.2 4.2"/>
+                            <path d="m15.6 15.6 4.2 4.2"/>
+                            <path d="m19.8 4.2-4.2 4.2"/>
+                            <path d="m8.4 15.6-4.2 4.2"/>
                         </svg>
                     </button>
                     <button id="theme-toggle" class="theme-toggle" title="Toggle theme">
@@ -481,11 +500,7 @@
 
         <!-- Footer -->
         <footer class="footer">
-            <p>&copy; 2025 DuckBridge. Built with 🦆 for developers.</p>
-            <div class="footer-links">
-                <a href="https://github.com/MichaelAyles/AgentTool" target="_blank">GitHub</a>
-                <a href="#" onclick="showAbout()">About</a>
-            </div>
+            <p>&copy; 2025 DuckBridge. Built with 🦆 for developers. <a href="https://github.com/MichaelAyles/AgentTool" target="_blank">GitHub</a></p>
         </footer>
     </div>
 
@@ -596,12 +611,8 @@
 
         <!-- Footer -->
         <footer class="footer">
-            <p>&copy; 2025 DuckBridge. Built with 🦆 for developers.</p>
-            <div class="footer-links">
-                <a href="https://github.com/MichaelAyles/AgentTool" target="_blank">GitHub</a>
-                <a href="#" onclick="showAbout()">About</a>
-            </div>
-        </div>
+            <p>&copy; 2025 DuckBridge. Built with 🦆 for developers. <a href="https://github.com/MichaelAyles/AgentTool" target="_blank">GitHub</a></p>
+        </footer>
     </div>
 
     <!-- QR Code Modal -->

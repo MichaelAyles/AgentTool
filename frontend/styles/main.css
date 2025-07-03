@@ -135,6 +135,76 @@ body {
     display: none;
 }
 
+/* Header Controls */
+.header-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.header-btn {
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    padding: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+}
+
+.header-btn:hover {
+    border-color: var(--border-hover);
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+/* Connection Status Indicator */
+.connection-status-btn {
+    padding: 0.5rem 0.75rem;
+    gap: 0.5rem;
+    min-width: 120px;
+}
+
+.connection-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+}
+
+.connection-dot.disconnected {
+    background-color: #ef4444;
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+}
+
+.connection-dot.connecting {
+    background-color: #f59e0b;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.connection-dot.connected {
+    background-color: #10b981;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+.connection-text {
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
 /* Main content */
 .main {
     flex: 1;
@@ -1014,7 +1084,23 @@ body {
     
     .header-content {
         padding: 1rem;
+        flex-wrap: wrap;
+        gap: 1rem;
     }
+    
+    .header-controls {
+        gap: 0.5rem;
+    }
+    
+    .connection-status-btn {
+        min-width: 100px;
+        padding: 0.5rem;
+    }
+    
+    .connection-text {
+        display: none;
+    }
+}
     
     .hero-content h2 {
         font-size: 2rem;
@@ -1064,6 +1150,22 @@ body {
 }
 
 @media (max-width: 480px) {
+    .header-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+    
+    .header-controls {
+        gap: 0.25rem;
+        flex-wrap: wrap;
+    }
+    
+    .connection-status-btn {
+        min-width: 80px;
+        padding: 0.375rem 0.5rem;
+    }
+    
     .hero-content h2 {
         font-size: 1.75rem;
     }
@@ -5326,6 +5428,22 @@ body {
     border-radius: 0.5rem;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     z-index: 200;
+    display: none; /* Hidden by default */
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.recording-controls.visible {
+    display: block;
+}
+
+.recording-controls.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.recording-controls.hide {
+    opacity: 0;
+    transform: translateY(10px);
 }
 
 .recording-header {
@@ -5334,6 +5452,26 @@ body {
     align-items: center;
     padding: 1rem 1rem 0.5rem 1rem;
     border-bottom: 1px solid var(--border-color);
+    position: relative;
+}
+
+.recording-close-btn {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: none;
+    border: none;
+    font-size: 1.25rem;
+    cursor: pointer;
+    color: var(--text-secondary);
+    padding: 0.25rem;
+    border-radius: 0.25rem;
+    transition: all 0.2s ease;
+}
+
+.recording-close-btn:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
 }
 
 .recording-header h4 {
