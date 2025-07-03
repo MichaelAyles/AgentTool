@@ -61,7 +61,16 @@ class DuckBridgeApp {
         // UUID controls
         this.regenerateBtn.addEventListener('click', () => this.regenerateUuid());
         this.copyUuidBtn.addEventListener('click', () => this.copyUuid());
-        this.qrUuidBtn.addEventListener('click', () => this.showQrCode());
+        
+        if (this.qrUuidBtn) {
+            this.qrUuidBtn.addEventListener('click', () => {
+                console.log('QR button clicked');
+                this.showQrCode();
+            });
+        } else {
+            console.error('QR button not found');
+        }
+        
         this.uuidInput.addEventListener('input', (e) => this.handleUuidInput(e));
         this.uuidInput.addEventListener('blur', () => this.validateUuid());
         
@@ -139,11 +148,22 @@ class DuckBridgeApp {
     }
     
     showQrCode() {
+        console.log('showQrCode called', this.currentUuid);
+        
         if (!this.currentUuid) {
+            console.log('No UUID available');
             this.showUuidError('Please generate a UUID first');
             return;
         }
         
+        // Check if QRCode library is loaded
+        if (typeof QRCode === 'undefined') {
+            console.error('QRCode library not available');
+            this.showError('QR code library not loaded. Please refresh the page.');
+            return;
+        }
+        
+        console.log('Generating QR code for URL');
         const url = `https://vibe.theduck.chat?uuid=${this.currentUuid}`;
         this.generateQrCode(url);
         this.qrUrl.textContent = url;
@@ -164,24 +184,31 @@ class DuckBridgeApp {
     }
     
     generateQrCode(text) {
-        // Clear previous QR code
-        this.qrCanvas.width = 200;
-        this.qrCanvas.height = 200;
-        
-        // Generate QR code
-        QRCode.toCanvas(this.qrCanvas, text, {
-            width: 200,
-            margin: 2,
-            color: {
-                dark: '#000000',
-                light: '#FFFFFF'
-            }
-        }, (error) => {
-            if (error) {
-                console.error('QR Code generation failed:', error);
-                this.showError('Failed to generate QR code');
-            }
-        });
+        try {
+            // Clear previous QR code
+            this.qrCanvas.width = 200;
+            this.qrCanvas.height = 200;
+            
+            // Generate QR code
+            QRCode.toCanvas(this.qrCanvas, text, {
+                width: 200,
+                margin: 2,
+                color: {
+                    dark: '#000000',
+                    light: '#FFFFFF'
+                }
+            }, (error) => {
+                if (error) {
+                    console.error('QR Code generation failed:', error);
+                    this.showError('Failed to generate QR code: ' + error.message);
+                    this.hideQrCode();
+                }
+            });
+        } catch (error) {
+            console.error('QR Code generation error:', error);
+            this.showError('QR code generation failed: ' + error.message);
+            this.hideQrCode();
+        }
     }
     
     async copyInstallCommand() {
