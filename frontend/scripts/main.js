@@ -15,6 +15,7 @@ class DuckBridgeApp {
         
         this.initializeElements();
         this.attachEventListeners();
+        this.handleUrlParameters();
         this.updateUuidDisplay();
         this.initializeTheme();
         this.initializeTagline();
@@ -26,8 +27,15 @@ class DuckBridgeApp {
         this.uuidInput = document.getElementById('uuid-input');
         this.regenerateBtn = document.getElementById('regenerate-uuid');
         this.copyUuidBtn = document.getElementById('copy-uuid');
+        this.qrUuidBtn = document.getElementById('qr-uuid');
         this.commandUuidSpan = document.getElementById('command-uuid');
         this.uuidError = document.getElementById('uuid-error');
+        
+        // QR Modal elements
+        this.qrModal = document.getElementById('qr-modal');
+        this.qrModalClose = document.getElementById('qr-modal-close');
+        this.qrCanvas = document.getElementById('qr-canvas');
+        this.qrUrl = document.getElementById('qr-url');
         
         // Connection elements
         this.connectBtn = document.getElementById('connect-btn');
@@ -53,8 +61,17 @@ class DuckBridgeApp {
         // UUID controls
         this.regenerateBtn.addEventListener('click', () => this.regenerateUuid());
         this.copyUuidBtn.addEventListener('click', () => this.copyUuid());
+        this.qrUuidBtn.addEventListener('click', () => this.showQrCode());
         this.uuidInput.addEventListener('input', (e) => this.handleUuidInput(e));
         this.uuidInput.addEventListener('blur', () => this.validateUuid());
+        
+        // QR Modal controls
+        this.qrModalClose.addEventListener('click', () => this.hideQrCode());
+        this.qrModal.addEventListener('click', (e) => {
+            if (e.target === this.qrModal) {
+                this.hideQrCode();
+            }
+        });
         
         // Connection controls
         this.connectBtn.addEventListener('click', () => this.handleConnect());
@@ -119,6 +136,52 @@ class DuckBridgeApp {
             console.error('Failed to copy UUID:', err);
             this.showUuidError('Failed to copy UUID');
         }
+    }
+    
+    showQrCode() {
+        if (!this.currentUuid) {
+            this.showUuidError('Please generate a UUID first');
+            return;
+        }
+        
+        const url = `https://vibe.theduck.chat?uuid=${this.currentUuid}`;
+        this.generateQrCode(url);
+        this.qrUrl.textContent = url;
+        this.qrModal.classList.add('show');
+        
+        // Close on Escape key
+        const escapeHandler = (e) => {
+            if (e.key === 'Escape') {
+                this.hideQrCode();
+                document.removeEventListener('keydown', escapeHandler);
+            }
+        };
+        document.addEventListener('keydown', escapeHandler);
+    }
+    
+    hideQrCode() {
+        this.qrModal.classList.remove('show');
+    }
+    
+    generateQrCode(text) {
+        // Clear previous QR code
+        this.qrCanvas.width = 200;
+        this.qrCanvas.height = 200;
+        
+        // Generate QR code
+        QRCode.toCanvas(this.qrCanvas, text, {
+            width: 200,
+            margin: 2,
+            color: {
+                dark: '#000000',
+                light: '#FFFFFF'
+            }
+        }, (error) => {
+            if (error) {
+                console.error('QR Code generation failed:', error);
+                this.showError('Failed to generate QR code');
+            }
+        });
     }
     
     async copyInstallCommand() {
@@ -612,6 +675,25 @@ class DuckBridgeApp {
         if (taglineElement) {
             const randomTagline = taglines[Math.floor(Math.random() * taglines.length)];
             taglineElement.textContent = randomTagline;
+        }
+    }
+    
+    handleUrlParameters() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const uuidParam = urlParams.get('uuid');
+        
+        if (uuidParam) {
+            // Validate the UUID format
+            const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            if (uuidPattern.test(uuidParam)) {
+                this.currentUuid = uuidParam;
+                // Clear URL parameter after setting UUID
+                const url = new URL(window.location);
+                url.searchParams.delete('uuid');
+                window.history.replaceState({}, '', url);
+            } else {
+                console.warn('Invalid UUID in URL parameter');
+            }
         }
     }
     

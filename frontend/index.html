@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DuckBridge - AI-Powered Coding Terminal</title>
     <link rel="stylesheet" href="/styles/main.css">
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 </head>
 <body>
     <div class="app">
@@ -53,6 +54,21 @@
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
                                         <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                                    </svg>
+                                </button>
+                                <button id="qr-uuid" class="icon-btn" title="Show QR Code for mobile access">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="3" y="3" width="5" height="5"/>
+                                        <rect x="3" y="16" width="5" height="5"/>
+                                        <rect x="16" y="3" width="5" height="5"/>
+                                        <path d="m5 5h4v4h-4z"/>
+                                        <path d="m5 18h4v4h-4z"/>
+                                        <path d="m18 5h4v4h-4z"/>
+                                        <rect x="11" y="11" width="3" height="3"/>
+                                        <rect x="16" y="16" width="2" height="2"/>
+                                        <rect x="19" y="16" width="2" height="2"/>
+                                        <rect x="16" y="19" width="2" height="2"/>
+                                        <rect x="19" y="19" width="2" height="2"/>
                                     </svg>
                                 </button>
                             </div>
@@ -125,6 +141,25 @@
                 <a href="#" onclick="showAbout()">About</a>
             </div>
         </footer>
+    </div>
+
+    <!-- QR Code Modal -->
+    <div id="qr-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Mobile Access QR Code</h3>
+                <button class="modal-close" id="qr-modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="qr-container">
+                    <canvas id="qr-canvas"></canvas>
+                    <p class="qr-description">
+                        Scan this QR code with your phone to access DuckBridge on mobile
+                    </p>
+                    <div class="qr-url" id="qr-url"></div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="/scripts/main.js"></script>

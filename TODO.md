@@ -193,6 +193,143 @@
 
 ## 🎉 PROJECT LAUNCHED - Live at https://vibe.theduck.chat
 
+## Phase 3: Multi-Terminal AI Agent System
+
+### 3.0 Immediate Enhancement
+- [ ] **QR Code for Mobile Access**
+  - [ ] Add QR code generation library
+  - [ ] Display QR code next to UUID that links to vibe.theduck.chat?uuid=XXX
+  - [ ] Ensure mobile-responsive design works properly
+  - [ ] Test mobile terminal functionality
+
+### 3.1 UI/UX Transformation
+- [ ] **Login Popover System**
+  - [ ] Convert current main screen to popover/modal
+  - [ ] Design new main interface for authenticated sessions
+  - [ ] Implement smooth transition from login to main interface
+  - [ ] Add session persistence and auto-reconnect
+
+- [ ] **Tabbed Terminal Interface**
+  - [ ] Design tab component system
+  - [ ] Implement tab creation, switching, closing
+  - [ ] Add tab naming and color coding
+  - [ ] Support keyboard shortcuts for tab navigation
+
+- [ ] **Session Sidebar**
+  - [ ] Create collapsible sidebar for active sessions
+  - [ ] Show session status, name, and quick actions
+  - [ ] Implement drag-and-drop for session organization
+  - [ ] Add session grouping by project
+
+### 3.2 Backend Architecture
+- [ ] **Multi-Terminal Support**
+  - [ ] Refactor connector to support multiple terminal instances
+  - [ ] Implement terminal session management
+  - [ ] Add terminal ID system for routing
+  - [ ] Handle resource allocation and limits
+
+- [ ] **WebSocket Protocol Update**
+  - [ ] Extend protocol for multi-terminal commands
+  - [ ] Add terminal creation/deletion messages
+  - [ ] Implement terminal switching protocol
+  - [ ] Add inter-terminal communication
+
+### 3.3 AI Agent System
+- [ ] **Middle Manager Agent**
+  - [ ] Design agent architecture and communication protocol
+  - [ ] Implement prompt generation for subagents
+  - [ ] Add agent state management
+  - [ ] Create agent UI components
+
+- [ ] **Subagent Integration**
+  - [ ] Implement claude-code integration
+  - [ ] Add gemini CLI support
+  - [ ] Create agent spawning system
+  - [ ] Handle agent output aggregation
+
+- [ ] **Agent Communication**
+  - [ ] Design inter-agent messaging protocol
+  - [ ] Implement agent coordination system
+  - [ ] Add agent task delegation
+  - [ ] Create agent monitoring dashboard
+
+### 3.4 Project Management
+- [ ] **Multi-Project Support**
+  - [ ] Design project data model
+  - [ ] Implement project creation/switching
+  - [ ] Add project-level settings
+  - [ ] Create project workspace isolation
+
+- [ ] **Repository Integration**
+  - [ ] Implement "New Repo" functionality
+  - [ ] Add "Open Existing Repo" with git integration
+  - [ ] Create local directory detection for git repos
+  - [ ] Add repository status indicators
+
+- [ ] **Project UI**
+  - [ ] Design project switcher interface
+  - [ ] Implement nested tabs or split views
+  - [ ] Add color coding per project
+  - [ ] Create project overview dashboard
+
+### 3.5 Terminal Interoperability
+- [ ] **Tool Detection**
+  - [ ] Detect available CLI tools (claude-code, gemini, etc.)
+  - [ ] Create tool registry system
+  - [ ] Implement tool capability discovery
+  - [ ] Add tool installation helpers
+
+- [ ] **Command Routing**
+  - [ ] Implement intelligent command routing
+  - [ ] Add command interception for agent tools
+  - [ ] Create command history per tool
+  - [ ] Handle tool-specific output formatting
+
+### 3.6 Advanced Features
+- [ ] **Layout Management**
+  - [ ] Implement split terminal views
+  - [ ] Add side-by-side terminal comparison
+  - [ ] Create customizable layouts
+  - [ ] Save/restore layout preferences
+
+- [ ] **Collaboration Features**
+  - [ ] Add shared terminal sessions
+  - [ ] Implement real-time cursor tracking
+  - [ ] Create commenting system
+  - [ ] Add session recording/playback
+
+## Implementation Priority Order
+
+1. **Phase 3.0**: QR Code (Quick Win) - 1 day
+2. **Phase 3.2**: Multi-Terminal Backend - 1 week
+3. **Phase 3.1**: UI/UX Transformation - 1 week
+4. **Phase 3.4**: Project Management - 1 week
+5. **Phase 3.3**: AI Agent System - 2 weeks
+6. **Phase 3.5**: Terminal Interoperability - 1 week
+7. **Phase 3.6**: Advanced Features - 2 weeks
+
+Total estimated time: 8-9 weeks for full implementation
+
+## Technical Considerations
+
+### Architecture Changes
+- Move from single terminal to terminal manager pattern
+- Implement proper state management (Redux/Zustand)
+- Add WebSocket multiplexing for multiple streams
+- Create plugin architecture for AI agents
+
+### Security Considerations
+- Implement proper session isolation
+- Add project-level access controls
+- Secure inter-agent communication
+- Rate limiting for agent operations
+
+### Performance Optimizations
+- Lazy load terminal instances
+- Implement virtual scrolling for large outputs
+- Add output buffering and throttling
+- Cache project and session data
+
 ## Notes
 - Start with Node.js for desktop connector (good cross-platform support)
 - Use WebSockets for real-time terminal streaming
