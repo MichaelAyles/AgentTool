@@ -7,7 +7,7 @@ import axios from 'axios';
 
 program
   .name('vibe-connector')
-  .description('Vibe Coding Desktop Connector - Bridge your terminal to the web')
+  .description('DuckBridge Desktop Connector - Bridge your terminal to AI-powered coding')
   .version('0.1.0');
 
 // Start command
@@ -20,7 +20,7 @@ program
   .action(async (options) => {
     try {
       if (options.banner !== false) {
-        console.log('🌊 Vibe Coding Connector');
+        console.log('🦆 DuckBridge Connector');
         console.log('========================');
       }
 

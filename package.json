@@ -1,7 +1,7 @@
 {
-  "name": "vibe-coding-app",
+  "name": "duckbridge",
   "version": "0.1.0",
-  "description": "Browser-based terminal access via UUID pairing",
+  "description": "AI-powered terminal access - Get your ducks in a row with AI",
   "private": true,
   "scripts": {
     "dev": "cd frontend && python3 -m http.server 8000",

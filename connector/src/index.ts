@@ -74,7 +74,7 @@ export class VibeConnector {
     // Get connector info
     this.app.get('/info', (req, res) => {
       res.json({
-        name: 'Vibe Coding Connector',
+        name: 'DuckBridge Connector',
         version: '0.1.0',
         uuid: this.uuid,
         platform: process.platform,
@@ -184,7 +184,7 @@ export class VibeConnector {
       try {
         // Start HTTP server
         const server = this.app.listen(this.httpPort, () => {
-          console.log('🚀 Vibe Coding Connector Started');
+          console.log('🦆 DuckBridge Connector Started');
           console.log('================================');
           console.log(`📡 HTTP API: http://localhost:${this.httpPort}`);
           console.log(`🔌 WebSocket: ws://localhost:${this.wsPort}`);

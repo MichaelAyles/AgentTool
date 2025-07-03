@@ -1,5 +1,5 @@
-// Vibe Coding Frontend Application
-class VibeApp {
+// DuckBridge Frontend Application
+class DuckBridgeApp {
     constructor() {
         this.wsConnection = null;
         this.sessionId = null;
@@ -17,6 +17,7 @@ class VibeApp {
         this.attachEventListeners();
         this.updateUuidDisplay();
         this.initializeTheme();
+        this.initializeTagline();
         this.checkConnectorAvailability();
     }
     
@@ -506,7 +507,7 @@ class VibeApp {
         terminalInput.focus();
         
         // Initial terminal message
-        this.appendToTerminal(`🚀 Vibe Coding Terminal Connected\n`);
+        this.appendToTerminal(`🦆 DuckBridge Terminal Connected\n`);
         this.appendToTerminal(`Session: ${this.sessionId}\n`);
         this.appendToTerminal(`Platform: ${navigator.platform}\n`);
         this.appendToTerminal(`Waiting for shell to initialize...\n\n`);
@@ -591,6 +592,29 @@ class VibeApp {
         this.setTheme(savedTheme);
     }
     
+    initializeTagline() {
+        const taglines = [
+            "Get your ducks in a row with AI",
+            "Paddle through code with AI companions",
+            "Where coding flows like water",
+            "Your flock of AI coding assistants",
+            "Smooth sailing through code",
+            "Making waves in AI-powered development",
+            "Duck in, code out",
+            "Waddle less, code more",
+            "Your AI coding convoy",
+            "Glide through development",
+            "Coding that's just ducky",
+            "Float your ideas with AI"
+        ];
+        
+        const taglineElement = document.getElementById('tagline');
+        if (taglineElement) {
+            const randomTagline = taglines[Math.floor(Math.random() * taglines.length)];
+            taglineElement.textContent = randomTagline;
+        }
+    }
+    
     toggleTheme() {
         const currentTheme = document.documentElement.getAttribute('data-theme');
         const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
@@ -649,6 +673,6 @@ function showAbout() {
 
 // Initialize the application when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    const app = new VibeApp();
+    const app = new DuckBridgeApp();
     app.checkStoredConnection();
 });

@@ -54,7 +54,7 @@ export class TerminalManager extends EventEmitter {
     
     // Send initial prompt
     setTimeout(() => {
-      this.emit('data', uuid, `\r\n🚀 Vibe Coding Terminal Connected\r\n`);
+      this.emit('data', uuid, `\r\n🦆 DuckBridge Terminal Connected\r\n`);
       this.emit('data', uuid, `Session ID: ${uuid.substring(0, 8)}...\r\n`);
       this.emit('data', uuid, `Platform: ${platform()}\r\n\r\n`);
     }, 100);

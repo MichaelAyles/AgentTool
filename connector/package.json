@@ -1,10 +1,10 @@
 {
-  "name": "vibe-coding-connector",
+  "name": "duckbridge-connector",
   "version": "0.1.0",
-  "description": "Desktop connector for Vibe Coding app - provides local terminal access via WebSocket",
+  "description": "Desktop connector for DuckBridge - provides AI-powered terminal access via WebSocket",
   "main": "dist/index.js",
   "bin": {
-    "vibe-connector": "dist/cli.js"
+    "duckbridge-connector": "dist/cli.js"
   },
   "scripts": {
     "dev": "tsx watch src/index.ts",
