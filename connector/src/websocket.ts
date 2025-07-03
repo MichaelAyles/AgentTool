@@ -267,7 +267,6 @@ export class WebSocketManager {
     const allowedOrigins = [
       'http://localhost:3000',
       'http://localhost:8000',
-      'https://frontend-three-delta-48.vercel.app',
       'https://vibe.theduck.chat',
       'https://agent-tool-frontend.vercel.app'
     ];

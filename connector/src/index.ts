@@ -73,7 +73,6 @@ export class DuckBridgeConnector {
       origin: [
         'http://localhost:3000',
         'http://localhost:8000',
-        'https://frontend-three-delta-48.vercel.app',
         'https://vibe.theduck.chat',
         /\.vercel\.app$/
       ],
@@ -142,7 +141,7 @@ export class DuckBridgeConnector {
         instructions: [
           `Use this UUID to connect from the web interface`,
           `WebSocket endpoint: ws://localhost:${this.wsPort}`,
-          `Or connect directly at: https://frontend-three-delta-48.vercel.app`
+          `Or connect directly at: https://vibe.theduck.chat`
         ]
       });
     });
@@ -1460,11 +1459,11 @@ export class DuckBridgeConnector {
             console.log(`🔌 WebSocket: ws://localhost:${this.wsPort}`);
             console.log(`🆔 Connector UUID: ${this.uuid}`);
             console.log('🤖 AI Agent System: Active');
-            console.log('📱 Frontend: https://frontend-three-delta-48.vercel.app');
+            console.log('📱 Frontend: https://vibe.theduck.chat');
             console.log('================================');
             console.log('');
             console.log('💡 Quick Start:');
-            console.log(`   1. Visit https://frontend-three-delta-48.vercel.app`);
+            console.log(`   1. Visit https://vibe.theduck.chat`);
             console.log(`   2. Enter UUID: ${this.uuid}`);
             console.log('   3. Start coding with AI agents!');
             console.log('');

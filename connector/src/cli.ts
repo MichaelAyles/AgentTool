@@ -46,7 +46,7 @@ program
     console.log('');
     console.log('💡 Usage:');
     console.log('   1. Start the connector: duckbridge-connector start');
-    console.log('   2. Visit: https://frontend-three-delta-48.vercel.app');
+    console.log('   2. Visit: https://vibe.theduck.chat');
     console.log(`   3. Enter UUID: ${uuid}`);
   });
 
@@ -176,7 +176,7 @@ program
     console.log('🧪 Testing Connection');
     console.log('====================');
     console.log(`Test UUID: ${testUuid}`);
-    console.log('Frontend URL: https://frontend-three-delta-48.vercel.app');
+    console.log('Frontend URL: https://vibe.theduck.chat');
     console.log('');
     console.log('💡 Manual Test Steps:');
     console.log('1. Start connector: duckbridge-connector start');
