@@ -14,6 +14,10 @@ class DuckBridgeApp {
         this.activeTerminalId = null;
         this.terminalCounter = 1;
         
+        // Project management
+        this.projects = new Map(); // projectId -> project data
+        this.activeProjectId = null;
+        
         this.initializeElements();
         this.attachEventListeners();
         this.updateUuidDisplay();
@@ -108,10 +112,10 @@ class DuckBridgeApp {
         this.logoutBtn.addEventListener('click', () => this.logout());
         
         // Project controls
-        this.newProjectBtn.addEventListener('click', () => this.createNewProject());
-        this.openProjectBtn.addEventListener('click', () => this.openExistingProject());
+        this.newProjectBtn.addEventListener('click', () => this.showCreateProjectDialog());
+        this.openProjectBtn.addEventListener('click', () => this.showCreateProjectDialog());
         if (this.createFirstProjectBtn) {
-            this.createFirstProjectBtn.addEventListener('click', () => this.createNewProject());
+            this.createFirstProjectBtn.addEventListener('click', () => this.showCreateProjectDialog());
         }
         
         // Terminal controls
@@ -279,6 +283,9 @@ class DuckBridgeApp {
         
         // Show main interface
         this.showMainInterface();
+        
+        // Load user projects
+        this.loadUserProjects();
         
         // Create first terminal tab if none exist
         if (this.terminalTabs.children.length === 0) {
@@ -1524,6 +1531,269 @@ class DuckBridgeApp {
         const currentIndex = terminalIds.indexOf(this.activeTerminalId);
         const prevIndex = currentIndex <= 0 ? terminalIds.length - 1 : currentIndex - 1;
         this.setActiveTerminal(terminalIds[prevIndex]);
+    }
+    
+    // Project management methods
+    async loadUserProjects() {
+        if (!this.currentUuid) return;
+        
+        try {
+            const response = await fetch(`http://localhost:3001/projects/${this.currentUuid}`);
+            if (response.ok) {
+                const data = await response.json();
+                this.updateProjectsDisplay(data.projects);
+            }
+        } catch (error) {
+            console.error('Failed to load projects:', error);
+        }
+    }
+    
+    updateProjectsDisplay(projects) {
+        this.projects.clear();
+        
+        // Store projects
+        projects.forEach(project => {
+            this.projects.set(project.id, project);
+        });
+        
+        // Update projects grid
+        const projectsGrid = this.projectsGrid;
+        if (!projectsGrid) return;
+        
+        projectsGrid.innerHTML = '';
+        
+        if (projects.length === 0) {
+            // Show empty state
+            projectsGrid.innerHTML = `
+                <div class="project-card placeholder-card">
+                    <div class="project-icon">📁</div>
+                    <h3>No Projects Yet</h3>
+                    <p>Create your first project to get started with AI-powered coding</p>
+                    <button class="create-first-project-btn">Create Project</button>
+                </div>
+            `;
+            
+            // Attach event listener to the button
+            const createBtn = projectsGrid.querySelector('.create-first-project-btn');
+            if (createBtn) {
+                createBtn.addEventListener('click', () => this.showCreateProjectDialog());
+            }
+        } else {
+            // Show existing projects
+            projects.forEach(project => {
+                const projectCard = this.createProjectCard(project);
+                projectsGrid.appendChild(projectCard);
+            });
+        }
+    }
+    
+    createProjectCard(project) {
+        const card = document.createElement('div');
+        card.className = `project-card color-${project.color}`;
+        card.dataset.projectId = project.id;
+        
+        const lastAccessed = new Date(project.lastAccessedAt).toLocaleDateString();
+        const projectIcon = project.type === 'git' ? '📂' : '📁';
+        
+        card.innerHTML = `
+            <div class="project-icon">${projectIcon}</div>
+            <h3>${project.name}</h3>
+            <p>${project.description || 'No description'}</p>
+            <div class="project-meta">
+                <span class="project-path">${this.truncatePath(project.path)}</span>
+                <span class="project-date">Last used: ${lastAccessed}</span>
+            </div>
+            <div class="project-actions">
+                <button class="project-open-btn" title="Open Project">Open</button>
+                <button class="project-edit-btn" title="Edit Project">✏️</button>
+                <button class="project-delete-btn" title="Delete Project">🗑️</button>
+            </div>
+        `;
+        
+        // Attach event listeners
+        const openBtn = card.querySelector('.project-open-btn');
+        const editBtn = card.querySelector('.project-edit-btn');
+        const deleteBtn = card.querySelector('.project-delete-btn');
+        
+        openBtn.addEventListener('click', () => this.openProject(project.id));
+        editBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.editProject(project.id);
+        });
+        deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.deleteProject(project.id);
+        });
+        
+        return card;
+    }
+    
+    truncatePath(path) {
+        if (path.length <= 40) return path;
+        return '...' + path.slice(-37);
+    }
+    
+    showCreateProjectDialog() {
+        const dialog = document.createElement('div');
+        dialog.className = 'modal';
+        dialog.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Create New Project</h3>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="create-project-form">
+                        <div class="form-group">
+                            <label for="project-name">Project Name *</label>
+                            <input type="text" id="project-name" required placeholder="My Project">
+                        </div>
+                        <div class="form-group">
+                            <label for="project-path">Project Path *</label>
+                            <input type="text" id="project-path" required placeholder="/path/to/project">
+                        </div>
+                        <div class="form-group">
+                            <label for="project-description">Description</label>
+                            <textarea id="project-description" placeholder="Optional project description"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="project-color">Color</label>
+                            <select id="project-color">
+                                <option value="blue">Blue</option>
+                                <option value="green">Green</option>
+                                <option value="purple">Purple</option>
+                                <option value="orange">Orange</option>
+                                <option value="red">Red</option>
+                                <option value="pink">Pink</option>
+                                <option value="indigo">Indigo</option>
+                                <option value="teal">Teal</option>
+                            </select>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="primary-btn">Create Project</button>
+                            <button type="button" class="secondary-btn cancel-btn">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(dialog);
+        dialog.classList.add('show');
+        
+        // Event listeners
+        const form = dialog.querySelector('#create-project-form');
+        const closeBtn = dialog.querySelector('.modal-close');
+        const cancelBtn = dialog.querySelector('.cancel-btn');
+        
+        const closeDialog = () => {
+            dialog.remove();
+        };
+        
+        closeBtn.addEventListener('click', closeDialog);
+        cancelBtn.addEventListener('click', closeDialog);
+        dialog.addEventListener('click', (e) => {
+            if (e.target === dialog) closeDialog();
+        });
+        
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(form);
+            const projectData = {
+                name: formData.get('project-name'),
+                path: formData.get('project-path'),
+                description: formData.get('project-description'),
+                color: formData.get('project-color')
+            };
+            
+            try {
+                await this.createProject(projectData);
+                closeDialog();
+            } catch (error) {
+                alert('Failed to create project: ' + error.message);
+            }
+        });
+        
+        // Focus name input
+        dialog.querySelector('#project-name').focus();
+    }
+    
+    async createProject(projectData) {
+        if (!this.currentUuid) throw new Error('No UUID available');
+        
+        const response = await fetch(`http://localhost:3001/projects/${this.currentUuid}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(projectData)
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to create project');
+        }
+        
+        const result = await response.json();
+        
+        // Reload projects
+        await this.loadUserProjects();
+        
+        return result.project;
+    }
+    
+    async openProject(projectId) {
+        // Access the project to update last accessed time
+        try {
+            await fetch(`http://localhost:3001/projects/${this.currentUuid}/${projectId}/access`, {
+                method: 'POST'
+            });
+            
+            this.activeProjectId = projectId;
+            
+            // Show success feedback
+            const project = this.projects.get(projectId);
+            if (project) {
+                console.log(`Opened project: ${project.name}`);
+                // You could show a toast notification here
+            }
+            
+            // Reload projects to update last accessed time
+            await this.loadUserProjects();
+            
+        } catch (error) {
+            console.error('Failed to open project:', error);
+        }
+    }
+    
+    async editProject(projectId) {
+        // Implementation for editing projects
+        alert('Edit project functionality not yet implemented');
+    }
+    
+    async deleteProject(projectId) {
+        const project = this.projects.get(projectId);
+        if (!project) return;
+        
+        if (!confirm(`Are you sure you want to delete the project "${project.name}"?`)) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`http://localhost:3001/projects/${this.currentUuid}/${projectId}`, {
+                method: 'DELETE'
+            });
+            
+            if (response.ok) {
+                await this.loadUserProjects();
+            } else {
+                const error = await response.json();
+                alert('Failed to delete project: ' + error.error);
+            }
+        } catch (error) {
+            alert('Failed to delete project: ' + error.message);
+        }
     }
     
     // Inter-terminal communication methods

@@ -4,12 +4,14 @@ import { v4 as uuidv4 } from 'uuid';
 import { TerminalManager } from './terminal';
 import { WebSocketManager } from './websocket';
 import { SessionDatabase } from './database';
+import { ProjectManager } from './project';
 
 export class DuckBridgeConnector {
   private app: express.Application;
   private terminalManager: TerminalManager;
   private websocketManager: WebSocketManager;
   private database: SessionDatabase;
+  private projectManager: ProjectManager;
   private httpPort: number;
   private wsPort: number;
   private uuid: string;
@@ -22,6 +24,7 @@ export class DuckBridgeConnector {
     // Initialize components
     this.database = new SessionDatabase();
     this.terminalManager = new TerminalManager();
+    this.projectManager = new ProjectManager();
     this.websocketManager = new WebSocketManager(this.wsPort, this.terminalManager, this.database);
 
     // Setup Express app
@@ -148,6 +151,100 @@ export class DuckBridgeConnector {
       });
     });
 
+    // Project management endpoints
+    this.app.get('/projects/:uuid', (req, res) => {
+      const { uuid } = req.params;
+      const projects = this.projectManager.getUserProjects(uuid);
+      res.json({ projects });
+    });
+
+    this.app.post('/projects/:uuid', (req, res) => {
+      const { uuid } = req.params;
+      const { name, path, description, color, type, settings } = req.body;
+
+      if (!name || !path) {
+        return res.status(400).json({
+          error: 'Missing required fields: name and path'
+        });
+      }
+
+      try {
+        const project = this.projectManager.createProject(uuid, name, path, {
+          description,
+          color,
+          type,
+          settings
+        });
+
+        res.json({
+          success: true,
+          project
+        });
+      } catch (error) {
+        res.status(400).json({
+          error: error instanceof Error ? error.message : 'Failed to create project'
+        });
+      }
+    });
+
+    this.app.get('/projects/:uuid/:projectId', (req, res) => {
+      const { uuid, projectId } = req.params;
+      const project = this.projectManager.getProject(uuid, projectId);
+      
+      if (!project) {
+        return res.status(404).json({
+          error: 'Project not found'
+        });
+      }
+
+      res.json({ project });
+    });
+
+    this.app.put('/projects/:uuid/:projectId', (req, res) => {
+      const { uuid, projectId } = req.params;
+      const updates = req.body;
+
+      const success = this.projectManager.updateProject(uuid, projectId, updates);
+      
+      if (!success) {
+        return res.status(404).json({
+          error: 'Project not found'
+        });
+      }
+
+      const project = this.projectManager.getProject(uuid, projectId);
+      res.json({
+        success: true,
+        project
+      });
+    });
+
+    this.app.delete('/projects/:uuid/:projectId', (req, res) => {
+      const { uuid, projectId } = req.params;
+      const success = this.projectManager.deleteProject(uuid, projectId);
+      
+      res.json({
+        success,
+        message: success ? 'Project deleted' : 'Project not found'
+      });
+    });
+
+    this.app.post('/projects/:uuid/:projectId/access', (req, res) => {
+      const { uuid, projectId } = req.params;
+      const project = this.projectManager.accessProject(uuid, projectId);
+      
+      if (!project) {
+        return res.status(404).json({
+          error: 'Project not found'
+        });
+      }
+
+      res.json({
+        success: true,
+        project
+      });
+    });
+
     // 404 handler
     this.app.use((req, res) => {
       res.status(404).json({
@@ -157,7 +254,13 @@ export class DuckBridgeConnector {
           'GET /info', 
           'POST /generate-uuid',
           'GET /sessions',
-          'DELETE /sessions/:uuid'
+          'DELETE /sessions/:uuid',
+          'GET /projects/:uuid',
+          'POST /projects/:uuid',
+          'GET /projects/:uuid/:projectId',
+          'PUT /projects/:uuid/:projectId',
+          'DELETE /projects/:uuid/:projectId',
+          'POST /projects/:uuid/:projectId/access'
         ]
       });
     });
@@ -222,6 +325,7 @@ export class DuckBridgeConnector {
     // Cleanup resources
     this.websocketManager.destroy();
     this.terminalManager.destroy();
+    this.projectManager.destroy();
     this.database.close();
     
     console.log('✅ Cleanup completed');
