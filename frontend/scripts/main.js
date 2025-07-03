@@ -17,6 +17,9 @@ class DuckBridgeApp {
         // Project management
         this.projects = new Map(); // projectId -> project data
         this.activeProjectId = null;
+        this.projectTerminals = new Map(); // projectId -> Set of terminalIds
+        this.terminalProjects = new Map(); // terminalId -> projectId
+        this.pendingTerminalProjects = new Map(); // temporary storage for project association
         
         this.initializeElements();
         this.attachEventListeners();
@@ -24,6 +27,8 @@ class DuckBridgeApp {
         this.initializeTheme();
         this.initializeTagline();
         this.checkUrlParams();
+        this.loadProjectTerminalAssociations();
+        this.restoreActiveProject();
         this.initializeUI();
     }
     
@@ -609,6 +614,23 @@ class DuckBridgeApp {
             lastActivity: new Date()
         });
         
+        // Associate with project if this was a project terminal
+        // Find the most recent pending project association
+        let projectId = null;
+        let mostRecentTimestamp = 0;
+        
+        for (const [timestamp, pendingProjectId] of this.pendingTerminalProjects.entries()) {
+            if (timestamp > mostRecentTimestamp) {
+                mostRecentTimestamp = timestamp;
+                projectId = pendingProjectId;
+            }
+        }
+        
+        if (projectId) {
+            this.associateTerminalWithProject(terminalId, projectId);
+            this.pendingTerminalProjects.delete(mostRecentTimestamp);
+        }
+        
         this.updateTerminalTabs();
         this.setActiveTerminal(terminalId);
     }
@@ -633,6 +655,9 @@ class DuckBridgeApp {
     
     handleTerminalClosed(terminalId) {
         console.log('Terminal closed:', terminalId);
+        
+        // Clean up project associations
+        this.removeTerminalFromProject(terminalId);
         
         this.terminals.delete(terminalId);
         
@@ -1489,7 +1514,7 @@ class DuckBridgeApp {
         });
     }
     
-    createNewTerminal(name, color, projectSettings = null) {
+    createNewTerminal(name, color, projectSettings = null, projectId = null) {
         if (!name) {
             name = `Terminal ${this.terminalCounter++}`;
         }
@@ -1506,10 +1531,17 @@ class DuckBridgeApp {
             terminalData.projectSettings = projectSettings;
         }
         
+        const timestamp = Date.now();
+        
+        // Store project association for when terminal is created
+        if (projectId) {
+            this.pendingTerminalProjects.set(timestamp, projectId);
+        }
+        
         this.sendMessage({
             type: 'terminal_create',
             data: terminalData,
-            timestamp: Date.now()
+            timestamp: timestamp
         });
     }
     
@@ -1575,9 +1607,27 @@ class DuckBridgeApp {
         
         projectsGrid.innerHTML = '';
         
+        // Always add "All Terminals" option at the beginning
+        const allTerminalsCard = document.createElement('div');
+        allTerminalsCard.className = 'project-card all-terminals-card';
+        allTerminalsCard.innerHTML = `
+            <div class="project-icon">🖥️</div>
+            <h3>All Terminals</h3>
+            <p>Show all terminals across projects</p>
+            <div class="project-actions">
+                <button class="project-open-btn">View All</button>
+            </div>
+        `;
+        
+        allTerminalsCard.querySelector('.project-open-btn').addEventListener('click', () => {
+            this.switchToAllTerminals();
+        });
+        
+        projectsGrid.appendChild(allTerminalsCard);
+        
         if (projects.length === 0) {
             // Show empty state
-            projectsGrid.innerHTML = `
+            projectsGrid.innerHTML += `
                 <div class="project-card placeholder-card">
                     <div class="project-icon">📁</div>
                     <h3>No Projects Yet</h3>
@@ -1835,8 +1885,17 @@ class DuckBridgeApp {
             if (project) {
                 console.log(`Opened project: ${project.name}`);
                 
-                // Create a new terminal with project settings
-                this.createNewTerminal(`${project.name}`, project.color, project.settings);
+                // Switch to project workspace
+                this.switchToProject(projectId);
+                
+                // Create a new terminal with project settings if none exist
+                const projectTerminals = this.projectTerminals.get(projectId);
+                if (!projectTerminals || projectTerminals.size === 0) {
+                    this.createNewTerminal(`${project.name}`, project.color, project.settings, projectId);
+                } else {
+                    // Switch to project's existing terminals
+                    this.showProjectTerminals(projectId);
+                }
                 
                 // You could show a toast notification here
                 this.showSuccessMessage(`Opened project: ${project.name}`);
@@ -2044,6 +2103,147 @@ class DuckBridgeApp {
             
         } catch (error) {
             alert('Failed to delete project: ' + error.message);
+        }
+    }
+    
+    // Project workspace isolation methods
+    switchToProject(projectId) {
+        this.activeProjectId = projectId;
+        
+        // Update UI to show active project
+        const project = this.projects.get(projectId);
+        if (project) {
+            // Update header or add project indicator
+            console.log(`Switched to project: ${project.name}`);
+            
+            // Store in localStorage for persistence
+            localStorage.setItem('activeProjectId', projectId);
+        }
+    }
+    
+    switchToAllTerminals() {
+        this.activeProjectId = null;
+        localStorage.removeItem('activeProjectId');
+        this.showAllTerminals();
+        console.log('Switched to all terminals view');
+        this.showSuccessMessage('Showing all terminals');
+    }
+    
+    showProjectTerminals(projectId) {
+        // Hide all terminal tabs
+        const allTabs = document.querySelectorAll('.terminal-tab');
+        const allPanels = document.querySelectorAll('.terminal-panel');
+        
+        allTabs.forEach(tab => tab.style.display = 'none');
+        allPanels.forEach(panel => panel.style.display = 'none');
+        
+        // Show only terminals for this project
+        const projectTerminals = this.projectTerminals.get(projectId);
+        if (projectTerminals && projectTerminals.size > 0) {
+            let firstTerminalId = null;
+            
+            projectTerminals.forEach(terminalId => {
+                const tab = document.querySelector(`[data-tab-id*="${terminalId}"]`);
+                const panel = document.querySelector(`[id*="${terminalId}"]`);
+                
+                if (tab) {
+                    tab.style.display = 'flex';
+                    if (!firstTerminalId) firstTerminalId = terminalId;
+                }
+                if (panel) {
+                    panel.style.display = 'block';
+                }
+            });
+            
+            // Activate the first terminal tab
+            if (firstTerminalId) {
+                const firstTab = document.querySelector(`[data-tab-id*="${firstTerminalId}"]`);
+                const firstPanel = document.querySelector(`[id*="${firstTerminalId}"]`);
+                
+                if (firstTab && firstPanel) {
+                    // Remove active from all
+                    allTabs.forEach(tab => tab.classList.remove('active'));
+                    allPanels.forEach(panel => panel.classList.remove('active'));
+                    
+                    // Add active to first
+                    firstTab.classList.add('active');
+                    firstPanel.classList.add('active');
+                    this.activeTerminalId = firstTerminalId;
+                }
+            }
+        }
+    }
+    
+    showAllTerminals() {
+        // Show all terminal tabs (for when not in project mode)
+        const allTabs = document.querySelectorAll('.terminal-tab');
+        const allPanels = document.querySelectorAll('.terminal-panel');
+        
+        allTabs.forEach(tab => tab.style.display = 'flex');
+        allPanels.forEach(panel => panel.style.display = 'block');
+    }
+    
+    associateTerminalWithProject(terminalId, projectId) {
+        if (!projectId) return;
+        
+        // Add terminal to project
+        if (!this.projectTerminals.has(projectId)) {
+            this.projectTerminals.set(projectId, new Set());
+        }
+        this.projectTerminals.get(projectId).add(terminalId);
+        
+        // Track project for terminal
+        this.terminalProjects.set(terminalId, projectId);
+        
+        // Persist in localStorage
+        this.saveProjectTerminalAssociations();
+    }
+    
+    removeTerminalFromProject(terminalId) {
+        const projectId = this.terminalProjects.get(terminalId);
+        if (projectId) {
+            const projectTerminals = this.projectTerminals.get(projectId);
+            if (projectTerminals) {
+                projectTerminals.delete(terminalId);
+                if (projectTerminals.size === 0) {
+                    this.projectTerminals.delete(projectId);
+                }
+            }
+            this.terminalProjects.delete(terminalId);
+            this.saveProjectTerminalAssociations();
+        }
+    }
+    
+    saveProjectTerminalAssociations() {
+        const associations = {};
+        for (const [projectId, terminalIds] of this.projectTerminals.entries()) {
+            associations[projectId] = Array.from(terminalIds);
+        }
+        localStorage.setItem('projectTerminalAssociations', JSON.stringify(associations));
+    }
+    
+    loadProjectTerminalAssociations() {
+        try {
+            const stored = localStorage.getItem('projectTerminalAssociations');
+            if (stored) {
+                const associations = JSON.parse(stored);
+                for (const [projectId, terminalIds] of Object.entries(associations)) {
+                    this.projectTerminals.set(projectId, new Set(terminalIds));
+                    terminalIds.forEach(terminalId => {
+                        this.terminalProjects.set(terminalId, projectId);
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('Failed to load project-terminal associations:', error);
+        }
+    }
+    
+    restoreActiveProject() {
+        const storedProjectId = localStorage.getItem('activeProjectId');
+        if (storedProjectId) {
+            this.activeProjectId = storedProjectId;
+            console.log(`Restored active project: ${storedProjectId}`);
         }
     }
     

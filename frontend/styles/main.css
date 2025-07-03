@@ -1125,6 +1125,24 @@ body {
     background: var(--bg-secondary);
 }
 
+.project-card.all-terminals-card {
+    border: 2px solid var(--accent-primary);
+    background: linear-gradient(135deg, var(--accent-primary)10, var(--bg-primary));
+    position: relative;
+}
+
+.project-card.all-terminals-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), transparent);
+    border-radius: 0.75rem;
+    pointer-events: none;
+}
+
 .project-icon {
     font-size: 3rem;
     margin-bottom: 1rem;
