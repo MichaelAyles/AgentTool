@@ -8,6 +8,7 @@ class DuckBridgeApp {
         this.reconnectAttempts = 0;
         this.maxReconnectAttempts = 5;
         this.currentUuid = this.generateUUID();
+        this.isConnected = false;
         
         // Multi-terminal support
         this.terminals = new Map(); // terminalId -> terminal data
@@ -30,6 +31,16 @@ class DuckBridgeApp {
         this.loadProjectTerminalAssociations();
         this.restoreActiveProject();
         this.initializeUI();
+        this.initializeSidebar();
+        
+        // Initialize tool manager
+        this.toolManager = new ToolManager(this);
+        
+        // Initialize command routing manager
+        this.commandRoutingManager = new CommandRoutingManager(this);
+        
+        // Initialize agent dashboard
+        this.agentDashboard = new AgentDashboard(this);
     }
     
     initializeElements() {
@@ -84,6 +95,55 @@ class DuckBridgeApp {
         this.terminalTabs = document.getElementById('terminal-tabs');
         this.terminalPanels = document.getElementById('terminal-panels');
         this.newTerminalBtn = document.getElementById('new-terminal-btn');
+        
+        // Session sidebar elements
+        this.sessionSidebar = document.getElementById('session-sidebar');
+        this.sidebarToggle = document.getElementById('sidebar-toggle');
+        this.sessionGroups = document.getElementById('session-groups');
+        this.sessionSidebarContent = document.getElementById('session-sidebar-content');
+        this.globalSessions = document.getElementById('global-sessions');
+        
+        // Project switcher elements
+        this.projectSwitcherBar = document.getElementById('project-switcher-bar');
+        this.projectSwitcherBtn = document.getElementById('project-switcher-btn');
+        this.projectSwitcherDropdown = document.getElementById('project-switcher-dropdown');
+        this.projectOverviewBtn = document.getElementById('project-overview-btn');
+        this.currentProjectName = document.getElementById('current-project-name');
+        this.projectColorDot = document.getElementById('project-color-dot');
+        this.projectStats = document.getElementById('project-stats');
+        this.activeTerminalsSpan = document.getElementById('active-terminals');
+        this.gitStatusSpan = document.getElementById('git-status');
+        this.dropdownProjects = document.getElementById('dropdown-projects');
+        this.createProjectQuick = document.getElementById('create-project-quick');
+        this.manageProjects = document.getElementById('manage-projects');
+        
+        // Project overview dashboard elements
+        this.projectOverviewDashboard = document.getElementById('project-overview-dashboard');
+        this.closeOverviewBtn = document.getElementById('close-overview-btn');
+        this.totalProjectsSpan = document.getElementById('total-projects');
+        this.activeSessionsSpan = document.getElementById('active-sessions');
+        this.gitReposSpan = document.getElementById('git-repos');
+        this.recentActivitySpan = document.getElementById('recent-activity');
+        this.recentProjectsList = document.getElementById('recent-projects-list');
+        this.activeSessionsList = document.getElementById('active-sessions-list');
+        this.gitActivityList = document.getElementById('git-activity-list');
+        this.refreshAllGitBtn = document.getElementById('refresh-all-git');
+        this.viewAllProjects = document.getElementById('view-all-projects');
+        this.viewAllSessions = document.getElementById('view-all-sessions');
+        
+        // Workspace controls
+        this.toggleSplitView = document.getElementById('toggle-split-view');
+        this.toggleHorizontalSplit = document.getElementById('toggle-horizontal-split');
+        this.toggleLayoutMode = document.getElementById('toggle-layout-mode');
+        this.terminalWorkspaceContainer = document.getElementById('terminal-workspace-container');
+        this.terminalPanelsSecondary = document.getElementById('terminal-panels-secondary');
+        this.splitViewDivider = document.getElementById('split-view-divider');
+        this.mainDashboard = document.getElementById('main-dashboard');
+        
+        // Split view state
+        this.splitViewActive = false;
+        this.splitViewOrientation = 'vertical'; // 'vertical' or 'horizontal'
+        this.layoutMode = 'single'; // 'single', 'split', 'quad'
     }
     
     attachEventListeners() {
@@ -127,6 +187,67 @@ class DuckBridgeApp {
         if (this.newTerminalBtn) {
             this.newTerminalBtn.addEventListener('click', () => this.createNewTerminal());
         }
+        
+        // Session sidebar controls
+        if (this.sidebarToggle) {
+            this.sidebarToggle.addEventListener('click', () => this.toggleSidebar());
+        }
+        
+        // Project switcher controls
+        if (this.projectSwitcherBtn) {
+            this.projectSwitcherBtn.addEventListener('click', () => this.toggleProjectSwitcher());
+        }
+        
+        if (this.projectOverviewBtn) {
+            this.projectOverviewBtn.addEventListener('click', () => this.toggleProjectOverview());
+        }
+        
+        if (this.closeOverviewBtn) {
+            this.closeOverviewBtn.addEventListener('click', () => this.closeProjectOverview());
+        }
+        
+        if (this.createProjectQuick) {
+            this.createProjectQuick.addEventListener('click', () => this.showCreateProjectDialog());
+        }
+        
+        if (this.manageProjects) {
+            this.manageProjects.addEventListener('click', () => this.showManageProjectsDialog());
+        }
+        
+        if (this.refreshAllGitBtn) {
+            this.refreshAllGitBtn.addEventListener('click', () => this.refreshAllGitStatus());
+        }
+        
+        if (this.viewAllProjects) {
+            this.viewAllProjects.addEventListener('click', () => this.showAllProjects());
+        }
+        
+        if (this.viewAllSessions) {
+            this.viewAllSessions.addEventListener('click', () => this.showAllSessions());
+        }
+        
+        // Workspace controls
+        if (this.toggleSplitView) {
+            this.toggleSplitView.addEventListener('click', () => this.toggleSplitViewMode());
+        }
+        
+        if (this.toggleHorizontalSplit) {
+            this.toggleHorizontalSplit.addEventListener('click', () => this.toggleHorizontalSplitMode());
+        }
+        
+        if (this.toggleLayoutMode) {
+            this.toggleLayoutMode.addEventListener('click', () => this.cycleLayoutMode());
+        }
+        
+        // Click outside to close dropdowns
+        document.addEventListener('click', (e) => {
+            if (!this.projectSwitcherBar?.contains(e.target)) {
+                this.closeProjectSwitcher();
+            }
+        });
+        
+        // Initialize split view divider dragging
+        this.initializeSplitViewDivider();
         
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
@@ -381,6 +502,10 @@ class DuckBridgeApp {
         
         btn.classList.remove('connecting', 'connected');
         
+        // Update connection status for tool manager
+        const wasConnected = this.isConnected;
+        this.isConnected = (state === 'connected');
+        
         switch (state) {
             case 'connecting':
                 this.statusText.textContent = 'Connecting...';
@@ -403,6 +528,15 @@ class DuckBridgeApp {
                 btn.disabled = false;
                 break;
         }
+        
+        // Notify tool manager of connection status change
+        if (this.toolManager && wasConnected !== this.isConnected) {
+            this.toolManager.onConnectionStatusChanged(this.isConnected);
+        }
+    }
+    
+    getApiUrl() {
+        return 'http://localhost:3001';
     }
     
     startConnectionTimer() {
@@ -557,6 +691,38 @@ class DuckBridgeApp {
                     
                 case 'pong':
                     break;
+
+                case 'command_result':
+                    this.handleCommandResult(message.terminalId, message.data);
+                    break;
+                    
+                case 'command_error':
+                    this.handleCommandError(message.terminalId, message.data);
+                    break;
+                    
+                case 'command_parsed':
+                    this.handleCommandParsed(message.data);
+                    break;
+                    
+                case 'command_history_result':
+                    this.handleCommandHistoryResult(message.terminalId, message.data);
+                    break;
+                    
+                case 'tool_history_result':
+                    this.handleToolHistoryResult(message.data);
+                    break;
+                    
+                case 'tool_histories_result':
+                    this.handleToolHistoriesResult(message.data);
+                    break;
+                    
+                case 'agent_output':
+                    this.handleAgentOutput(message.terminalId, message.data);
+                    break;
+                    
+                case 'command_routed':
+                    this.handleCommandRouted(message.terminalId, message.data);
+                    break;
                     
                 case 'error':
                     console.error('WebSocket error:', message.data);
@@ -633,6 +799,7 @@ class DuckBridgeApp {
         
         this.updateTerminalTabs();
         this.setActiveTerminal(terminalId);
+        this.updateSessionSidebar();
     }
     
     handleTerminalCreateError(data) {
@@ -671,6 +838,7 @@ class DuckBridgeApp {
         if (this.activeTerminalId) {
             this.setActiveTerminal(this.activeTerminalId);
         }
+        this.updateSessionSidebar();
     }
     
     handleTerminalOutput(terminalId, data) {
@@ -688,7 +856,13 @@ class DuckBridgeApp {
                 if (terminalInput && data.includes('\n')) {
                     terminalInput.value = '';
                 }
+            } else {
+                // Show notification for inactive terminals
+                this.showTabNotification(terminalId);
             }
+            
+            // Update sidebar to reflect activity status changes
+            this.updateSessionSidebar();
         }
     }
     
@@ -735,6 +909,82 @@ class DuckBridgeApp {
         if (terminalOutput) {
             terminalOutput.textContent += text;
             terminalOutput.scrollTop = terminalOutput.scrollHeight;
+        }
+    }
+    
+    // Command routing message handlers
+    handleCommandResult(terminalId, data) {
+        if (this.commandRoutingManager) {
+            this.commandRoutingManager.handleCommandResult(terminalId, data);
+        }
+    }
+    
+    handleCommandError(terminalId, data) {
+        if (this.commandRoutingManager) {
+            this.commandRoutingManager.handleCommandError(terminalId, data);
+        }
+    }
+    
+    handleCommandParsed(data) {
+        // Handle command parsing result
+        console.log('Command parsed:', data);
+        
+        // If there's a pending callback, resolve it
+        if (this.tempCallbacks && data.callbackId) {
+            const callback = this.tempCallbacks.get(data.callbackId);
+            if (callback) {
+                callback.resolve(data.commandInfo);
+                this.tempCallbacks.delete(data.callbackId);
+            }
+        }
+    }
+    
+    handleCommandHistoryResult(terminalId, data) {
+        // Handle command history result
+        console.log('Command history result:', terminalId, data);
+        
+        if (this.commandRoutingManager && data.history) {
+            // Update local history with backend data
+            this.commandRoutingManager.commandHistory.set(terminalId, data.history.commands || []);
+            this.commandRoutingManager.updateCommandHistoryUI(terminalId);
+        }
+    }
+    
+    handleToolHistoryResult(data) {
+        // Handle tool history result
+        console.log('Tool history result:', data);
+        
+        if (this.commandRoutingManager && data.history && data.tool) {
+            // Update local tool history with backend data
+            this.commandRoutingManager.toolHistories.set(data.tool, data.history.commands || []);
+            this.commandRoutingManager.updateToolHistoryUI(data.tool);
+        }
+    }
+    
+    handleToolHistoriesResult(data) {
+        // Handle all tool histories result
+        console.log('Tool histories result:', data);
+        
+        if (this.commandRoutingManager && data.histories) {
+            // Update all tool histories
+            data.histories.forEach(history => {
+                if (history.tool !== 'terminal') {
+                    this.commandRoutingManager.toolHistories.set(history.tool, history.commands || []);
+                    this.commandRoutingManager.updateToolHistoryUI(history.tool);
+                }
+            });
+        }
+    }
+    
+    handleAgentOutput(terminalId, data) {
+        if (this.commandRoutingManager) {
+            this.commandRoutingManager.handleAgentOutput(terminalId, data);
+        }
+    }
+    
+    handleCommandRouted(terminalId, data) {
+        if (this.commandRoutingManager) {
+            this.commandRoutingManager.handleCommandRouted(terminalId, data);
         }
     }
     
@@ -914,6 +1164,9 @@ class DuckBridgeApp {
             // Attempt auto-reconnect after a brief delay
             setTimeout(() => {
                 this.attemptAutoReconnect();
+                
+                // Initialize project switcher after potential reconnection
+                this.updateProjectSwitcherStats();
             }, 1000);
         } else {
             // Show welcome screen for new users
@@ -1264,7 +1517,8 @@ class DuckBridgeApp {
         const tabsContainer = this.terminalTabs;
         if (!tabsContainer) return;
         
-        // Clear existing tabs
+        // Clear existing tabs (but preserve new terminal button)
+        const newTerminalBtn = tabsContainer.querySelector('#new-terminal-btn');
         tabsContainer.innerHTML = '';
         
         // Create tabs for each terminal
@@ -1272,8 +1526,16 @@ class DuckBridgeApp {
             this.createTabElement(terminalId, terminal.name, terminal.color);
         });
         
+        // Re-add new terminal button
+        if (newTerminalBtn) {
+            tabsContainer.appendChild(newTerminalBtn);
+        }
+        
         // Create terminal panels container if needed
         this.ensureTerminalPanels();
+        
+        // Update terminal header info
+        this.updateTerminalHeaderInfo();
     }
     
     createTabElement(terminalId, name, color) {
@@ -1411,6 +1673,9 @@ class DuckBridgeApp {
             outputElement.scrollTop = outputElement.scrollHeight;
             outputElement.focus();
         }
+        
+        // Update sidebar to reflect active session
+        this.updateSessionSidebar();
     }
     
     attachMultiTerminalTabListeners(tab, terminalId) {
@@ -1578,6 +1843,75 @@ class DuckBridgeApp {
         this.setActiveTerminal(terminalIds[prevIndex]);
     }
     
+    updateTerminalHeaderInfo() {
+        const headerInfo = document.getElementById('terminal-header-info');
+        if (!headerInfo) return;
+        
+        // Get active terminal project
+        const activeTerminal = this.terminals.get(this.activeTerminalId);
+        const activeProjectId = activeTerminal ? this.terminalProjects.get(this.activeTerminalId) : null;
+        const activeProject = activeProjectId ? this.projects.get(activeProjectId) : null;
+        
+        if (!activeProject || !activeProject.gitRepo) {
+            headerInfo.classList.remove('show');
+            return;
+        }
+        
+        const gitRepo = activeProject.gitRepo;
+        const statusBadge = this.createGitStatusBadge(gitRepo.status);
+        const branchInfo = this.createGitBranchInfo(gitRepo);
+        const statsHtml = this.createTerminalGitStatsHtml(gitRepo.stats);
+        
+        headerInfo.innerHTML = `
+            <div class="terminal-repo-info">
+                <div class="terminal-repo-path">${this.truncatePath(activeProject.path)}</div>
+                <div class="terminal-git-status">
+                    ${branchInfo}
+                    ${statusBadge}
+                    ${statsHtml}
+                </div>
+            </div>
+            <div class="terminal-repo-actions">
+                <button class="refresh-git-btn" title="Refresh Git Status" data-project-id="${activeProject.id}">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="23 4 23 10 17 10"/>
+                        <polyline points="1 20 1 14 7 14"/>
+                        <path d="m3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                    </svg>
+                </button>
+            </div>
+        `;
+        
+        headerInfo.classList.add('show');
+        
+        // Add event listener for refresh button
+        const refreshBtn = headerInfo.querySelector('.refresh-git-btn');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const projectId = refreshBtn.dataset.projectId;
+                if (projectId) {
+                    this.refreshProjectGitStatus(projectId);
+                }
+            });
+        }
+    }
+    
+    createTerminalGitStatsHtml(stats) {
+        if (!stats) return '';
+        
+        const activeStats = [];
+        if (stats.ahead > 0) activeStats.push(`↑${stats.ahead}`);
+        if (stats.behind > 0) activeStats.push(`↓${stats.behind}`);
+        if (stats.staged > 0) activeStats.push(`+${stats.staged}`);
+        if (stats.modified > 0) activeStats.push(`~${stats.modified}`);
+        if (stats.untracked > 0) activeStats.push(`?${stats.untracked}`);
+        
+        if (activeStats.length === 0) return '';
+        
+        return `<div class="terminal-git-stats">${activeStats.join(' ')}</div>`;
+    }
+    
     // Project management methods
     async loadUserProjects() {
         if (!this.currentUuid) return;
@@ -1587,6 +1921,8 @@ class DuckBridgeApp {
             if (response.ok) {
                 const data = await response.json();
                 this.updateProjectsDisplay(data.projects);
+                // Update project switcher after loading projects
+                this.updateProjectSwitcherStats();
             }
         } catch (error) {
             console.error('Failed to load projects:', error);
@@ -1656,9 +1992,17 @@ class DuckBridgeApp {
         card.dataset.projectId = project.id;
         
         const lastAccessed = new Date(project.lastAccessedAt).toLocaleDateString();
-        const projectIcon = project.type === 'git' ? '📂' : '📁';
+        const projectIcon = this.getProjectIcon(project);
+        const gitStatusHtml = this.createGitStatusHtml(project.gitRepo);
         
         card.innerHTML = `
+            <button class="project-status-refresh" title="Refresh Git Status">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="23 4 23 10 17 10"/>
+                    <polyline points="1 20 1 14 7 14"/>
+                    <path d="m3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                </svg>
+            </button>
             <div class="project-icon">${projectIcon}</div>
             <h3>${project.name}</h3>
             <p>${project.description || 'No description'}</p>
@@ -1666,6 +2010,7 @@ class DuckBridgeApp {
                 <span class="project-path">${this.truncatePath(project.path)}</span>
                 <span class="project-date">Last used: ${lastAccessed}</span>
             </div>
+            ${gitStatusHtml}
             <div class="project-actions">
                 <button class="project-open-btn" title="Open Project">Open</button>
                 <button class="project-edit-btn" title="Edit Project">✏️</button>
@@ -1677,6 +2022,7 @@ class DuckBridgeApp {
         const openBtn = card.querySelector('.project-open-btn');
         const editBtn = card.querySelector('.project-edit-btn');
         const deleteBtn = card.querySelector('.project-delete-btn');
+        const refreshBtn = card.querySelector('.project-status-refresh');
         
         openBtn.addEventListener('click', () => this.openProject(project.id));
         editBtn.addEventListener('click', (e) => {
@@ -1687,8 +2033,136 @@ class DuckBridgeApp {
             e.stopPropagation();
             this.deleteProject(project.id);
         });
+        refreshBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.refreshProjectGitStatus(project.id);
+        });
         
         return card;
+    }
+    
+    getProjectIcon(project) {
+        if (project.type === 'git' && project.gitRepo) {
+            // Different icons based on git status
+            switch (project.gitRepo.status) {
+                case 'clean': return '📗';
+                case 'dirty': return '📙';
+                case 'ahead': return '📘';
+                case 'behind': return '📕';
+                case 'ahead-behind': return '📓';
+                default: return '📂';
+            }
+        }
+        return project.type === 'git' ? '📂' : '📁';
+    }
+    
+    createGitStatusHtml(gitRepo) {
+        if (!gitRepo) {
+            return '';
+        }
+        
+        const statusBadge = this.createGitStatusBadge(gitRepo.status);
+        const branchInfo = this.createGitBranchInfo(gitRepo);
+        const statsInfo = this.createGitStatsInfo(gitRepo.stats);
+        const commitInfo = this.createGitCommitInfo(gitRepo.lastCommit);
+        
+        return `
+            <div class="project-git-info">
+                <div class="project-git-status">
+                    ${branchInfo}
+                    ${statusBadge}
+                </div>
+                ${statsInfo}
+                ${commitInfo}
+            </div>
+        `;
+    }
+    
+    createGitStatusBadge(status) {
+        const statusText = {
+            'clean': 'Clean',
+            'dirty': 'Changes',
+            'ahead': 'Ahead',
+            'behind': 'Behind',
+            'ahead-behind': 'Diverged'
+        }[status] || 'Unknown';
+        
+        return `
+            <div class="git-status-badge ${status}">
+                <div class="git-status-icon ${status}"></div>
+                <span>${statusText}</span>
+            </div>
+        `;
+    }
+    
+    createGitBranchInfo(gitRepo) {
+        return `
+            <div class="git-branch">
+                <svg class="git-branch-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="6" y1="3" x2="6" y2="15"></line>
+                    <circle cx="18" cy="6" r="3"></circle>
+                    <circle cx="6" cy="18" r="3"></circle>
+                    <path d="m18 9a9 9 0 0 1-9 9"></path>
+                </svg>
+                <span>${gitRepo.branch}</span>
+            </div>
+        `;
+    }
+    
+    createGitStatsInfo(stats) {
+        if (!stats) {
+            return '';
+        }
+        
+        const statsItems = [];
+        
+        if (stats.ahead > 0) {
+            statsItems.push(`<div class="git-stat ahead"><span class="git-stat-number">${stats.ahead}</span> ahead</div>`);
+        }
+        if (stats.behind > 0) {
+            statsItems.push(`<div class="git-stat behind"><span class="git-stat-number">${stats.behind}</span> behind</div>`);
+        }
+        if (stats.staged > 0) {
+            statsItems.push(`<div class="git-stat staged"><span class="git-stat-number">${stats.staged}</span> staged</div>`);
+        }
+        if (stats.modified > 0) {
+            statsItems.push(`<div class="git-stat modified"><span class="git-stat-number">${stats.modified}</span> modified</div>`);
+        }
+        if (stats.untracked > 0) {
+            statsItems.push(`<div class="git-stat untracked"><span class="git-stat-number">${stats.untracked}</span> untracked</div>`);
+        }
+        if (stats.conflicts > 0) {
+            statsItems.push(`<div class="git-stat conflicts"><span class="git-stat-number">${stats.conflicts}</span> conflicts</div>`);
+        }
+        
+        if (statsItems.length === 0) {
+            return '';
+        }
+        
+        return `
+            <div class="git-stats">
+                ${statsItems.join('')}
+            </div>
+        `;
+    }
+    
+    createGitCommitInfo(lastCommit) {
+        if (!lastCommit) {
+            return '';
+        }
+        
+        const commitDate = new Date(lastCommit.date).toLocaleDateString();
+        
+        return `
+            <div class="git-commit-info">
+                <div class="git-commit-hash">${lastCommit.hash}</div>
+                <div class="git-commit-message">${lastCommit.message}</div>
+                <div class="git-commit-meta">
+                    <span>${lastCommit.author}</span>
+                    <span>${commitDate}</span>
+                </div>
+            </div>
+        `;
     }
     
     truncatePath(path) {
@@ -2468,6 +2942,41 @@ class DuckBridgeApp {
         await this.loadUserProjects();
     }
     
+    async refreshProjectGitStatus(projectId) {
+        const project = this.projects.get(projectId);
+        if (!project) return;
+        
+        const refreshBtn = document.querySelector(`[data-project-id="${projectId}"] .project-status-refresh`);
+        if (refreshBtn) {
+            refreshBtn.classList.add('loading');
+        }
+        
+        try {
+            const response = await fetch(`http://localhost:3001/projects/${this.currentUuid}/${projectId}/refresh-git`, {
+                method: 'POST'
+            });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to refresh git status');
+            }
+            
+            // Reload projects to get updated git info
+            await this.loadUserProjects();
+            
+            // Update terminal header if this project is active
+            this.updateTerminalHeaderInfo();
+            
+        } catch (error) {
+            console.error('Failed to refresh git status:', error);
+            alert('Failed to refresh git status: ' + error.message);
+        } finally {
+            if (refreshBtn) {
+                refreshBtn.classList.remove('loading');
+            }
+        }
+    }
+    
     async deleteProject(projectId) {
         const project = this.projects.get(projectId);
         if (!project) return;
@@ -2665,6 +3174,1694 @@ class DuckBridgeApp {
             timestamp: Date.now()
         });
     }
+    
+    // Session Sidebar Methods
+    toggleSidebar() {
+        if (this.sessionSidebar) {
+            this.sessionSidebar.classList.toggle('collapsed');
+            
+            // Save collapsed state
+            const isCollapsed = this.sessionSidebar.classList.contains('collapsed');
+            localStorage.setItem('sidebarCollapsed', isCollapsed.toString());
+        }
+    }
+    
+    initializeSidebar() {
+        // Restore collapsed state
+        const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+        if (isCollapsed && this.sessionSidebar) {
+            this.sessionSidebar.classList.add('collapsed');
+        }
+        
+        // Initialize session groups
+        this.updateSessionSidebar();
+    }
+    
+    updateSessionSidebar() {
+        if (!this.sessionGroups) return;
+        
+        // Clear existing sessions
+        this.sessionGroups.innerHTML = '';
+        
+        // Group sessions by project
+        const globalSessions = [];
+        const projectGroups = new Map();
+        
+        for (const [terminalId, terminal] of this.terminals.entries()) {
+            const projectId = this.terminalProjects.get(terminalId) || 'global';
+            
+            if (projectId === 'global') {
+                globalSessions.push({ terminalId, terminal });
+            } else {
+                if (!projectGroups.has(projectId)) {
+                    projectGroups.set(projectId, []);
+                }
+                projectGroups.get(projectId).push({ terminalId, terminal });
+            }
+        }
+        
+        // Create global sessions group
+        if (globalSessions.length > 0) {
+            const globalGroup = this.createSessionGroup('global', 'Global Sessions', globalSessions);
+            this.sessionGroups.appendChild(globalGroup);
+        }
+        
+        // Create project groups
+        for (const [projectId, sessions] of projectGroups.entries()) {
+            const project = this.projects.get(projectId);
+            const projectName = project ? project.name : `Project ${projectId}`;
+            const projectGroup = this.createSessionGroup(projectId, projectName, sessions);
+            this.sessionGroups.appendChild(projectGroup);
+        }
+        
+        // If no sessions exist, show empty state
+        if (this.terminals.size === 0) {
+            this.sessionGroups.innerHTML = `
+                <div class="empty-sessions">
+                    <div class="empty-icon">📟</div>
+                    <p>No active sessions</p>
+                    <button class="primary-btn" onclick="app.createNewTerminal()">Create Terminal</button>
+                </div>
+            `;
+        }
+    }
+    
+    createSessionGroup(projectId, groupName, sessions) {
+        const groupElement = document.createElement('div');
+        groupElement.className = 'session-group';
+        groupElement.setAttribute('data-project-id', projectId);
+        
+        const project = this.projects.get(projectId);
+        const groupIcon = projectId === 'global' ? 
+            '<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/>' :
+            '<path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>';
+        
+        groupElement.innerHTML = `
+            <div class="session-group-header" onclick="app.toggleSessionGroup('${projectId}')">
+                <div class="session-group-title">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        ${groupIcon}
+                    </svg>
+                    <span>${groupName} (${sessions.length})</span>
+                </div>
+                <button class="session-group-toggle" title="Toggle group">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M6 9l6 6 6-6"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="session-list" id="sessions-${projectId}">
+                ${sessions.map(({ terminalId, terminal }) => this.createSessionItem(terminalId, terminal, projectId)).join('')}
+            </div>
+        `;
+        
+        return groupElement;
+    }
+    
+    createSessionItem(terminalId, terminal, projectId) {
+        const isActive = this.activeTerminalId === terminalId;
+        const status = this.getTerminalStatus(terminalId);
+        const project = this.projects.get(projectId);
+        
+        return `
+            <div class="session-item ${isActive ? 'active' : ''}" 
+                 data-terminal-id="${terminalId}"
+                 draggable="true"
+                 ondragstart="app.handleSessionDragStart(event)"
+                 ondragover="app.handleSessionDragOver(event)"
+                 ondrop="app.handleSessionDrop(event)"
+                 onclick="app.switchToSession('${terminalId}')">
+                <div class="session-status ${status}"></div>
+                <div class="session-info">
+                    <div class="session-name">${terminal.name || 'Terminal'}</div>
+                    <div class="session-meta">
+                        ${terminal.lastActivity ? this.formatRelativeTime(terminal.lastActivity) : 'Active'}
+                        ${projectId !== 'global' && project ? `<span class="session-project-badge">${project.name}</span>` : ''}
+                    </div>
+                </div>
+                <div class="session-actions">
+                    <button class="session-action" title="Rename session" onclick="event.stopPropagation(); app.renameSession('${terminalId}')">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                            <path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                        </svg>
+                    </button>
+                    <button class="session-action" title="Duplicate session" onclick="event.stopPropagation(); app.duplicateSession('${terminalId}')">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                            <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                        </svg>
+                    </button>
+                    <button class="session-action danger" title="Close session" onclick="event.stopPropagation(); app.closeSessionFromSidebar('${terminalId}')">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"/>
+                            <line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+    
+    getTerminalStatus(terminalId) {
+        const terminal = this.terminals.get(terminalId);
+        if (!terminal) return 'inactive';
+        
+        if (this.activeTerminalId === terminalId) return 'active';
+        
+        // Check if terminal has recent activity (within last 30 seconds)
+        const now = Date.now();
+        const lastActivity = terminal.lastActivity ? new Date(terminal.lastActivity).getTime() : 0;
+        const timeSinceActivity = now - lastActivity;
+        
+        if (timeSinceActivity < 30000) return 'running'; // 30 seconds
+        if (timeSinceActivity < 300000) return 'idle'; // 5 minutes
+        return 'inactive';
+    }
+    
+    formatRelativeTime(date) {
+        const now = Date.now();
+        const time = new Date(date).getTime();
+        const diff = now - time;
+        
+        if (diff < 60000) return 'Just now';
+        if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+        if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+        return `${Math.floor(diff / 86400000)}d ago`;
+    }
+    
+    toggleSessionGroup(projectId) {
+        const group = document.querySelector(`[data-project-id="${projectId}"]`);
+        if (group) {
+            group.classList.toggle('collapsed');
+            
+            // Save collapsed state
+            const collapsedGroups = JSON.parse(localStorage.getItem('collapsedSessionGroups') || '[]');
+            const isCollapsed = group.classList.contains('collapsed');
+            
+            if (isCollapsed && !collapsedGroups.includes(projectId)) {
+                collapsedGroups.push(projectId);
+            } else if (!isCollapsed) {
+                const index = collapsedGroups.indexOf(projectId);
+                if (index > -1) collapsedGroups.splice(index, 1);
+            }
+            
+            localStorage.setItem('collapsedSessionGroups', JSON.stringify(collapsedGroups));
+        }
+    }
+    
+    switchToSession(terminalId) {
+        if (this.terminals.has(terminalId)) {
+            this.setActiveTerminal(terminalId);
+            this.updateSessionSidebar();
+        }
+    }
+    
+    renameSession(terminalId) {
+        const terminal = this.terminals.get(terminalId);
+        if (!terminal) return;
+        
+        const newName = prompt('Enter new session name:', terminal.name || 'Terminal');
+        if (newName && newName.trim() && newName !== terminal.name) {
+            // Update terminal name
+            terminal.name = newName.trim();
+            
+            // Update tab name if it exists
+            const tab = document.querySelector(`[data-tab-id*="${terminalId}"]`);
+            if (tab) {
+                const tabName = tab.querySelector('.terminal-tab-name');
+                if (tabName) tabName.textContent = newName.trim();
+            }
+            
+            // Update sidebar
+            this.updateSessionSidebar();
+            
+            // Send update to backend if needed
+            this.sendMessage({
+                type: 'terminal_rename',
+                terminalId: terminalId,
+                name: newName.trim(),
+                timestamp: Date.now()
+            });
+        }
+    }
+    
+    duplicateSession(terminalId) {
+        const terminal = this.terminals.get(terminalId);
+        if (!terminal) return;
+        
+        const projectId = this.terminalProjects.get(terminalId);
+        const project = projectId ? this.projects.get(projectId) : null;
+        
+        const newName = `${terminal.name || 'Terminal'} (Copy)`;
+        this.createNewTerminal(newName, terminal.color, project?.settings, projectId);
+    }
+    
+    closeSessionFromSidebar(terminalId) {
+        if (confirm('Are you sure you want to close this session?')) {
+            this.closeTerminal(terminalId);
+        }
+    }
+    
+    // Drag and Drop for session organization
+    handleSessionDragStart(event) {
+        const terminalId = event.target.getAttribute('data-terminal-id');
+        event.dataTransfer.setData('text/plain', terminalId);
+        event.target.classList.add('dragging');
+    }
+    
+    handleSessionDragOver(event) {
+        event.preventDefault();
+        const draggedElement = document.querySelector('.dragging');
+        const targetElement = event.target.closest('.session-item');
+        
+        if (targetElement && targetElement !== draggedElement) {
+            targetElement.classList.add('drop-target');
+        }
+    }
+    
+    handleSessionDrop(event) {
+        event.preventDefault();
+        const draggedTerminalId = event.dataTransfer.getData('text/plain');
+        const targetElement = event.target.closest('.session-item');
+        const targetTerminalId = targetElement?.getAttribute('data-terminal-id');
+        
+        // Clean up drag states
+        document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
+        document.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
+        
+        if (draggedTerminalId && targetTerminalId && draggedTerminalId !== targetTerminalId) {
+            // Reorder sessions (this would require backend support for proper persistence)
+            console.log(`Reordering: ${draggedTerminalId} -> ${targetTerminalId}`);
+            this.updateSessionSidebar();
+        }
+    }
+    
+    // ===============================
+    // Project Switcher Methods
+    // ===============================
+    
+    toggleProjectSwitcher() {
+        if (this.projectSwitcherDropdown) {
+            const isActive = this.projectSwitcherDropdown.classList.contains('active');
+            if (isActive) {
+                this.closeProjectSwitcher();
+            } else {
+                this.openProjectSwitcher();
+            }
+        }
+    }
+    
+    openProjectSwitcher() {
+        if (this.projectSwitcherDropdown) {
+            this.projectSwitcherDropdown.classList.add('active');
+            this.updateProjectSwitcherDropdown();
+        }
+    }
+    
+    closeProjectSwitcher() {
+        if (this.projectSwitcherDropdown) {
+            this.projectSwitcherDropdown.classList.remove('active');
+        }
+    }
+    
+    updateProjectSwitcherDropdown() {
+        if (!this.dropdownProjects) return;
+        
+        this.dropdownProjects.innerHTML = '';
+        
+        // Sort projects by last accessed
+        const sortedProjects = Array.from(this.projects.values())
+            .sort((a, b) => new Date(b.lastAccessedAt) - new Date(a.lastAccessedAt));
+        
+        // Show recent projects (limit to 5)
+        const recentProjects = sortedProjects.slice(0, 5);
+        
+        recentProjects.forEach(project => {
+            const projectElement = document.createElement('div');
+            projectElement.className = 'dropdown-item';
+            projectElement.dataset.projectId = project.id;
+            
+            const terminalCount = this.projectTerminals.get(project.id)?.size || 0;
+            const gitStatus = project.gitRepo ? this.getGitStatusText(project.gitRepo.status) : 'No Git';
+            
+            projectElement.innerHTML = `
+                <div class="project-item-icon color-${project.color}">
+                    ${this.getProjectIcon(project)}
+                </div>
+                <div class="project-item-content">
+                    <div class="project-item-name">${project.name}</div>
+                    <div class="project-item-stats">${terminalCount} terminals • ${gitStatus}</div>
+                </div>
+            `;
+            
+            projectElement.addEventListener('click', () => {
+                this.switchToProject(project.id);
+                this.closeProjectSwitcher();
+            });
+            
+            this.dropdownProjects.appendChild(projectElement);
+        });
+        
+        // Add "all projects" option
+        const allProjectsElement = document.createElement('div');
+        allProjectsElement.className = 'dropdown-item all-projects';
+        allProjectsElement.innerHTML = `
+            <div class="project-item-icon">🌐</div>
+            <div class="project-item-content">
+                <div class="project-item-name">All Projects</div>
+                <div class="project-item-stats">View all terminals</div>
+            </div>
+        `;
+        
+        allProjectsElement.addEventListener('click', () => {
+            this.switchToAllTerminals();
+            this.closeProjectSwitcher();
+        });
+        
+        this.dropdownProjects.appendChild(allProjectsElement);
+        
+        // Update stats in switcher header
+        this.updateProjectSwitcherStats();
+    }
+    
+    updateProjectSwitcherStats() {
+        if (!this.activeTerminalsSpan || !this.gitStatusSpan) return;
+        
+        const activeProject = this.activeProjectId ? this.projects.get(this.activeProjectId) : null;
+        
+        if (activeProject) {
+            // Update current project display
+            this.currentProjectName.textContent = activeProject.name;
+            this.projectColorDot.className = `project-color-dot color-${activeProject.color}`;
+            
+            // Update stats
+            const terminalCount = this.projectTerminals.get(activeProject.id)?.size || 0;
+            this.activeTerminalsSpan.textContent = `${terminalCount} terminals`;
+            
+            const gitStatus = activeProject.gitRepo ? this.getGitStatusText(activeProject.gitRepo.status) : '—';
+            this.gitStatusSpan.textContent = gitStatus;
+        } else {
+            // All projects view
+            this.currentProjectName.textContent = 'All Projects';
+            this.projectColorDot.className = 'project-color-dot';
+            
+            const totalTerminals = this.terminals.size;
+            this.activeTerminalsSpan.textContent = `${totalTerminals} terminals`;
+            
+            const gitRepoCount = Array.from(this.projects.values())
+                .filter(p => p.gitRepo).length;
+            this.gitStatusSpan.textContent = `${gitRepoCount} Git repos`;
+        }
+    }
+    
+    getGitStatusText(status) {
+        switch (status) {
+            case 'clean': return '✅ Clean';
+            case 'dirty': return '⚠️ Modified';
+            case 'ahead': return '⬆️ Ahead';
+            case 'behind': return '⬇️ Behind';
+            case 'diverged': return '🔀 Diverged';
+            default: return '—';
+        }
+    }
+    
+    // ===============================
+    // Project Overview Dashboard
+    // ===============================
+    
+    toggleProjectOverview() {
+        if (this.projectOverviewDashboard) {
+            const isVisible = this.projectOverviewDashboard.style.display !== 'none';
+            if (isVisible) {
+                this.closeProjectOverview();
+            } else {
+                this.openProjectOverview();
+            }
+        }
+    }
+    
+    openProjectOverview() {
+        if (this.projectOverviewDashboard && this.mainDashboard) {
+            this.projectOverviewDashboard.style.display = 'block';
+            this.mainDashboard.style.display = 'none';
+            this.updateProjectOverviewStats();
+            this.updateProjectOverviewContent();
+        }
+    }
+    
+    closeProjectOverview() {
+        if (this.projectOverviewDashboard && this.mainDashboard) {
+            this.projectOverviewDashboard.style.display = 'none';
+            this.mainDashboard.style.display = 'block';
+        }
+    }
+    
+    updateProjectOverviewStats() {
+        if (!this.totalProjectsSpan) return;
+        
+        const totalProjects = this.projects.size;
+        const activeSessions = this.terminals.size;
+        const gitRepos = Array.from(this.projects.values()).filter(p => p.gitRepo).length;
+        const recentActivity = this.getRecentActivityCount();
+        
+        this.totalProjectsSpan.textContent = totalProjects;
+        this.activeSessionsSpan.textContent = activeSessions;
+        this.gitReposSpan.textContent = gitRepos;
+        this.recentActivitySpan.textContent = recentActivity;
+    }
+    
+    updateProjectOverviewContent() {
+        this.updateRecentProjectsList();
+        this.updateActiveSessionsList();
+        this.updateGitActivityList();
+    }
+    
+    updateRecentProjectsList() {
+        if (!this.recentProjectsList) return;
+        
+        this.recentProjectsList.innerHTML = '';
+        
+        const sortedProjects = Array.from(this.projects.values())
+            .sort((a, b) => new Date(b.lastAccessedAt) - new Date(a.lastAccessedAt))
+            .slice(0, 5);
+        
+        sortedProjects.forEach(project => {
+            const projectElement = document.createElement('div');
+            projectElement.className = 'project-overview-item';
+            
+            const terminalCount = this.projectTerminals.get(project.id)?.size || 0;
+            const lastAccessed = new Date(project.lastAccessedAt).toLocaleDateString();
+            
+            projectElement.innerHTML = `
+                <div class="overview-item-icon color-${project.color}">
+                    ${this.getProjectIcon(project)}
+                </div>
+                <div class="overview-item-content">
+                    <div class="overview-item-name">${project.name}</div>
+                    <div class="overview-item-details">${terminalCount} terminals • Last accessed ${lastAccessed}</div>
+                </div>
+                <div class="overview-item-actions">
+                    <button class="overview-action-btn" onclick="app.openProject('${project.id}')" title="Open Project">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 12l2 2 4-4"/>
+                            <path d="M21 12c-1 0-3-1-3-3s2-3 3-3 3 1 3 3-2 3-3 3"/>
+                            <path d="M3 12c1 0 3-1 3-3s-2-3-3-3-3 1-3 3 2 3 3 3"/>
+                        </svg>
+                    </button>
+                    <button class="overview-action-btn" onclick="app.editProject('${project.id}')" title="Edit Project">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                            <path d="m18.5 2.5 a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                        </svg>
+                    </button>
+                </div>
+            `;
+            
+            this.recentProjectsList.appendChild(projectElement);
+        });
+    }
+    
+    updateActiveSessionsList() {
+        if (!this.activeSessionsList) return;
+        
+        this.activeSessionsList.innerHTML = '';
+        
+        const sortedTerminals = Array.from(this.terminals.values())
+            .sort((a, b) => new Date(b.lastActivity) - new Date(a.lastActivity))
+            .slice(0, 5);
+        
+        sortedTerminals.forEach(terminal => {
+            const sessionElement = document.createElement('div');
+            sessionElement.className = 'session-overview-item';
+            
+            const projectId = this.terminalProjects.get(terminal.terminalId);
+            const project = projectId ? this.projects.get(projectId) : null;
+            const projectName = project ? project.name : 'Global';
+            const lastActivity = new Date(terminal.lastActivity).toLocaleTimeString();
+            
+            sessionElement.innerHTML = `
+                <div class="overview-item-icon color-${terminal.color}">
+                    💻
+                </div>
+                <div class="overview-item-content">
+                    <div class="overview-item-name">${terminal.name}</div>
+                    <div class="overview-item-details">${projectName} • Last activity ${lastActivity}</div>
+                </div>
+                <div class="overview-item-actions">
+                    <button class="overview-action-btn" onclick="app.setActiveTerminal('${terminal.terminalId}')" title="Switch to Terminal">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 12l2 2 4-4"/>
+                            <path d="M21 12c-1 0-3-1-3-3s2-3 3-3 3 1 3 3-2 3-3 3"/>
+                            <path d="M3 12c1 0 3-1 3-3s-2-3-3-3-3 1-3 3 2 3 3 3"/>
+                        </svg>
+                    </button>
+                    <button class="overview-action-btn" onclick="app.closeTerminal('${terminal.terminalId}')" title="Close Terminal">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"/>
+                            <line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                    </button>
+                </div>
+            `;
+            
+            this.activeSessionsList.appendChild(sessionElement);
+        });
+    }
+    
+    updateGitActivityList() {
+        if (!this.gitActivityList) return;
+        
+        this.gitActivityList.innerHTML = '';
+        
+        const projectsWithGit = Array.from(this.projects.values())
+            .filter(p => p.gitRepo)
+            .sort((a, b) => new Date(b.gitRepo.lastUpdated) - new Date(a.gitRepo.lastUpdated))
+            .slice(0, 5);
+        
+        projectsWithGit.forEach(project => {
+            const gitElement = document.createElement('div');
+            gitElement.className = 'git-activity-item';
+            
+            const gitRepo = project.gitRepo;
+            const lastUpdated = new Date(gitRepo.lastUpdated).toLocaleTimeString();
+            const statusText = this.getGitStatusText(gitRepo.status);
+            
+            gitElement.innerHTML = `
+                <div class="overview-item-icon color-${project.color}">
+                    🔄
+                </div>
+                <div class="overview-item-content">
+                    <div class="overview-item-name">${project.name}</div>
+                    <div class="overview-item-details">${gitRepo.branch} • ${statusText} • Updated ${lastUpdated}</div>
+                </div>
+                <div class="overview-item-actions">
+                    <button class="overview-action-btn" onclick="app.refreshProjectGitStatus('${project.id}')" title="Refresh Git Status">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="23 4 23 10 17 10"/>
+                            <polyline points="1 20 1 14 7 14"/>
+                            <path d="m3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                        </svg>
+                    </button>
+                    <button class="overview-action-btn" onclick="app.openProject('${project.id}')" title="Open Project">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 12l2 2 4-4"/>
+                            <path d="M21 12c-1 0-3-1-3-3s2-3 3-3 3 1 3 3-2 3-3 3"/>
+                            <path d="M3 12c1 0 3-1 3-3s-2-3-3-3-3 1-3 3 2 3 3 3"/>
+                        </svg>
+                    </button>
+                </div>
+            `;
+            
+            this.gitActivityList.appendChild(gitElement);
+        });
+    }
+    
+    getRecentActivityCount() {
+        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+        return Array.from(this.terminals.values())
+            .filter(t => new Date(t.lastActivity) > oneHourAgo).length;
+    }
+    
+    refreshAllGitStatus() {
+        this.refreshAllGitBtn.classList.add('loading');
+        
+        const promises = Array.from(this.projects.keys())
+            .map(projectId => this.refreshProjectGitStatus(projectId));
+        
+        Promise.all(promises)
+            .finally(() => {
+                this.refreshAllGitBtn.classList.remove('loading');
+                this.updateProjectOverviewContent();
+            });
+    }
+    
+    showAllProjects() {
+        this.closeProjectOverview();
+        // Switch to projects view
+        this.switchToAllTerminals();
+    }
+    
+    showAllSessions() {
+        this.closeProjectOverview();
+        // Focus on sessions sidebar
+        this.toggleSidebar();
+    }
+    
+    showManageProjectsDialog() {
+        // This would open a dedicated project management dialog
+        alert('Project management dialog would open here');
+    }
+    
+    // ===============================
+    // Split View Methods
+    // ===============================
+    
+    toggleSplitViewMode() {
+        this.splitViewActive = !this.splitViewActive;
+        this.applySplitViewLayout();
+    }
+    
+    toggleHorizontalSplitMode() {
+        this.splitViewOrientation = this.splitViewOrientation === 'vertical' ? 'horizontal' : 'vertical';
+        if (this.splitViewActive) {
+            this.applySplitViewLayout();
+        }
+    }
+    
+    cycleLayoutMode() {
+        const modes = ['single', 'split', 'quad'];
+        const currentIndex = modes.indexOf(this.layoutMode);
+        this.layoutMode = modes[(currentIndex + 1) % modes.length];
+        this.applyLayoutMode();
+    }
+    
+    applySplitViewLayout() {
+        if (!this.terminalWorkspaceContainer) return;
+        
+        const container = this.terminalWorkspaceContainer;
+        const secondaryPanels = this.terminalPanelsSecondary;
+        const divider = this.splitViewDivider;
+        
+        if (this.splitViewActive) {
+            // Show split view
+            container.classList.add(`split-${this.splitViewOrientation}`);
+            secondaryPanels.style.display = 'block';
+            divider.style.display = 'block';
+            
+            // Update control buttons
+            this.toggleSplitView.classList.add('active');
+            if (this.splitViewOrientation === 'horizontal') {
+                this.toggleHorizontalSplit.classList.add('active');
+            } else {
+                this.toggleHorizontalSplit.classList.remove('active');
+            }
+        } else {
+            // Hide split view
+            container.classList.remove('split-vertical', 'split-horizontal');
+            secondaryPanels.style.display = 'none';
+            divider.style.display = 'none';
+            
+            // Update control buttons
+            this.toggleSplitView.classList.remove('active');
+            this.toggleHorizontalSplit.classList.remove('active');
+        }
+    }
+    
+    applyLayoutMode() {
+        // Implementation for quad layout and other advanced layouts
+        switch (this.layoutMode) {
+            case 'single':
+                this.splitViewActive = false;
+                this.applySplitViewLayout();
+                break;
+            case 'split':
+                this.splitViewActive = true;
+                this.applySplitViewLayout();
+                break;
+            case 'quad':
+                // Advanced quad layout (would need additional HTML structure)
+                console.log('Quad layout not fully implemented yet');
+                break;
+        }
+        
+        // Update button states
+        this.toggleLayoutMode.classList.toggle('active', this.layoutMode !== 'single');
+    }
+    
+    initializeSplitViewDivider() {
+        if (!this.splitViewDivider) return;
+        
+        let isDragging = false;
+        let startPos = 0;
+        let startSize = 0;
+        
+        this.splitViewDivider.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            startPos = this.splitViewOrientation === 'vertical' ? e.clientX : e.clientY;
+            startSize = this.splitViewOrientation === 'vertical' ? 
+                this.terminalPanels.offsetWidth : 
+                this.terminalPanels.offsetHeight;
+            
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+            e.preventDefault();
+        });
+        
+        const handleMouseMove = (e) => {
+            if (!isDragging) return;
+            
+            const currentPos = this.splitViewOrientation === 'vertical' ? e.clientX : e.clientY;
+            const diff = currentPos - startPos;
+            const newSize = startSize + diff;
+            
+            if (this.splitViewOrientation === 'vertical') {
+                this.terminalPanels.style.width = `${newSize}px`;
+            } else {
+                this.terminalPanels.style.height = `${newSize}px`;
+            }
+        };
+        
+        const handleMouseUp = () => {
+            isDragging = false;
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+    }
+    
+    // Override the existing switchToProject method to update switcher
+    switchToProject(projectId) {
+        this.activeProjectId = projectId;
+        
+        // Update UI to show active project
+        const project = this.projects.get(projectId);
+        if (project) {
+            console.log(`Switched to project: ${project.name}`);
+            
+            // Store in localStorage for persistence
+            localStorage.setItem('activeProjectId', projectId);
+            
+            // Update project switcher display
+            this.updateProjectSwitcherStats();
+            
+            // Show project terminals
+            this.showProjectTerminals(projectId);
+        }
+    }
+    
+    // Override the existing switchToAllTerminals method to update switcher
+    switchToAllTerminals() {
+        this.activeProjectId = null;
+        localStorage.removeItem('activeProjectId');
+        this.showAllTerminals();
+        console.log('Switched to all terminals view');
+        
+        // Update project switcher display
+        this.updateProjectSwitcherStats();
+        
+        this.showSuccessMessage('Showing all terminals');
+    }
+}
+
+// Tool Management System
+class ToolManager {
+    constructor(app) {
+        this.app = app;
+        this.tools = new Map();
+        this.statistics = null;
+        this.activeCategory = 'all';
+        this.selectedTool = null;
+        
+        this.initializeElements();
+        this.attachEventListeners();
+        this.loadTools();
+    }
+    
+    initializeElements() {
+        // Tool status bar elements
+        this.toolStatusBar = document.getElementById('tool-status-bar');
+        this.toolStatusStats = document.getElementById('tool-status-stats');
+        this.toolsInstalledSpan = document.getElementById('tools-installed');
+        this.toolsMissingSpan = document.getElementById('tools-missing');
+        this.toolStatusIndicators = document.getElementById('tool-status-indicators');
+        this.toolRefreshBtn = document.getElementById('tool-refresh-btn');
+        this.toolManagerBtn = document.getElementById('tool-manager-btn');
+        
+        // Tool manager modal elements
+        this.toolManagerModal = document.getElementById('tool-manager-modal');
+        this.toolManagerClose = document.getElementById('tool-manager-close');
+        this.modalToolsInstalled = document.getElementById('modal-tools-installed');
+        this.modalToolsMissing = document.getElementById('modal-tools-missing');
+        this.modalToolsTotal = document.getElementById('modal-tools-total');
+        this.categoryTabs = document.querySelectorAll('.category-tab');
+        this.toolsGrid = document.getElementById('tools-grid');
+        this.toolDetailPanel = document.getElementById('tool-detail-panel');
+        this.toolDetailContent = document.getElementById('tool-detail-content');
+        this.backToToolsBtn = document.getElementById('back-to-tools-btn');
+    }
+    
+    attachEventListeners() {
+        // Tool status bar controls
+        this.toolRefreshBtn?.addEventListener('click', () => this.refreshTools());
+        this.toolManagerBtn?.addEventListener('click', () => this.openToolManager());
+        
+        // Modal controls
+        this.toolManagerClose?.addEventListener('click', () => this.closeToolManager());
+        this.backToToolsBtn?.addEventListener('click', () => this.showToolsGrid());
+        
+        // Category tabs
+        this.categoryTabs.forEach(tab => {
+            tab.addEventListener('click', () => this.selectCategory(tab.dataset.category));
+        });
+        
+        // Modal backdrop click
+        this.toolManagerModal?.addEventListener('click', (e) => {
+            if (e.target === this.toolManagerModal) {
+                this.closeToolManager();
+            }
+        });
+    }
+    
+    async loadTools() {
+        try {
+            this.showLoadingState();
+            
+            if (!this.app.isConnected) {
+                this.showDisconnectedState();
+                return;
+            }
+            
+            const response = await fetch(`${this.app.getApiUrl()}/tools`);
+            const data = await response.json();
+            
+            if (data.success) {
+                this.tools.clear();
+                Object.entries(data.tools).forEach(([name, tool]) => {
+                    this.tools.set(name, tool);
+                });
+                this.statistics = data.statistics;
+                
+                this.updateToolStatusBar();
+                this.updateToolsGrid();
+            } else {
+                console.error('Failed to load tools:', data.error);
+                this.showErrorState(data.error);
+            }
+        } catch (error) {
+            console.error('Error loading tools:', error);
+            this.showErrorState('Failed to connect to tool detection service');
+        }
+    }
+    
+    async refreshTools() {
+        if (!this.app.isConnected) return;
+        
+        try {
+            this.toolRefreshBtn?.classList.add('loading');
+            this.showLoadingState();
+            
+            const response = await fetch(`${this.app.getApiUrl()}/tools/refresh`, {
+                method: 'POST'
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                this.tools.clear();
+                Object.entries(data.tools).forEach(([name, tool]) => {
+                    this.tools.set(name, tool);
+                });
+                this.statistics = data.statistics;
+                
+                this.updateToolStatusBar();
+                this.updateToolsGrid();
+            } else {
+                console.error('Failed to refresh tools:', data.error);
+                this.showErrorState(data.error);
+            }
+        } catch (error) {
+            console.error('Error refreshing tools:', error);
+            this.showErrorState('Failed to refresh tool status');
+        } finally {
+            this.toolRefreshBtn?.classList.remove('loading');
+        }
+    }
+    
+    updateToolStatusBar() {
+        if (!this.statistics) return;
+        
+        // Update stats
+        if (this.toolsInstalledSpan) {
+            this.toolsInstalledSpan.textContent = `${this.statistics.installed} installed`;
+        }
+        if (this.toolsMissingSpan) {
+            this.toolsMissingSpan.textContent = `${this.statistics.missing} missing`;
+        }
+        
+        // Update indicators
+        this.updateToolIndicators();
+        
+        // Update modal stats if open
+        if (this.modalToolsInstalled) {
+            this.modalToolsInstalled.textContent = this.statistics.installed;
+        }
+        if (this.modalToolsMissing) {
+            this.modalToolsMissing.textContent = this.statistics.missing;
+        }
+        if (this.modalToolsTotal) {
+            this.modalToolsTotal.textContent = this.statistics.total;
+        }
+    }
+    
+    updateToolIndicators() {
+        if (!this.toolStatusIndicators) return;
+        
+        this.toolStatusIndicators.innerHTML = '';
+        
+        // Show top 8 tools (4 installed, 4 missing)
+        const installedTools = Array.from(this.tools.values()).filter(tool => tool.isInstalled).slice(0, 4);
+        const missingTools = Array.from(this.tools.values()).filter(tool => !tool.isInstalled).slice(0, 4);
+        
+        [...installedTools, ...missingTools].forEach(tool => {
+            const indicator = document.createElement('div');
+            indicator.className = `tool-indicator ${tool.isInstalled ? 'installed' : 'missing'}`;
+            indicator.innerHTML = `
+                <div class="tool-indicator-dot"></div>
+                <span>${tool.displayName}</span>
+            `;
+            this.toolStatusIndicators.appendChild(indicator);
+        });
+        
+        // Add "view all" indicator if there are more tools
+        const remainingCount = this.tools.size - installedTools.length - missingTools.length;
+        if (remainingCount > 0) {
+            const viewAllIndicator = document.createElement('div');
+            viewAllIndicator.className = 'tool-indicator';
+            viewAllIndicator.style.cursor = 'pointer';
+            viewAllIndicator.innerHTML = `
+                <span>+${remainingCount} more</span>
+            `;
+            viewAllIndicator.addEventListener('click', () => this.openToolManager());
+            this.toolStatusIndicators.appendChild(viewAllIndicator);
+        }
+    }
+    
+    openToolManager() {
+        if (!this.toolManagerModal) return;
+        
+        this.toolManagerModal.style.display = 'flex';
+        this.updateToolsGrid();
+        this.showToolsGrid();
+    }
+    
+    closeToolManager() {
+        if (!this.toolManagerModal) return;
+        
+        this.toolManagerModal.style.display = 'none';
+        this.selectedTool = null;
+    }
+    
+    selectCategory(category) {
+        this.activeCategory = category;
+        
+        // Update tab active state
+        this.categoryTabs.forEach(tab => {
+            tab.classList.toggle('active', tab.dataset.category === category);
+        });
+        
+        this.updateToolsGrid();
+    }
+    
+    updateToolsGrid() {
+        if (!this.toolsGrid) return;
+        
+        const filteredTools = this.getFilteredTools();
+        this.toolsGrid.innerHTML = '';
+        
+        if (filteredTools.length === 0) {
+            this.toolsGrid.innerHTML = '<div class="tool-loading">No tools found for this category</div>';
+            return;
+        }
+        
+        filteredTools.forEach(tool => {
+            const toolCard = this.createToolCard(tool);
+            this.toolsGrid.appendChild(toolCard);
+        });
+    }
+    
+    getFilteredTools() {
+        const allTools = Array.from(this.tools.values());
+        
+        if (this.activeCategory === 'all') {
+            return allTools;
+        }
+        
+        return allTools.filter(tool => tool.category === this.activeCategory);
+    }
+    
+    createToolCard(tool) {
+        const card = document.createElement('div');
+        card.className = 'tool-card';
+        card.addEventListener('click', () => this.showToolDetails(tool));
+        
+        const categoryIcons = {
+            ai: '🤖',
+            development: '💻',
+            devops: '⚙️',
+            cloud: '☁️',
+            database: '🗄️',
+            system: '🔧'
+        };
+        
+        const statusClass = tool.isInstalled ? 'installed' : 'missing';
+        const statusText = tool.isInstalled ? 'Installed' : 'Missing';
+        
+        card.innerHTML = `
+            <div class="tool-card-header">
+                <div class="tool-card-title">
+                    <div class="tool-card-icon ${tool.category}">
+                        ${categoryIcons[tool.category] || '🔧'}
+                    </div>
+                    <div>
+                        <div class="tool-card-name">${tool.displayName}</div>
+                        ${tool.version ? `<div class="tool-card-version">v${tool.version}</div>` : ''}
+                    </div>
+                </div>
+                <div class="tool-card-status ${statusClass}">
+                    <div class="tool-card-status-dot"></div>
+                    <span>${statusText}</span>
+                </div>
+            </div>
+            <div class="tool-card-description">
+                ${tool.description}
+            </div>
+            <div class="tool-card-capabilities">
+                ${tool.capabilities.slice(0, 3).map(cap => 
+                    `<span class="tool-capability-tag">${cap.name}</span>`
+                ).join('')}
+                ${tool.capabilities.length > 3 ? `<span class="tool-capability-tag">+${tool.capabilities.length - 3} more</span>` : ''}
+            </div>
+            <div class="tool-card-actions">
+                <button class="tool-action-btn" onclick="event.stopPropagation(); window.app.toolManager.refreshTool('${tool.name}')">
+                    Refresh
+                </button>
+                ${!tool.isInstalled ? `<button class="tool-action-btn primary" onclick="event.stopPropagation(); window.app.toolManager.showInstallGuide('${tool.name}')">
+                    Install Guide
+                </button>` : ''}
+            </div>
+        `;
+        
+        return card;
+    }
+    
+    async showToolDetails(tool) {
+        this.selectedTool = tool;
+        
+        // Hide tools grid, show detail panel
+        this.toolsGrid.style.display = 'none';
+        this.toolDetailPanel.style.display = 'block';
+        
+        // Get installation guides
+        let installGuides = [];
+        try {
+            const response = await fetch(`${this.app.getApiUrl()}/tools/${tool.name}/install-guide`);
+            const data = await response.json();
+            if (data.success) {
+                installGuides = data.guides;
+            }
+        } catch (error) {
+            console.error('Error fetching install guides:', error);
+        }
+        
+        // Populate detail content
+        this.toolDetailContent.innerHTML = `
+            <div class="tool-detail-header-info">
+                <h2>${tool.displayName}</h2>
+                <p>${tool.description}</p>
+                ${tool.version ? `<p><strong>Version:</strong> ${tool.version}</p>` : ''}
+                ${tool.path ? `<p><strong>Path:</strong> <code>${tool.path}</code></p>` : ''}
+                <p><strong>Status:</strong> <span class="tool-card-status ${tool.isInstalled ? 'installed' : 'missing'}">
+                    <div class="tool-card-status-dot"></div>
+                    ${tool.isInstalled ? 'Installed' : 'Missing'}
+                </span></p>
+            </div>
+            
+            <div class="tool-detail-info">
+                <div class="tool-detail-section">
+                    <h4>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3"/>
+                            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
+                        </svg>
+                        Capabilities
+                    </h4>
+                    <div class="tool-capabilities-list">
+                        ${tool.capabilities.map(cap => `
+                            <div class="tool-capability-item">
+                                <h5>${cap.name}</h5>
+                                <p>${cap.description}</p>
+                                <div class="tool-capability-commands">
+                                    ${cap.commands.map(cmd => `<code class="tool-capability-command">${cmd}</code>`).join('')}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                
+                ${installGuides.length > 0 ? `
+                    <div class="tool-detail-section">
+                        <h4>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+                            </svg>
+                            Installation Guide
+                        </h4>
+                        <div class="tool-installation-guides">
+                            ${installGuides.map(guide => `
+                                <div class="tool-installation-guide">
+                                    <h5>${guide.platform}</h5>
+                                    <p>${guide.description}</p>
+                                    <div class="tool-installation-commands">
+                                        <pre>${guide.commands.join('\n')}</pre>
+                                    </div>
+                                    ${guide.url ? `<p><a href="${guide.url}" target="_blank">Learn more</a></p>` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    }
+    
+    showToolsGrid() {
+        if (this.toolsGrid) this.toolsGrid.style.display = 'grid';
+        if (this.toolDetailPanel) this.toolDetailPanel.style.display = 'none';
+    }
+    
+    async refreshTool(toolName) {
+        try {
+            const response = await fetch(`${this.app.getApiUrl()}/tools/${toolName}/refresh`, {
+                method: 'POST'
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                this.tools.set(toolName, data.tool);
+                this.updateToolStatusBar();
+                this.updateToolsGrid();
+                
+                // If detail panel is open for this tool, update it
+                if (this.selectedTool && this.selectedTool.name === toolName) {
+                    this.showToolDetails(data.tool);
+                }
+            }
+        } catch (error) {
+            console.error('Error refreshing tool:', error);
+        }
+    }
+    
+    showInstallGuide(toolName) {
+        const tool = this.tools.get(toolName);
+        if (tool) {
+            this.showToolDetails(tool);
+        }
+    }
+    
+    showLoadingState() {
+        if (this.toolsInstalledSpan) {
+            this.toolsInstalledSpan.textContent = 'Loading...';
+        }
+        if (this.toolsMissingSpan) {
+            this.toolsMissingSpan.textContent = '—';
+        }
+        if (this.toolStatusIndicators) {
+            this.toolStatusIndicators.innerHTML = '<div class="tool-loading"><div class="tool-loading-spinner"></div>Loading tools...</div>';
+        }
+    }
+    
+    showDisconnectedState() {
+        if (this.toolsInstalledSpan) {
+            this.toolsInstalledSpan.textContent = 'Disconnected';
+        }
+        if (this.toolsMissingSpan) {
+            this.toolsMissingSpan.textContent = '—';
+        }
+        if (this.toolStatusIndicators) {
+            this.toolStatusIndicators.innerHTML = '<div class="tool-indicator">Connect to view tools</div>';
+        }
+    }
+    
+    showErrorState(message) {
+        if (this.toolsInstalledSpan) {
+            this.toolsInstalledSpan.textContent = 'Error';
+        }
+        if (this.toolsMissingSpan) {
+            this.toolsMissingSpan.textContent = '—';
+        }
+        if (this.toolStatusIndicators) {
+            this.toolStatusIndicators.innerHTML = `<div class="tool-indicator missing">${message}</div>`;
+        }
+    }
+    
+    onConnectionStatusChanged(isConnected) {
+        if (isConnected) {
+            this.loadTools();
+        } else {
+            this.showDisconnectedState();
+        }
+    }
+}
+
+// Command Routing Manager Class
+class CommandRoutingManager {
+    constructor(app) {
+        this.app = app;
+        this.commandHistory = new Map(); // terminalId -> history
+        this.toolHistories = new Map(); // tool -> history
+        this.activeCommands = new Map(); // terminalId -> current command
+        this.commandSuggestions = new Map(); // tool -> suggestions
+        
+        this.initializeRouting();
+    }
+    
+    initializeRouting() {
+        // Initialize tool-specific command suggestions
+        this.commandSuggestions.set('git', [
+            'git status',
+            'git add .',
+            'git commit -m "message"',
+            'git push',
+            'git pull',
+            'git log --oneline',
+            'git branch',
+            'git checkout -b branch-name'
+        ]);
+        
+        this.commandSuggestions.set('npm', [
+            'npm install',
+            'npm run build',
+            'npm run dev',
+            'npm run test',
+            'npm run start',
+            'npm audit',
+            'npm outdated',
+            'npm update'
+        ]);
+        
+        this.commandSuggestions.set('docker', [
+            'docker ps',
+            'docker images',
+            'docker build -t name .',
+            'docker run -it name',
+            'docker logs container',
+            'docker exec -it container bash',
+            'docker-compose up',
+            'docker-compose down'
+        ]);
+        
+        this.commandSuggestions.set('claude-code', [
+            'claude-code help',
+            'claude-code generate --type component',
+            'claude-code review --file',
+            'claude-code document --file',
+            'claude-code explain --code',
+            'claude-code fix --error'
+        ]);
+    }
+    
+    // Route a command through the intelligent routing system
+    async routeCommand(terminalId, command, workingDirectory = null) {
+        if (!this.app.isConnected) {
+            throw new Error('Not connected to backend');
+        }
+        
+        // Mark command as active
+        this.activeCommands.set(terminalId, {
+            command,
+            timestamp: Date.now(),
+            workingDirectory
+        });
+        
+        // Send routing request via WebSocket
+        this.app.sendMessage({
+            type: 'command_route',
+            terminalId,
+            command,
+            workingDirectory,
+            timestamp: Date.now()
+        });
+    }
+    
+    // Parse a command to identify the tool and get metadata
+    async parseCommand(command) {
+        if (!this.app.isConnected) {
+            throw new Error('Not connected to backend');
+        }
+        
+        return new Promise((resolve, reject) => {
+            // Store callback for response
+            this.app.tempCallbacks = this.app.tempCallbacks || new Map();
+            const callbackId = `parse_${Date.now()}`;
+            
+            this.app.tempCallbacks.set(callbackId, { resolve, reject });
+            
+            // Send parse request
+            this.app.sendMessage({
+                type: 'command_parse',
+                command,
+                callbackId,
+                timestamp: Date.now()
+            });
+            
+            // Timeout after 5 seconds
+            setTimeout(() => {
+                if (this.app.tempCallbacks.has(callbackId)) {
+                    this.app.tempCallbacks.delete(callbackId);
+                    reject(new Error('Command parse timeout'));
+                }
+            }, 5000);
+        });
+    }
+    
+    // Get command history for a terminal
+    getTerminalHistory(terminalId) {
+        return this.commandHistory.get(terminalId) || [];
+    }
+    
+    // Get tool-specific history
+    getToolHistory(tool) {
+        return this.toolHistories.get(tool) || [];
+    }
+    
+    // Add command to history
+    addToHistory(terminalId, command, result = null) {
+        if (!this.commandHistory.has(terminalId)) {
+            this.commandHistory.set(terminalId, []);
+        }
+        
+        const history = this.commandHistory.get(terminalId);
+        history.push({
+            command,
+            timestamp: new Date(),
+            result,
+            terminalId
+        });
+        
+        // Keep only last 100 commands per terminal
+        if (history.length > 100) {
+            history.splice(0, history.length - 100);
+        }
+        
+        // Update UI if this is the active terminal
+        if (terminalId === this.app.activeTerminalId) {
+            this.updateCommandHistoryUI(terminalId);
+        }
+    }
+    
+    // Add to tool-specific history
+    addToToolHistory(tool, command, result = null) {
+        if (!this.toolHistories.has(tool)) {
+            this.toolHistories.set(tool, []);
+        }
+        
+        const history = this.toolHistories.get(tool);
+        history.push({
+            command,
+            timestamp: new Date(),
+            result,
+            tool
+        });
+        
+        // Keep only last 50 commands per tool
+        if (history.length > 50) {
+            history.splice(0, history.length - 50);
+        }
+        
+        // Update tool history UI
+        this.updateToolHistoryUI(tool);
+    }
+    
+    // Get command suggestions for a tool
+    getCommandSuggestions(tool) {
+        return this.commandSuggestions.get(tool) || [];
+    }
+    
+    // Update command history UI for a terminal
+    updateCommandHistoryUI(terminalId) {
+        const historyPanel = document.getElementById(`history-${terminalId}`);
+        if (!historyPanel) return;
+        
+        const history = this.getTerminalHistory(terminalId);
+        const historyList = historyPanel.querySelector('.command-history-list');
+        
+        if (historyList) {
+            historyList.innerHTML = '';
+            
+            history.slice(-10).forEach(entry => {
+                const item = document.createElement('div');
+                item.className = 'history-item';
+                item.innerHTML = `
+                    <div class="history-command">${this.escapeHtml(entry.command)}</div>
+                    <div class="history-timestamp">${entry.timestamp.toLocaleTimeString()}</div>
+                `;
+                
+                // Add click handler to repeat command
+                item.addEventListener('click', () => {
+                    this.repeatCommand(terminalId, entry.command);
+                });
+                
+                historyList.appendChild(item);
+            });
+        }
+    }
+    
+    // Update tool history UI
+    updateToolHistoryUI(tool) {
+        const toolHistoryPanel = document.getElementById(`tool-history-${tool}`);
+        if (!toolHistoryPanel) return;
+        
+        const history = this.getToolHistory(tool);
+        const historyList = toolHistoryPanel.querySelector('.tool-history-list');
+        
+        if (historyList) {
+            historyList.innerHTML = '';
+            
+            history.slice(-10).forEach(entry => {
+                const item = document.createElement('div');
+                item.className = 'tool-history-item';
+                item.innerHTML = `
+                    <div class="tool-history-command">${this.escapeHtml(entry.command)}</div>
+                    <div class="tool-history-timestamp">${entry.timestamp.toLocaleTimeString()}</div>
+                `;
+                
+                historyList.appendChild(item);
+            });
+        }
+    }
+    
+    // Repeat a command
+    repeatCommand(terminalId, command) {
+        // Insert command into terminal input
+        const terminal = this.app.terminals.get(terminalId);
+        if (terminal) {
+            // Send the command to the terminal
+            this.app.sendMessage({
+                type: 'terminal_input',
+                terminalId: terminalId,
+                data: command + '\r',
+                timestamp: Date.now()
+            });
+        }
+    }
+    
+    // Show command suggestions
+    showCommandSuggestions(terminalId, tool) {
+        const suggestions = this.getCommandSuggestions(tool);
+        if (suggestions.length === 0) return;
+        
+        // Create suggestions popup
+        const popup = document.createElement('div');
+        popup.className = 'command-suggestions-popup';
+        popup.innerHTML = `
+            <div class="suggestions-header">
+                <h4>${tool} Commands</h4>
+                <button class="close-suggestions">&times;</button>
+            </div>
+            <div class="suggestions-list">
+                ${suggestions.map(cmd => `
+                    <div class="suggestion-item" data-command="${this.escapeHtml(cmd)}">
+                        <code>${this.escapeHtml(cmd)}</code>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+        
+        // Add to terminal panel
+        const terminalPanel = document.getElementById(`panel-${terminalId}`);
+        if (terminalPanel) {
+            terminalPanel.appendChild(popup);
+            
+            // Add event listeners
+            popup.querySelector('.close-suggestions').addEventListener('click', () => {
+                popup.remove();
+            });
+            
+            popup.querySelectorAll('.suggestion-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const command = item.dataset.command;
+                    this.repeatCommand(terminalId, command);
+                    popup.remove();
+                });
+            });
+            
+            // Auto-hide after 10 seconds
+            setTimeout(() => {
+                if (popup.parentNode) {
+                    popup.remove();
+                }
+            }, 10000);
+        }
+    }
+    
+    // Format command output with syntax highlighting
+    formatCommandOutput(output, commandInfo) {
+        if (!commandInfo || !commandInfo.tool) {
+            return this.escapeHtml(output);
+        }
+        
+        // Apply tool-specific formatting
+        switch (commandInfo.tool) {
+            case 'git':
+                return this.formatGitOutput(output);
+            case 'npm':
+                return this.formatNpmOutput(output);
+            case 'docker':
+                return this.formatDockerOutput(output);
+            default:
+                return this.escapeHtml(output);
+        }
+    }
+    
+    formatGitOutput(output) {
+        let formatted = this.escapeHtml(output);
+        
+        // Highlight git status patterns
+        formatted = formatted.replace(/(modified:|new file:|deleted:)/g, '<span class="git-modified">$1</span>');
+        formatted = formatted.replace(/(Untracked files:)/g, '<span class="git-untracked">$1</span>');
+        formatted = formatted.replace(/(Changes to be committed:)/g, '<span class="git-staged">$1</span>');
+        
+        return formatted;
+    }
+    
+    formatNpmOutput(output) {
+        let formatted = this.escapeHtml(output);
+        
+        // Highlight npm patterns
+        formatted = formatted.replace(/(WARN|WARNING)/g, '<span class="npm-warn">$1</span>');
+        formatted = formatted.replace(/(ERROR|ERR!)/g, '<span class="npm-error">$1</span>');
+        formatted = formatted.replace(/(✓|✔)/g, '<span class="npm-success">$1</span>');
+        
+        return formatted;
+    }
+    
+    formatDockerOutput(output) {
+        let formatted = this.escapeHtml(output);
+        
+        // Highlight Docker patterns
+        formatted = formatted.replace(/(CONTAINER ID|IMAGE|COMMAND|CREATED|STATUS|PORTS|NAMES)/g, '<span class="docker-header">$1</span>');
+        formatted = formatted.replace(/(Up \d+.*|Exited \(\d+\).*)/g, '<span class="docker-status">$1</span>');
+        
+        return formatted;
+    }
+    
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    // Handle command routing events from backend
+    handleCommandResult(terminalId, data) {
+        console.log('Command result:', terminalId, data);
+        
+        // Remove from active commands
+        this.activeCommands.delete(terminalId);
+        
+        // Add to history
+        if (data.commandInfo) {
+            this.addToHistory(terminalId, data.commandInfo.command, data);
+            
+            if (data.commandInfo.tool) {
+                this.addToToolHistory(data.commandInfo.tool, data.commandInfo.command, data);
+            }
+        }
+        
+        // Show output in terminal if available
+        if (data.output) {
+            this.app.handleTerminalOutput(terminalId, data.output);
+        }
+        
+        // Show suggestions if this was a tool command
+        if (data.commandInfo && data.commandInfo.tool && data.success) {
+            setTimeout(() => {
+                this.showCommandSuggestions(terminalId, data.commandInfo.tool);
+            }, 1000);
+        }
+    }
+    
+    handleCommandError(terminalId, data) {
+        console.error('Command error:', terminalId, data);
+        
+        // Remove from active commands
+        this.activeCommands.delete(terminalId);
+        
+        // Show error in terminal
+        if (data.error) {
+            this.app.handleTerminalOutput(terminalId, `Error: ${data.error}`);
+        }
+    }
+    
+    handleAgentOutput(terminalId, data) {
+        console.log('Agent output:', terminalId, data);
+        
+        // Handle streaming output from AI tools
+        if (data.chunk) {
+            this.app.handleTerminalOutput(terminalId, data.chunk);
+        }
+    }
+    
+    handleCommandRouted(terminalId, data) {
+        console.log('Command routed:', terminalId, data);
+        
+        // Update routing statistics or UI as needed
+        if (data.commandInfo && data.commandInfo.isAgentTool) {
+            // Show agent tool indicator
+            this.showAgentToolIndicator(terminalId, data.commandInfo.tool);
+        }
+    }
+    
+    showAgentToolIndicator(terminalId, tool) {
+        const terminalTab = document.querySelector(`[data-tab-id="${terminalId}"]`);
+        if (terminalTab) {
+            terminalTab.classList.add('agent-active');
+            terminalTab.setAttribute('title', `AI Agent (${tool}) is processing...`);
+            
+            // Remove indicator after 30 seconds
+            setTimeout(() => {
+                terminalTab.classList.remove('agent-active');
+                terminalTab.removeAttribute('title');
+            }, 30000);
+        }
+    }
+    
+    // Check if a command is currently running
+    isCommandActive(terminalId) {
+        return this.activeCommands.has(terminalId);
+    }
+    
+    // Get currently active command
+    getActiveCommand(terminalId) {
+        return this.activeCommands.get(terminalId);
+    }
+    
+    // Clear all history
+    clearAllHistory() {
+        this.commandHistory.clear();
+        this.toolHistories.clear();
+        this.activeCommands.clear();
+    }
+    
+    // Clear history for a specific terminal
+    clearTerminalHistory(terminalId) {
+        this.commandHistory.delete(terminalId);
+        this.updateCommandHistoryUI(terminalId);
+    }
+    
+    // Clear history for a specific tool
+    clearToolHistory(tool) {
+        this.toolHistories.delete(tool);
+        this.updateToolHistoryUI(tool);
+    }
 }
 
 // Global functions
@@ -2675,5 +4872,6 @@ function showAbout() {
 // Initialize the application when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     const app = new DuckBridgeApp();
+    window.app = app; // Make app globally accessible
     app.checkStoredConnection();
 });

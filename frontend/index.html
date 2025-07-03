@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DuckBridge - Remote Terminal Access</title>
     <link rel="stylesheet" href="/styles/main.css">
+    <link rel="stylesheet" href="/styles/agent-dashboard.css">
 </head>
 <body>
     <div class="app">
@@ -16,6 +17,13 @@
                     <p class="tagline" id="tagline">Get your ducks in a row with AI</p>
                 </div>
                 <div class="header-controls">
+                    <button id="agent-dashboard-btn" class="header-btn" title="AI Agent Dashboard">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2L13.09 8.26L22 9L13.09 9.74L12 16L10.91 9.74L2 9L10.91 8.26L12 2Z"/>
+                            <path d="M8 17L9 19.5L8 22L7 19.5L8 17Z"/>
+                            <path d="M16 17L17 19.5L16 22L15 19.5L16 17Z"/>
+                        </svg>
+                    </button>
                     <button id="theme-toggle" class="theme-toggle" title="Toggle theme">
                         <svg class="sun-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="5"/>
@@ -31,60 +39,328 @@
 
         <!-- Main Interface (shown when connected) -->
         <main class="main" id="main-interface" style="display: none;">
-            <!-- Project Dashboard -->
-            <section class="dashboard">
-                <div class="dashboard-header">
-                    <h2>Project Dashboard</h2>
-                    <div class="dashboard-controls">
-                        <button id="new-project-btn" class="primary-btn">
+            <!-- Session Sidebar -->
+            <aside class="session-sidebar" id="session-sidebar">
+                <div class="session-sidebar-header">
+                    <div class="sidebar-title">
+                        <h3>Sessions</h3>
+                        <button id="sidebar-toggle" class="sidebar-toggle" title="Toggle sidebar">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <line x1="12" y1="5" x2="12" y2="19"></line>
-                                <line x1="5" y1="12" x2="19" y2="12"></line>
-                            </svg>
-                            New Project
-                        </button>
-                        <button id="open-project-btn" class="secondary-btn">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
-                            </svg>
-                            Open Project
-                        </button>
-                        <button id="logout-btn" class="logout-btn" title="Disconnect">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"></path>
-                                <polyline points="16 17 21 12 16 7"></polyline>
-                                <line x1="21" y1="12" x2="9" y2="12"></line>
+                                <path d="M3 12h18M3 6h18M3 18h18"/>
                             </svg>
                         </button>
                     </div>
                 </div>
                 
-                <!-- Project Grid -->
-                <div class="projects-grid" id="projects-grid">
-                    <div class="project-card placeholder-card">
-                        <div class="project-icon">📁</div>
-                        <h3>No Projects Yet</h3>
-                        <p>Create your first project to get started with AI-powered coding</p>
-                        <button class="create-first-project-btn">Create Project</button>
+                <div class="session-sidebar-content" id="session-sidebar-content">
+                    <!-- Session Groups will be dynamically added here -->
+                    <div class="session-groups" id="session-groups">
+                        <!-- Global Sessions Group -->
+                        <div class="session-group" data-project-id="global">
+                            <div class="session-group-header">
+                                <div class="session-group-title">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                        <line x1="9" y1="9" x2="15" y2="15"/>
+                                        <line x1="15" y1="9" x2="9" y2="15"/>
+                                    </svg>
+                                    <span>Global Sessions</span>
+                                </div>
+                                <button class="session-group-toggle" title="Toggle group">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M6 9l6 6 6-6"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="session-list" id="global-sessions">
+                                <!-- Global session items will be added here -->
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </section>
+            </aside>
             
-            <!-- Tabbed Terminal Interface -->
-            <section class="terminal-workspace">
-                <div class="terminal-tabs" id="terminal-tabs">
-                    <!-- Tabs will be dynamically added here -->
-                    <button id="new-terminal-btn" class="new-terminal-btn" title="Create new terminal">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <line x1="12" y1="5" x2="12" y2="19"></line>
-                            <line x1="5" y1="12" x2="19" y2="12"></line>
-                        </svg>
-                    </button>
+            <!-- Main Content Area -->
+            <div class="main-content" id="main-content">
+                <!-- Project Switcher Bar -->
+                <div class="project-switcher-bar" id="project-switcher-bar">
+                    <div class="project-switcher-content">
+                        <div class="current-project" id="current-project">
+                            <div class="project-indicator" id="project-indicator">
+                                <div class="project-color-dot" id="project-color-dot"></div>
+                                <span class="project-name" id="current-project-name">All Projects</span>
+                            </div>
+                            <div class="project-stats" id="project-stats">
+                                <span class="stat-item" id="active-terminals">0 terminals</span>
+                                <span class="stat-item" id="git-status">—</span>
+                            </div>
+                        </div>
+                        <div class="project-switcher-controls">
+                            <button class="project-switcher-btn" id="project-switcher-btn" title="Switch Project">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                                </svg>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M6 9l6 6 6-6"/>
+                                </svg>
+                            </button>
+                            <button class="project-overview-btn" id="project-overview-btn" title="Project Overview">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="7" height="9"/>
+                                    <rect x="14" y="3" width="7" height="5"/>
+                                    <rect x="14" y="12" width="7" height="9"/>
+                                    <rect x="3" y="16" width="7" height="5"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Project Switcher Dropdown -->
+                    <div class="project-switcher-dropdown" id="project-switcher-dropdown">
+                        <div class="dropdown-content">
+                            <div class="dropdown-section">
+                                <div class="dropdown-header">Quick Access</div>
+                                <div class="dropdown-item all-projects" data-project-id="all">
+                                    <div class="project-item-icon">🌐</div>
+                                    <div class="project-item-content">
+                                        <div class="project-item-name">All Projects</div>
+                                        <div class="project-item-stats" id="all-projects-stats">View all terminals</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="dropdown-section">
+                                <div class="dropdown-header">Recent Projects</div>
+                                <div class="dropdown-projects" id="dropdown-projects">
+                                    <!-- Project items will be populated here -->
+                                </div>
+                            </div>
+                            <div class="dropdown-section">
+                                <div class="dropdown-actions">
+                                    <button class="dropdown-action-btn" id="create-project-quick">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <line x1="12" y1="5" x2="12" y2="19"/>
+                                            <line x1="5" y1="12" x2="19" y2="12"/>
+                                        </svg>
+                                        New Project
+                                    </button>
+                                    <button class="dropdown-action-btn" id="manage-projects">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <circle cx="12" cy="12" r="3"/>
+                                            <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"/>
+                                        </svg>
+                                        Manage Projects
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="terminal-panels" id="terminal-panels">
-                    <!-- Terminal panels will be dynamically added here -->
+                
+                <!-- Project Overview Dashboard -->
+                <section class="project-overview-dashboard" id="project-overview-dashboard" style="display: none;">
+                    <div class="dashboard-header">
+                        <h2>Project Overview</h2>
+                        <button class="close-overview-btn" id="close-overview-btn" title="Close Overview">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="18" y1="6" x2="6" y2="18"/>
+                                <line x1="6" y1="6" x2="18" y2="18"/>
+                            </svg>
+                        </button>
+                    </div>
+                    
+                    <div class="overview-stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon">📁</div>
+                            <div class="stat-content">
+                                <div class="stat-number" id="total-projects">0</div>
+                                <div class="stat-label">Total Projects</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">💻</div>
+                            <div class="stat-content">
+                                <div class="stat-number" id="active-sessions">0</div>
+                                <div class="stat-label">Active Sessions</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">🔄</div>
+                            <div class="stat-content">
+                                <div class="stat-number" id="git-repos">0</div>
+                                <div class="stat-label">Git Repositories</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">⚡</div>
+                            <div class="stat-content">
+                                <div class="stat-number" id="recent-activity">0</div>
+                                <div class="stat-label">Recent Activity</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="overview-content">
+                        <div class="overview-section">
+                            <div class="section-header">
+                                <h3>Recent Projects</h3>
+                                <button class="view-all-btn" id="view-all-projects">View All</button>
+                            </div>
+                            <div class="recent-projects-list" id="recent-projects-list">
+                                <!-- Recent projects will be populated here -->
+                            </div>
+                        </div>
+                        
+                        <div class="overview-section">
+                            <div class="section-header">
+                                <h3>Active Sessions</h3>
+                                <button class="view-all-btn" id="view-all-sessions">View All</button>
+                            </div>
+                            <div class="active-sessions-list" id="active-sessions-list">
+                                <!-- Active sessions will be populated here -->
+                            </div>
+                        </div>
+                        
+                        <div class="overview-section">
+                            <div class="section-header">
+                                <h3>Git Activity</h3>
+                                <button class="refresh-git-btn" id="refresh-all-git" title="Refresh All Git Status">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="23 4 23 10 17 10"/>
+                                        <polyline points="1 20 1 14 7 14"/>
+                                        <path d="m3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="git-activity-list" id="git-activity-list">
+                                <!-- Git activity will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Project Dashboard -->
+                <section class="dashboard" id="main-dashboard">
+                    <div class="dashboard-header">
+                        <h2>Project Dashboard</h2>
+                        <div class="dashboard-controls">
+                            <button id="new-project-btn" class="primary-btn">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                </svg>
+                                New Project
+                            </button>
+                            <button id="open-project-btn" class="secondary-btn">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+                                </svg>
+                                Open Project
+                            </button>
+                            <button id="logout-btn" class="logout-btn" title="Disconnect">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"></path>
+                                    <polyline points="16 17 21 12 16 7"></polyline>
+                                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Project Grid -->
+                    <div class="projects-grid" id="projects-grid">
+                        <div class="project-card placeholder-card">
+                            <div class="project-icon">📁</div>
+                            <h3>No Projects Yet</h3>
+                            <p>Create your first project to get started with AI-powered coding</p>
+                            <button class="create-first-project-btn">Create Project</button>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Tool Status Bar -->
+                <div class="tool-status-bar" id="tool-status-bar">
+                    <div class="tool-status-content">
+                        <div class="tool-status-header">
+                            <div class="tool-status-title">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                                </svg>
+                                <span>Development Tools</span>
+                            </div>
+                            <div class="tool-status-stats" id="tool-status-stats">
+                                <span class="stat-item" id="tools-installed">Loading...</span>
+                                <span class="stat-item" id="tools-missing">—</span>
+                            </div>
+                        </div>
+                        <div class="tool-status-controls">
+                            <button class="tool-refresh-btn" id="tool-refresh-btn" title="Refresh Tool Status">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="23 4 23 10 17 10"/>
+                                    <polyline points="1 20 1 14 7 14"/>
+                                    <path d="m3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                                </svg>
+                            </button>
+                            <button class="tool-manager-btn" id="tool-manager-btn" title="Open Tool Manager">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                    <path d="M9 9h6v6H9z"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="tool-status-indicators" id="tool-status-indicators">
+                        <!-- Tool status indicators will be dynamically added here -->
+                    </div>
                 </div>
-            </section>
+                
+                <!-- Tabbed Terminal Interface -->
+                <section class="terminal-workspace">
+                    <div class="workspace-header">
+                        <div class="terminal-tabs" id="terminal-tabs">
+                            <!-- Tabs will be dynamically added here -->
+                            <button id="new-terminal-btn" class="new-terminal-btn" title="Create new terminal">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="workspace-controls">
+                            <button class="workspace-control-btn" id="toggle-split-view" title="Toggle Split View">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="8" height="18"/>
+                                    <rect x="13" y="3" width="8" height="18"/>
+                                </svg>
+                            </button>
+                            <button class="workspace-control-btn" id="toggle-horizontal-split" title="Toggle Horizontal Split">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="18" height="8"/>
+                                    <rect x="3" y="13" width="18" height="8"/>
+                                </svg>
+                            </button>
+                            <button class="workspace-control-btn" id="toggle-layout-mode" title="Toggle Layout Mode">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="7" height="9"/>
+                                    <rect x="14" y="3" width="7" height="5"/>
+                                    <rect x="14" y="12" width="7" height="9"/>
+                                    <rect x="3" y="16" width="7" height="5"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="terminal-header-info" id="terminal-header-info">
+                        <!-- Repository status info will be displayed here -->
+                    </div>
+                    <div class="terminal-workspace-container" id="terminal-workspace-container">
+                        <div class="terminal-panels" id="terminal-panels">
+                            <!-- Terminal panels will be dynamically added here -->
+                        </div>
+                        <div class="terminal-panels secondary" id="terminal-panels-secondary" style="display: none;">
+                            <!-- Secondary terminal panels for split view -->
+                        </div>
+                    </div>
+                    <div class="split-view-divider" id="split-view-divider" style="display: none;"></div>
+                </section>
+            </div>
         </main>
 
         <!-- Loading/Welcome Screen (shown initially) -->
@@ -206,7 +482,80 @@
         </div>
     </div>
 
+    <!-- Tool Manager Modal -->
+    <div id="tool-manager-modal" class="modal">
+        <div class="modal-content tool-manager-modal-content">
+            <div class="modal-header">
+                <h3>Development Tools Manager</h3>
+                <button id="tool-manager-close" class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Tool Statistics -->
+                <div class="tool-stats-section">
+                    <div class="tool-stat-cards">
+                        <div class="tool-stat-card">
+                            <div class="stat-icon">✅</div>
+                            <div class="stat-content">
+                                <div class="stat-number" id="modal-tools-installed">0</div>
+                                <div class="stat-label">Installed</div>
+                            </div>
+                        </div>
+                        <div class="tool-stat-card">
+                            <div class="stat-icon">❌</div>
+                            <div class="stat-content">
+                                <div class="stat-number" id="modal-tools-missing">0</div>
+                                <div class="stat-label">Missing</div>
+                            </div>
+                        </div>
+                        <div class="tool-stat-card">
+                            <div class="stat-icon">🔧</div>
+                            <div class="stat-content">
+                                <div class="stat-number" id="modal-tools-total">0</div>
+                                <div class="stat-label">Total</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tool Categories -->
+                <div class="tool-categories-section">
+                    <div class="category-tabs">
+                        <button class="category-tab active" data-category="all">All Tools</button>
+                        <button class="category-tab" data-category="ai">AI Tools</button>
+                        <button class="category-tab" data-category="development">Development</button>
+                        <button class="category-tab" data-category="devops">DevOps</button>
+                        <button class="category-tab" data-category="cloud">Cloud</button>
+                        <button class="category-tab" data-category="database">Database</button>
+                        <button class="category-tab" data-category="system">System</button>
+                    </div>
+                    
+                    <div class="tools-grid" id="tools-grid">
+                        <!-- Tools will be dynamically added here -->
+                    </div>
+                </div>
+
+                <!-- Tool Detail Panel -->
+                <div class="tool-detail-panel" id="tool-detail-panel" style="display: none;">
+                    <div class="tool-detail-header">
+                        <button class="back-to-tools-btn" id="back-to-tools-btn">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M19 12H5M12 19l-7-7 7-7"/>
+                            </svg>
+                            Back to Tools
+                        </button>
+                    </div>
+                    <div class="tool-detail-content" id="tool-detail-content">
+                        <!-- Tool details will be dynamically added here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Agent Dashboard Modal (included from agent-dashboard.js) -->
+
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <script src="/scripts/main.js"></script>
+    <script src="/scripts/agent-dashboard.js"></script>
 </body>
 </html>

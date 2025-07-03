@@ -2,15 +2,19 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { IncomingMessage } from 'http';
 import { TerminalManager } from './terminal';
 import { SessionDatabase } from './database';
+import { CommandRoutingEngine } from './routing';
 
 export interface WebSocketMessage {
-  type: 'auth' | 'terminal_input' | 'terminal_resize' | 'terminal_create' | 'terminal_close' | 'terminal_list' | 'terminal_broadcast' | 'ping' | 'pong';
+  type: 'auth' | 'terminal_input' | 'terminal_resize' | 'terminal_create' | 'terminal_close' | 'terminal_list' | 'terminal_broadcast' | 'ping' | 'pong' | 'command_route' | 'command_history' | 'tool_history' | 'command_parse' | 'agent_output';
   uuid?: string;
   terminalId?: string;
   targetTerminalId?: string;
   sourceTerminalId?: string;
   data?: any;
   timestamp?: number;
+  command?: string;
+  tool?: string;
+  workingDirectory?: string;
 }
 
 export interface ConnectedClient {
@@ -25,6 +29,7 @@ export class WebSocketManager {
   private clients: Map<string, ConnectedClient> = new Map();
   private terminalManager: TerminalManager;
   private database: SessionDatabase;
+  private commandRoutingEngine: CommandRoutingEngine | null = null;
   private pingInterval!: NodeJS.Timeout;
 
   constructor(port: number, terminalManager: TerminalManager, database: SessionDatabase) {
@@ -54,6 +59,43 @@ export class WebSocketManager {
       this.terminalManager.cleanupInactiveSessions();
       this.database.cleanupOldSessions();
     }, 5 * 60 * 1000); // Every 5 minutes
+  }
+
+  public setCommandRoutingEngine(engine: CommandRoutingEngine): void {
+    this.commandRoutingEngine = engine;
+    
+    // Setup routing engine listeners for real-time agent output
+    if (this.commandRoutingEngine) {
+      this.commandRoutingEngine.on('agentOutput', (data) => {
+        const client = this.clients.get(data.uuid);
+        if (client) {
+          this.sendMessage(client.ws, {
+            type: 'agent_output',
+            terminalId: data.terminalId,
+            data: {
+              tool: data.tool,
+              chunk: data.chunk,
+              type: data.type
+            }
+          });
+        }
+      });
+
+      this.commandRoutingEngine.on('commandRouted', (data) => {
+        const client = this.clients.get(data.uuid);
+        if (client) {
+          this.sendMessage(client.ws, {
+            type: 'command_routed' as any,
+            terminalId: data.terminalId,
+            data: {
+              commandInfo: data.commandInfo,
+              result: data.result,
+              duration: data.duration
+            }
+          });
+        }
+      });
+    }
   }
 
   private verifyClient(info: { origin: string; secure: boolean; req: IncomingMessage }): boolean {
@@ -152,6 +194,22 @@ export class WebSocketManager {
 
       case 'terminal_broadcast':
         this.handleTerminalBroadcast(client, message);
+        break;
+
+      case 'command_route':
+        this.handleCommandRoute(client, message);
+        break;
+
+      case 'command_parse':
+        this.handleCommandParse(client, message);
+        break;
+
+      case 'command_history':
+        this.handleCommandHistory(client, message);
+        break;
+
+      case 'tool_history':
+        this.handleToolHistory(client, message);
         break;
 
       case 'pong':
@@ -416,6 +474,217 @@ export class WebSocketManager {
             sourceTerminalId: terminalId,
             data: data
           });
+        }
+      });
+    }
+  }
+
+  private async handleCommandRoute(client: ConnectedClient, message: WebSocketMessage): Promise<void> {
+    if (!client.authenticated || !client.uuid) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Authentication required for command routing'
+      });
+      return;
+    }
+
+    if (!this.commandRoutingEngine) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Command routing engine not available'
+      });
+      return;
+    }
+
+    const { terminalId, command, workingDirectory } = message;
+    
+    if (!terminalId || !command) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Terminal ID and command are required for routing'
+      });
+      return;
+    }
+
+    try {
+      const result = await this.commandRoutingEngine.routeCommand(
+        client.uuid,
+        terminalId,
+        command,
+        workingDirectory
+      );
+
+      this.sendMessage(client.ws, {
+        type: 'command_result' as any,
+        terminalId,
+        data: {
+          success: result.success,
+          handled: result.handled,
+          output: result.output,
+          error: result.error,
+          commandInfo: result.commandInfo
+        }
+      });
+    } catch (error) {
+      this.sendMessage(client.ws, {
+        type: 'command_error' as any,
+        terminalId,
+        data: {
+          error: error instanceof Error ? error.message : 'Unknown error during command routing'
+        }
+      });
+    }
+  }
+
+  private handleCommandParse(client: ConnectedClient, message: WebSocketMessage): void {
+    if (!client.authenticated || !client.uuid) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Authentication required for command parsing'
+      });
+      return;
+    }
+
+    if (!this.commandRoutingEngine) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Command routing engine not available'
+      });
+      return;
+    }
+
+    const { command } = message;
+    
+    if (!command) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Command is required for parsing'
+      });
+      return;
+    }
+
+    try {
+      const commandInfo = this.commandRoutingEngine.getParser().parseCommand(command);
+      
+      this.sendMessage(client.ws, {
+        type: 'command_parsed' as any,
+        data: {
+          commandInfo
+        }
+      });
+    } catch (error) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: {
+          error: error instanceof Error ? error.message : 'Failed to parse command'
+        }
+      });
+    }
+  }
+
+  private handleCommandHistory(client: ConnectedClient, message: WebSocketMessage): void {
+    if (!client.authenticated || !client.uuid) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Authentication required for command history'
+      });
+      return;
+    }
+
+    if (!this.commandRoutingEngine) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Command routing engine not available'
+      });
+      return;
+    }
+
+    const { terminalId } = message;
+    
+    if (!terminalId) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Terminal ID is required for command history'
+      });
+      return;
+    }
+
+    try {
+      const history = this.commandRoutingEngine.getTerminalHistory(client.uuid, terminalId);
+      
+      this.sendMessage(client.ws, {
+        type: 'command_history_result' as any,
+        terminalId,
+        data: {
+          history
+        }
+      });
+    } catch (error) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: {
+          error: error instanceof Error ? error.message : 'Failed to get command history'
+        }
+      });
+    }
+  }
+
+  private handleToolHistory(client: ConnectedClient, message: WebSocketMessage): void {
+    if (!client.authenticated || !client.uuid) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Authentication required for tool history'
+      });
+      return;
+    }
+
+    if (!this.commandRoutingEngine) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: 'Command routing engine not available'
+      });
+      return;
+    }
+
+    const { tool } = message;
+    
+    if (!tool) {
+      // Return all tool histories if no specific tool requested
+      try {
+        const histories = this.commandRoutingEngine.getUserToolHistories(client.uuid);
+        
+        this.sendMessage(client.ws, {
+          type: 'tool_histories_result' as any,
+          data: {
+            histories
+          }
+        });
+      } catch (error) {
+        this.sendMessage(client.ws, {
+          type: 'error' as any,
+          data: {
+            error: error instanceof Error ? error.message : 'Failed to get tool histories'
+          }
+        });
+      }
+      return;
+    }
+
+    try {
+      const history = this.commandRoutingEngine.getToolHistory(client.uuid, tool);
+      
+      this.sendMessage(client.ws, {
+        type: 'tool_history_result' as any,
+        data: {
+          tool,
+          history
+        }
+      });
+    } catch (error) {
+      this.sendMessage(client.ws, {
+        type: 'error' as any,
+        data: {
+          error: error instanceof Error ? error.message : 'Failed to get tool history'
         }
       });
     }

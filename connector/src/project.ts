@@ -1,6 +1,10 @@
 import { EventEmitter } from 'events';
 import * as fs from 'fs';
 import * as path from 'path';
+import { exec, execSync } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
 
 export interface Project {
   id: string;
@@ -29,13 +33,26 @@ export interface ProjectSettings {
 export interface GitRepository {
   url: string;
   branch: string;
-  status: 'clean' | 'dirty' | 'ahead' | 'behind';
+  status: 'clean' | 'dirty' | 'ahead' | 'behind' | 'ahead-behind';
   lastCommit?: {
     hash: string;
     message: string;
     author: string;
     date: Date;
   };
+  stats?: {
+    ahead: number;
+    behind: number;
+    staged: number;
+    modified: number;
+    untracked: number;
+    conflicts: number;
+  };
+  remotes?: {
+    name: string;
+    url: string;
+    type: 'fetch' | 'push';
+  }[];
 }
 
 export class ProjectManager extends EventEmitter {
@@ -251,51 +268,184 @@ export class ProjectManager extends EventEmitter {
     }
 
     try {
-      const gitConfigPath = path.join(projectPath, '.git', 'config');
-      const headPath = path.join(projectPath, '.git', 'HEAD');
+      // Use git commands for accurate information
+      const gitInfo = this.executeGitCommands(projectPath);
+      return gitInfo;
+    } catch (error) {
+      console.error('Failed to get git info:', error);
+      // Fallback to file-based detection
+      return this.getGitInfoFallback(projectPath);
+    }
+  }
+
+  private executeGitCommands(projectPath: string): GitRepository {
+    const originalCwd = process.cwd();
+    
+    try {
+      process.chdir(projectPath);
       
-      let url = '';
+      // Get current branch
       let branch = 'main';
-      let status: 'clean' | 'dirty' | 'ahead' | 'behind' = 'clean';
-      
-      // Read git config to get remote URL
-      if (fs.existsSync(gitConfigPath)) {
-        const gitConfig = fs.readFileSync(gitConfigPath, 'utf8');
-        const urlMatch = gitConfig.match(/url\s*=\s*(.+)/);
-        if (urlMatch) {
-          url = urlMatch[1].trim();
-        }
+      try {
+        branch = execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf8' }).trim();
+      } catch {
+        branch = 'unknown';
       }
       
-      // Read current branch
-      if (fs.existsSync(headPath)) {
-        const headContent = fs.readFileSync(headPath, 'utf8').trim();
-        const branchMatch = headContent.match(/ref:\s*refs\/heads\/(.+)/);
-        if (branchMatch) {
-          branch = branchMatch[1];
-        }
+      // Get remote URL
+      let url = '';
+      try {
+        url = execSync('git config --get remote.origin.url', { encoding: 'utf8' }).trim();
+      } catch {
+        // No remote configured
       }
       
-      // Check for uncommitted changes (simplified)
-      const gitStatus = this.checkGitStatus(projectPath);
-      if (gitStatus.hasChanges) {
+      // Get all remotes
+      const remotes: GitRepository['remotes'] = [];
+      try {
+        const remoteOutput = execSync('git remote -v', { encoding: 'utf8' }).trim();
+        if (remoteOutput) {
+          const remoteLines = remoteOutput.split('\n');
+          for (const line of remoteLines) {
+            const match = line.match(/^(\w+)\s+(.+)\s+\((fetch|push)\)$/);
+            if (match) {
+              remotes.push({
+                name: match[1],
+                url: match[2],
+                type: match[3] as 'fetch' | 'push'
+              });
+            }
+          }
+        }
+      } catch {
+        // No remotes or git remote command failed
+      }
+      
+      // Get detailed status information
+      const stats = this.getGitStats(projectPath);
+      
+      // Determine overall status
+      let status: GitRepository['status'] = 'clean';
+      if (stats && (stats.staged > 0 || stats.modified > 0 || stats.untracked > 0)) {
         status = 'dirty';
+      } else if (stats && stats.ahead > 0 && stats.behind > 0) {
+        status = 'ahead-behind';
+      } else if (stats && stats.ahead > 0) {
+        status = 'ahead';
+      } else if (stats && stats.behind > 0) {
+        status = 'behind';
       }
+      
+      // Get last commit info
+      const lastCommit = this.getLastCommitInfo(projectPath);
       
       return {
         url,
         branch,
         status,
-        lastCommit: this.getLastCommitInfo(projectPath)
+        lastCommit,
+        stats,
+        remotes
       };
-    } catch (error) {
-      console.error('Failed to get git info:', error);
-      return {
-        url: '',
-        branch: 'unknown',
-        status: 'clean'
-      };
+    } finally {
+      process.chdir(originalCwd);
     }
+  }
+
+  private getGitStats(projectPath: string): GitRepository['stats'] {
+    const stats = {
+      ahead: 0,
+      behind: 0,
+      staged: 0,
+      modified: 0,
+      untracked: 0,
+      conflicts: 0
+    };
+    
+    try {
+      // Get ahead/behind count
+      try {
+        const revListOutput = execSync('git rev-list --count --left-right @{upstream}...HEAD', { encoding: 'utf8' }).trim();
+        const [behind, ahead] = revListOutput.split('\t').map(Number);
+        stats.ahead = ahead || 0;
+        stats.behind = behind || 0;
+      } catch {
+        // No upstream branch or not connected to remote
+      }
+      
+      // Get working directory status
+      const statusOutput = execSync('git status --porcelain', { encoding: 'utf8' }).trim();
+      if (statusOutput) {
+        const lines = statusOutput.split('\n');
+        for (const line of lines) {
+          const statusCode = line.substring(0, 2);
+          
+          // Check staged files (first character)
+          if (statusCode[0] !== ' ' && statusCode[0] !== '?') {
+            stats.staged++;
+          }
+          
+          // Check modified files (second character)
+          if (statusCode[1] === 'M' || statusCode[1] === 'D') {
+            stats.modified++;
+          }
+          
+          // Check untracked files
+          if (statusCode === '??') {
+            stats.untracked++;
+          }
+          
+          // Check conflicts
+          if (statusCode === 'UU' || statusCode === 'AA' || statusCode === 'DD') {
+            stats.conflicts++;
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to get git stats:', error);
+    }
+    
+    return stats;
+  }
+
+  private getGitInfoFallback(projectPath: string): GitRepository {
+    const gitConfigPath = path.join(projectPath, '.git', 'config');
+    const headPath = path.join(projectPath, '.git', 'HEAD');
+    
+    let url = '';
+    let branch = 'main';
+    let status: GitRepository['status'] = 'clean';
+    
+    // Read git config to get remote URL
+    if (fs.existsSync(gitConfigPath)) {
+      const gitConfig = fs.readFileSync(gitConfigPath, 'utf8');
+      const urlMatch = gitConfig.match(/url\s*=\s*(.+)/);
+      if (urlMatch) {
+        url = urlMatch[1].trim();
+      }
+    }
+    
+    // Read current branch
+    if (fs.existsSync(headPath)) {
+      const headContent = fs.readFileSync(headPath, 'utf8').trim();
+      const branchMatch = headContent.match(/ref:\s*refs\/heads\/(.+)/);
+      if (branchMatch) {
+        branch = branchMatch[1];
+      }
+    }
+    
+    // Check for uncommitted changes (simplified)
+    const gitStatus = this.checkGitStatus(projectPath);
+    if (gitStatus.hasChanges) {
+      status = 'dirty';
+    }
+    
+    return {
+      url,
+      branch,
+      status,
+      lastCommit: this.getLastCommitInfo(projectPath)
+    };
   }
   
   private checkGitStatus(projectPath: string): { hasChanges: boolean; files: string[] } {
@@ -330,6 +480,35 @@ export class ProjectManager extends EventEmitter {
   }
   
   private getLastCommitInfo(projectPath: string): GitRepository['lastCommit'] | undefined {
+    const originalCwd = process.cwd();
+    
+    try {
+      process.chdir(projectPath);
+      
+      // Get the latest commit information using git log
+      const logOutput = execSync('git log -1 --format="%H|%s|%an|%ad" --date=iso', { encoding: 'utf8' }).trim();
+      
+      if (logOutput) {
+        const [hash, message, author, dateStr] = logOutput.split('|');
+        
+        return {
+          hash: hash.substring(0, 7),
+          message: message || 'No commit message',
+          author: author || 'Unknown',
+          date: new Date(dateStr)
+        };
+      }
+      
+      return undefined;
+    } catch (error) {
+      // Fallback to file-based detection
+      return this.getLastCommitInfoFallback(projectPath);
+    } finally {
+      process.chdir(originalCwd);
+    }
+  }
+
+  private getLastCommitInfoFallback(projectPath: string): GitRepository['lastCommit'] | undefined {
     try {
       const gitPath = path.join(projectPath, '.git');
       const headPath = path.join(gitPath, 'HEAD');
@@ -346,10 +525,6 @@ export class ProjectManager extends EventEmitter {
         if (fs.existsSync(refPath)) {
           const commitHash = fs.readFileSync(refPath, 'utf8').trim();
           
-          // Read commit object (simplified)
-          const objectPath = path.join(gitPath, 'objects', commitHash.substring(0, 2), commitHash.substring(2));
-          
-          // For now, return a placeholder
           return {
             hash: commitHash.substring(0, 7),
             message: 'Latest commit',
@@ -611,6 +786,23 @@ export class ProjectManager extends EventEmitter {
     }
   }
 
+  // Add method to refresh git info for a project
+  refreshGitInfo(uuid: string, projectId: string): GitRepository | undefined {
+    const project = this.getProject(uuid, projectId);
+    if (!project) {
+      return undefined;
+    }
+    
+    const gitInfo = this.getGitInfo(project.path);
+    if (gitInfo) {
+      project.gitRepo = gitInfo;
+      this.saveProjects();
+      this.emit('project_git_updated', uuid, project);
+    }
+    
+    return gitInfo;
+  }
+
   // Scan directory tree for Git repositories
   scanForGitRepositories(rootPath: string, maxDepth: number = 3): Array<{
     name: string;
@@ -620,6 +812,7 @@ export class ProjectManager extends EventEmitter {
       status: string;
       hasRemote: boolean;
       url?: string;
+      stats?: GitRepository['stats'];
     };
   }> {
     const repositories: Array<{
@@ -630,6 +823,7 @@ export class ProjectManager extends EventEmitter {
         status: string;
         hasRemote: boolean;
         url?: string;
+        stats?: GitRepository['stats'];
       };
     }> = [];
 
@@ -648,7 +842,8 @@ export class ProjectManager extends EventEmitter {
                 branch: gitInfo.branch,
                 status: gitInfo.status,
                 hasRemote: !!gitInfo.url,
-                url: gitInfo.url
+                url: gitInfo.url,
+                stats: gitInfo.stats
               }
             });
           }
