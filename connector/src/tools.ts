@@ -61,19 +61,19 @@ export class ToolDetectionService {
           {
             name: 'Code Generation',
             description: 'Generate code in multiple programming languages',
-            commands: ['claude-code generate', 'claude-code write'],
+            commands: ['claude --print', 'claude --add-file'],
             category: 'core'
           },
           {
             name: 'Code Review',
             description: 'Review and analyze existing code',
-            commands: ['claude-code review', 'claude-code analyze'],
+            commands: ['claude --print', 'claude --add-dir'],
             category: 'core'
           },
           {
             name: 'Documentation',
             description: 'Generate documentation for code',
-            commands: ['claude-code document', 'claude-code explain'],
+            commands: ['claude --print', 'claude --help'],
             category: 'core'
           }
         ],
@@ -469,7 +469,7 @@ export class ToolDetectionService {
 
   private async getToolVersion(toolName: string): Promise<string | null> {
     const versionCommands: { [key: string]: string[] } = {
-      'claude-code': ['claude-code', '--version'],
+      'claude-code': ['claude', '--version'],
       'gemini': ['gemini', '--version'],
       'git': ['git', '--version'],
       'node': ['node', '--version'],

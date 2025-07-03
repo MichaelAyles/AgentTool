@@ -5,7 +5,7 @@ import path from 'path';
 
 export class ClaudeCodeAgent extends BaseAgent {
   private activeProcesses: Map<string, ChildProcess> = new Map();
-  private claudeCodePath: string = 'claude-code';
+  private claudeCodePath: string = 'claude';
   private sessionManager: Map<string, any> = new Map();
 
   constructor(config?: Partial<AgentConfig>) {
@@ -85,7 +85,28 @@ export class ClaudeCodeAgent extends BaseAgent {
     }
   }
 
+  private async testCommand(command: string): Promise<boolean> {
+    return new Promise((resolve) => {
+      const childProcess = spawn(command, ['--version'], {
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
+
+      childProcess.on('error', () => resolve(false));
+      childProcess.on('close', (code) => resolve(code === 0));
+    });
+  }
+
   private async verifyClaudeCodeInstallation(): Promise<void> {
+    const possibleCommands = ['claude-code', 'claude'];
+    
+    for (const command of possibleCommands) {
+      if (await this.testCommand(command)) {
+        this.claudeCodePath = command;
+        console.log(`Found Claude Code command: ${command}`);
+        return;
+      }
+    }
+    
     return new Promise((resolve, reject) => {
       const childProcess = spawn(this.claudeCodePath, ['--version'], {
         stdio: ['pipe', 'pipe', 'pipe']

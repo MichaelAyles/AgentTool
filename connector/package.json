@@ -11,7 +11,15 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "cli": "tsx src/cli.ts",
-    "test": "echo 'No tests configured yet'"
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:integration": "jest --testPathPattern=integration",
+    "test:unit": "jest --testPathPattern=unit",
+    "test:e2e": "jest --testPathPattern=e2e",
+    "test:stress": "node tests/stress/run-stress-tests.js",
+    "lint": "eslint src tests --ext .ts,.js",
+    "lint:fix": "eslint src tests --ext .ts,.js --fix"
   },
   "keywords": [
     "terminal",
@@ -35,11 +43,20 @@
     "@types/better-sqlite3": "^7.6.8",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
+    "@types/jest": "^29.5.12",
     "@types/node": "^20.10.0",
+    "@types/supertest": "^6.0.2",
     "@types/uuid": "^9.0.7",
     "@types/ws": "^8.5.10",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "eslint": "^8.56.0",
+    "jest": "^29.7.0",
+    "supertest": "^6.3.4",
+    "ts-jest": "^29.1.2",
     "tsx": "^4.6.0",
-    "typescript": "^5.3.0"
+    "typescript": "^5.3.0",
+    "ws": "^8.14.2"
   },
   "engines": {
     "node": ">=18.0.0"
