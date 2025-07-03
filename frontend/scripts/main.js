@@ -262,7 +262,7 @@ class DuckBridgeApp {
             try {
                 const tabs = JSON.parse(savedTabs);
                 tabs.forEach((tabInfo, index) => {
-                    const { tabId, panelId } = this.createNewTerminalTab(tabInfo.name);
+                    const { tabId, panelId } = this.createNewTerminalTab(tabInfo.name, tabInfo.color);
                     if (tabInfo.isActive) {
                         this.switchToTab(tabId, panelId);
                     }
@@ -791,17 +791,36 @@ class DuckBridgeApp {
     }
     
     // Terminal Tab Management
-    createNewTerminalTab(name = 'Terminal') {
+    createNewTerminalTab(name = 'Terminal', color = null) {
         const tabId = 'tab-' + Date.now();
         const panelId = 'panel-' + Date.now();
         
+        // Assign a color if not provided
+        if (!color) {
+            const colors = ['blue', 'green', 'purple', 'orange', 'red', 'pink', 'indigo', 'teal'];
+            const existingColors = Array.from(this.terminalTabs.children).map(tab => {
+                const colorMatch = tab.className.match(/color-(\w+)/);
+                return colorMatch ? colorMatch[1] : null;
+            }).filter(Boolean);
+            
+            // Find an unused color or cycle through
+            color = colors.find(c => !existingColors.includes(c)) || colors[existingColors.length % colors.length];
+        }
+        
         // Create tab
         const tab = document.createElement('div');
-        tab.className = 'terminal-tab';
+        tab.className = `terminal-tab color-${color}`;
         tab.dataset.tabId = tabId;
+        tab.dataset.color = color;
         tab.innerHTML = `
             <span class="terminal-tab-name">${name}</span>
-            <button class="terminal-tab-close" data-close="${tabId}">
+            <button class="terminal-tab-edit" data-edit="${tabId}" title="Edit tab">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"></path>
+                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+            </button>
+            <button class="terminal-tab-close" data-close="${tabId}" title="Close tab">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
                     <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -823,9 +842,14 @@ class DuckBridgeApp {
         
         // Add event listeners
         tab.addEventListener('click', (e) => {
-            if (!e.target.closest('.terminal-tab-close')) {
+            if (!e.target.closest('.terminal-tab-close') && !e.target.closest('.terminal-tab-edit')) {
                 this.switchToTab(tabId, panelId);
             }
+        });
+        
+        tab.querySelector('.terminal-tab-edit').addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.editTab(tabId);
         });
         
         tab.querySelector('.terminal-tab-close').addEventListener('click', (e) => {
@@ -870,6 +894,121 @@ class DuckBridgeApp {
                 this.switchToTab(firstTabId, firstPanel.id);
             }
         }
+    }
+    
+    editTab(tabId) {
+        const tab = document.querySelector(`[data-tab-id="${tabId}"]`);
+        if (!tab) return;
+        
+        const nameSpan = tab.querySelector('.terminal-tab-name');
+        const currentName = nameSpan.textContent;
+        const currentColor = tab.dataset.color;
+        
+        // Create inline editor
+        const editor = document.createElement('div');
+        editor.className = 'tab-editor';
+        editor.innerHTML = `
+            <input type="text" class="tab-name-input" value="${currentName}" placeholder="Tab name">
+            <select class="tab-color-select">
+                <option value="blue" ${currentColor === 'blue' ? 'selected' : ''}>🔵 Blue</option>
+                <option value="green" ${currentColor === 'green' ? 'selected' : ''}>🟢 Green</option>
+                <option value="purple" ${currentColor === 'purple' ? 'selected' : ''}>🟣 Purple</option>
+                <option value="orange" ${currentColor === 'orange' ? 'selected' : ''}>🟠 Orange</option>
+                <option value="red" ${currentColor === 'red' ? 'selected' : ''}>🔴 Red</option>
+                <option value="pink" ${currentColor === 'pink' ? 'selected' : ''}>🩷 Pink</option>
+                <option value="indigo" ${currentColor === 'indigo' ? 'selected' : ''}>🟦 Indigo</option>
+                <option value="teal" ${currentColor === 'teal' ? 'selected' : ''}>🔷 Teal</option>
+            </select>
+            <button class="tab-save-btn">✓</button>
+            <button class="tab-cancel-btn">✕</button>
+        `;
+        
+        // Replace tab content temporarily
+        const originalContent = tab.innerHTML;
+        tab.innerHTML = '';
+        tab.appendChild(editor);
+        
+        const nameInput = editor.querySelector('.tab-name-input');
+        const colorSelect = editor.querySelector('.tab-color-select');
+        const saveBtn = editor.querySelector('.tab-save-btn');
+        const cancelBtn = editor.querySelector('.tab-cancel-btn');
+        
+        // Focus input and select text
+        nameInput.focus();
+        nameInput.select();
+        
+        const saveChanges = () => {
+            const newName = nameInput.value.trim() || currentName;
+            const newColor = colorSelect.value;
+            
+            // Update tab
+            tab.className = `terminal-tab color-${newColor}`;
+            tab.dataset.color = newColor;
+            tab.innerHTML = originalContent;
+            
+            // Update name
+            const updatedNameSpan = tab.querySelector('.terminal-tab-name');
+            updatedNameSpan.textContent = newName;
+            
+            // Re-attach event listeners
+            this.attachTabListeners(tab, tabId);
+            
+            // Save to localStorage
+            this.saveTabState();
+        };
+        
+        const cancelChanges = () => {
+            tab.innerHTML = originalContent;
+            this.attachTabListeners(tab, tabId);
+        };
+        
+        // Event listeners for editor
+        saveBtn.addEventListener('click', saveChanges);
+        cancelBtn.addEventListener('click', cancelChanges);
+        nameInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') saveChanges();
+            if (e.key === 'Escape') cancelChanges();
+        });
+        
+        // Auto-save on color change
+        colorSelect.addEventListener('change', () => {
+            tab.className = `terminal-tab color-${colorSelect.value}`;
+        });
+    }
+    
+    attachTabListeners(tab, tabId) {
+        const panelId = document.querySelector('.terminal-panel.active')?.id || `panel-${Date.now()}`;
+        
+        tab.addEventListener('click', (e) => {
+            if (!e.target.closest('.terminal-tab-close') && !e.target.closest('.terminal-tab-edit')) {
+                this.switchToTab(tabId, panelId);
+            }
+        });
+        
+        const editBtn = tab.querySelector('.terminal-tab-edit');
+        if (editBtn) {
+            editBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.editTab(tabId);
+            });
+        }
+        
+        const closeBtn = tab.querySelector('.terminal-tab-close');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.closeTab(tabId, panelId);
+            });
+        }
+    }
+    
+    saveTabState() {
+        const tabs = Array.from(this.terminalTabs.children).map(tab => ({
+            name: tab.querySelector('.terminal-tab-name').textContent,
+            color: tab.dataset.color,
+            isActive: tab.classList.contains('active')
+        }));
+        localStorage.setItem('terminalTabs', JSON.stringify(tabs));
     }
     
     clearAllTerminals() {

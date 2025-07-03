@@ -1034,7 +1034,18 @@ body {
     gap: 0.5rem;
     transition: all 0.2s ease;
     position: relative;
+    border-left: 3px solid var(--accent-primary);
 }
+
+/* Terminal tab color variations */
+.terminal-tab.color-blue { border-left-color: #3b82f6; }
+.terminal-tab.color-green { border-left-color: #10b981; }
+.terminal-tab.color-purple { border-left-color: #8b5cf6; }
+.terminal-tab.color-orange { border-left-color: #f59e0b; }
+.terminal-tab.color-red { border-left-color: #ef4444; }
+.terminal-tab.color-pink { border-left-color: #ec4899; }
+.terminal-tab.color-indigo { border-left-color: #6366f1; }
+.terminal-tab.color-teal { border-left-color: #14b8a6; }
 
 .terminal-tab.active {
     background: var(--card-bg);
@@ -1065,6 +1076,93 @@ body {
 }
 
 .terminal-tab-close:hover {
+    background: var(--error-color);
+    color: white;
+}
+
+.terminal-tab-edit {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 0.25rem;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.terminal-tab-edit:hover {
+    background: var(--accent-primary);
+    color: white;
+}
+
+/* Tab Editor */
+.tab-editor {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem;
+    background: var(--card-bg);
+    border-radius: 0.5rem;
+    min-width: 250px;
+}
+
+.tab-name-input {
+    flex: 1;
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    color: var(--text-primary);
+    outline: none;
+}
+
+.tab-name-input:focus {
+    border-color: var(--accent-primary);
+}
+
+.tab-color-select {
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 0.25rem;
+    padding: 0.25rem;
+    font-size: 0.75rem;
+    color: var(--text-primary);
+    outline: none;
+    cursor: pointer;
+}
+
+.tab-color-select:focus {
+    border-color: var(--accent-primary);
+}
+
+.tab-save-btn, .tab-cancel-btn {
+    background: none;
+    border: none;
+    padding: 0.25rem;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+}
+
+.tab-save-btn {
+    color: var(--success-color);
+}
+
+.tab-save-btn:hover {
+    background: var(--success-color);
+    color: white;
+}
+
+.tab-cancel-btn {
+    color: var(--error-color);
+}
+
+.tab-cancel-btn:hover {
     background: var(--error-color);
     color: white;
 }
