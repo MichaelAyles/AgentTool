@@ -239,8 +239,40 @@ class DuckBridgeApp {
         
         this.showSuccessMessage('✅ Connected successfully!');
         
-        // Store UUID for reconnection
+        // Store session information for persistence
+        this.saveSessionState(uuid);
+    }
+    
+    saveSessionState(uuid) {
         localStorage.setItem('lastConnectedUUID', uuid);
+        localStorage.setItem('wasConnected', 'true');
+        localStorage.setItem('sessionTimestamp', Date.now().toString());
+        
+        // Save current tab configuration
+        const tabs = Array.from(this.terminalTabs.children).map(tab => ({
+            name: tab.querySelector('.terminal-tab-name').textContent,
+            isActive: tab.classList.contains('active')
+        }));
+        localStorage.setItem('terminalTabs', JSON.stringify(tabs));
+    }
+    
+    restoreSessionState() {
+        const savedTabs = localStorage.getItem('terminalTabs');
+        if (savedTabs) {
+            try {
+                const tabs = JSON.parse(savedTabs);
+                tabs.forEach((tabInfo, index) => {
+                    const { tabId, panelId } = this.createNewTerminalTab(tabInfo.name);
+                    if (tabInfo.isActive) {
+                        this.switchToTab(tabId, panelId);
+                    }
+                });
+            } catch (error) {
+                console.warn('Failed to restore terminal tabs:', error);
+                // Fallback: create a single terminal tab
+                this.createNewTerminalTab('Main Terminal');
+            }
+        }
     }
     
     handleConnectionError(message) {
@@ -633,25 +665,62 @@ class DuckBridgeApp {
     initializeUI() {
         // Check if user was previously connected
         const wasConnected = localStorage.getItem('wasConnected') === 'true';
+        const lastUuid = localStorage.getItem('lastConnectedUUID');
         
-        if (wasConnected) {
-            // Show login modal directly for returning users
+        if (wasConnected && lastUuid) {
+            // Auto-restore UUID for returning users
+            this.currentUuid = lastUuid;
+            this.updateUuidDisplay();
+            
+            // Show login modal and attempt auto-reconnect
             this.showLoginModal();
+            
+            // Attempt auto-reconnect after a brief delay
+            setTimeout(() => {
+                this.attemptAutoReconnect();
+            }, 1000);
         } else {
             // Show welcome screen for new users
             this.showWelcomeScreen();
         }
     }
     
+    attemptAutoReconnect() {
+        // Only attempt if we have a valid UUID and aren't already connected
+        if (this.currentUuid && this.validateUuidString(this.currentUuid) && !this.wsConnection) {
+            console.log('Attempting auto-reconnect with stored UUID');
+            this.handleConnect();
+        }
+    }
+    
+    // Helper method for UUID validation
+    validateUuidString(uuid) {
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        return uuidRegex.test(uuid);
+    }
+    
     showWelcomeScreen() {
-        this.welcomeScreen.style.display = 'block';
-        this.mainInterface.style.display = 'none';
+        // Smooth transition to welcome screen
+        this.mainInterface.classList.add('hidden');
         this.hideLoginModal();
+        
+        setTimeout(() => {
+            this.welcomeScreen.style.display = 'block';
+            this.mainInterface.style.display = 'none';
+            requestAnimationFrame(() => {
+                this.welcomeScreen.classList.remove('hidden');
+            });
+        }, 100);
     }
     
     showLoginModal() {
         this.loginModal.classList.add('show');
-        this.welcomeScreen.style.display = 'none';
+        
+        // Hide welcome screen with animation
+        this.welcomeScreen.classList.add('hidden');
+        setTimeout(() => {
+            this.welcomeScreen.style.display = 'none';
+        }, 300);
     }
     
     hideLoginModal() {
@@ -659,9 +728,17 @@ class DuckBridgeApp {
     }
     
     showMainInterface() {
-        this.welcomeScreen.style.display = 'none';
-        this.mainInterface.style.display = 'block';
+        // Hide both welcome screen and login modal
+        this.welcomeScreen.classList.add('hidden');
         this.hideLoginModal();
+        
+        // Show main interface with smooth transition
+        setTimeout(() => {
+            this.welcomeScreen.style.display = 'none';
+            this.mainInterface.style.display = 'block';
+            this.mainInterface.classList.remove('hidden');
+        }, 100);
+        
         localStorage.setItem('wasConnected', 'true');
     }
     
@@ -681,11 +758,20 @@ class DuckBridgeApp {
         // Clear terminal tabs
         this.clearAllTerminals();
         
+        // Clear all session state
+        this.clearSessionState();
+        
         // Reset UI state
-        localStorage.removeItem('wasConnected');
         this.showWelcomeScreen();
         
         this.showSuccessMessage('Disconnected successfully');
+    }
+    
+    clearSessionState() {
+        localStorage.removeItem('wasConnected');
+        localStorage.removeItem('lastConnectedUUID');
+        localStorage.removeItem('sessionTimestamp');
+        localStorage.removeItem('terminalTabs');
     }
     
     // Project Management

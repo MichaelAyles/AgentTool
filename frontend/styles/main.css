@@ -865,6 +865,15 @@ body {
     justify-content: center;
     min-height: 80vh;
     padding: 2rem;
+    opacity: 1;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    transform: translateY(0);
+}
+
+.welcome-screen.hidden {
+    opacity: 0;
+    transform: translateY(-20px);
+    pointer-events: none;
 }
 
 .welcome-content {
@@ -885,6 +894,19 @@ body {
     font-size: 1.25rem;
     color: var(--text-secondary);
     margin-bottom: 2rem;
+}
+
+/* Main Interface */
+.main {
+    opacity: 1;
+    transition: opacity 0.4s ease, transform 0.4s ease;
+    transform: translateY(0);
+}
+
+.main.hidden {
+    opacity: 0;
+    transform: translateY(20px);
+    pointer-events: none;
 }
 
 /* Dashboard Styles */
