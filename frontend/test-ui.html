@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DuckBridge UI Test</title>
+    <link rel="stylesheet" href="/styles/main.css">
+    <style>
+        body { padding: 2rem; }
+        .test-section { margin-bottom: 3rem; padding: 2rem; border: 1px solid var(--border-color); border-radius: 0.5rem; }
+        .test-title { font-size: 1.5rem; margin-bottom: 1rem; color: var(--accent-primary); }
+    </style>
+</head>
+<body>
+    <div class="test-section">
+        <h2 class="test-title">Project Switcher Bar</h2>
+        <div class="project-switcher-bar">
+            <div class="project-switcher-content">
+                <div class="current-project">
+                    <div class="project-indicator">
+                        <div class="project-color-dot color-blue"></div>
+                        <span class="project-name">Test Project</span>
+                    </div>
+                    <div class="project-stats">
+                        <span class="stat-item">3 terminals</span>
+                        <span class="stat-item">✅ Clean</span>
+                    </div>
+                </div>
+                <div class="project-switcher-controls">
+                    <button class="project-switcher-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                        </svg>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M6 9l6 6 6-6"/>
+                        </svg>
+                    </button>
+                    <button class="project-overview-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="7" height="9"/>
+                            <rect x="14" y="3" width="7" height="5"/>
+                            <rect x="14" y="12" width="7" height="9"/>
+                            <rect x="3" y="16" width="7" height="5"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2 class="test-title">Enhanced Project Cards</h2>
+        <div class="projects-grid">
+            <div class="project-card color-blue">
+                <div class="project-icon">🔧</div>
+                <h3>Blue Project</h3>
+                <p>A test project with blue color coding</p>
+                <button class="project-open-btn">Open Project</button>
+            </div>
+            <div class="project-card color-green">
+                <div class="project-icon">🌱</div>
+                <h3>Green Project</h3>
+                <p>A test project with green color coding</p>
+                <button class="project-open-btn">Open Project</button>
+            </div>
+            <div class="project-card color-purple">
+                <div class="project-icon">💜</div>
+                <h3>Purple Project</h3>
+                <p>A test project with purple color coding</p>
+                <button class="project-open-btn">Open Project</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2 class="test-title">Workspace Controls</h2>
+        <div class="workspace-controls">
+            <button class="workspace-control-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="8" height="18"/>
+                    <rect x="13" y="3" width="8" height="18"/>
+                </svg>
+            </button>
+            <button class="workspace-control-btn active">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="8"/>
+                    <rect x="3" y="13" width="18" height="8"/>
+                </svg>
+            </button>
+            <button class="workspace-control-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="7" height="9"/>
+                    <rect x="14" y="3" width="7" height="5"/>
+                    <rect x="14" y="12" width="7" height="9"/>
+                    <rect x="3" y="16" width="7" height="5"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2 class="test-title">Overview Stats Grid</h2>
+        <div class="overview-stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">📁</div>
+                <div class="stat-content">
+                    <div class="stat-number">12</div>
+                    <div class="stat-label">Total Projects</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">💻</div>
+                <div class="stat-content">
+                    <div class="stat-number">5</div>
+                    <div class="stat-label">Active Sessions</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🔄</div>
+                <div class="stat-content">
+                    <div class="stat-number">8</div>
+                    <div class="stat-label">Git Repositories</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">⚡</div>
+                <div class="stat-content">
+                    <div class="stat-number">3</div>
+                    <div class="stat-label">Recent Activity</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2 class="test-title">Enhanced Terminal Tabs</h2>
+        <div class="terminal-tabs">
+            <div class="terminal-tab color-blue active">
+                <span class="terminal-tab-name">Main Terminal</span>
+                <button class="terminal-tab-close" title="Close tab">×</button>
+            </div>
+            <div class="terminal-tab color-green">
+                <span class="terminal-tab-name">Test Terminal</span>
+                <button class="terminal-tab-close" title="Close tab">×</button>
+            </div>
+            <div class="terminal-tab color-purple">
+                <span class="terminal-tab-name">Debug Terminal</span>
+                <button class="terminal-tab-close" title="Close tab">×</button>
+            </div>
+            <button class="new-terminal-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Simple theme toggle for testing
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 't') {
+                const html = document.documentElement;
+                const currentTheme = html.getAttribute('data-theme');
+                html.setAttribute('data-theme', currentTheme === 'dark' ? 'light' : 'dark');
+            }
+        });
+        
+        console.log('UI Test Page Loaded');
+        console.log('Press "t" to toggle between light and dark themes');
+    </script>
+</body>
+</html>

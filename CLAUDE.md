@@ -11,3 +11,5 @@ The end deployment is: vibe.theduck.chat
 No OAuth should be needed, database should be part of the desktop connector and stored to user locally.
 
 The user doesn't like answering questions in the command line with you, if you need the user to do something, add it to user-requests.md
+
+If you finish your todolist, check todo.md to see if theres anything else to continue, don't ever stop unless todo.md is complete

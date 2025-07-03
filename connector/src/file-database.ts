@@ -118,3 +118,54 @@ export class SessionDatabase {
     console.log('📚 Database closed');
   }
 }
+
+export class FileDatabase {
+  private dbPath: string;
+  private dbFile: string;
+  private data: any = {};
+
+  constructor() {
+    // Store database in user's home directory
+    const dbDir = join(homedir(), '.vibe-coding');
+    mkdirSync(dbDir, { recursive: true });
+    this.dbPath = dbDir;
+    this.dbFile = join(dbDir, 'filedata.json');
+    
+    this.loadData();
+  }
+
+  private loadData(): void {
+    try {
+      if (existsSync(this.dbFile)) {
+        const rawData = readFileSync(this.dbFile, 'utf8');
+        this.data = JSON.parse(rawData);
+        console.log('📁 Loaded file database');
+      }
+    } catch (error) {
+      console.error('Failed to load file database:', error);
+      this.data = {};
+    }
+  }
+
+  private saveData(): void {
+    try {
+      writeFileSync(this.dbFile, JSON.stringify(this.data, null, 2), 'utf8');
+    } catch (error) {
+      console.error('Failed to save file database:', error);
+    }
+  }
+
+  getData(): any {
+    return this.data;
+  }
+
+  setData(newData: any): void {
+    this.data = newData;
+    this.saveData();
+  }
+
+  close(): void {
+    this.saveData();
+    console.log('📁 File database closed');
+  }
+}
