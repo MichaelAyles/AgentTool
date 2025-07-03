@@ -479,6 +479,10 @@ class DuckBridgeApp {
                     this.handleTerminalCreated(message.terminalId, message.data);
                     break;
                     
+                case 'terminal_create_error':
+                    this.handleTerminalCreateError(message.data);
+                    break;
+                    
                 case 'terminal_closed':
                     this.handleTerminalClosed(message.terminalId);
                     break;
@@ -559,6 +563,24 @@ class DuckBridgeApp {
         
         this.updateTerminalTabs();
         this.setActiveTerminal(terminalId);
+    }
+    
+    handleTerminalCreateError(data) {
+        console.error('Failed to create terminal:', data);
+        
+        // Show user-friendly error message
+        let message = 'Failed to create new terminal';
+        if (data.message) {
+            if (data.message.includes('Maximum terminals per user')) {
+                message = 'You have reached the maximum number of terminals (8). Please close some terminals first.';
+            } else if (data.message.includes('Maximum total terminals')) {
+                message = 'Server has reached maximum terminal capacity. Please try again later.';
+            } else {
+                message = data.message;
+            }
+        }
+        
+        alert(message);
     }
     
     handleTerminalClosed(terminalId) {

@@ -56,17 +56,27 @@ export class DuckBridgeConnector {
   private setupRoutes(): void {
     // Health check endpoint
     this.app.get('/health', (req, res) => {
+      const resourceUsage = this.terminalManager.getResourceUsage();
       res.json({
         status: 'healthy',
         uuid: this.uuid,
         timestamp: new Date().toISOString(),
         sessions: {
-          active: this.terminalManager.getActiveSessions().length,
-          total: this.terminalManager.getAllSessions().length
+          active: resourceUsage.activeTerminals,
+          total: resourceUsage.totalTerminals
         },
         websocket: {
           port: this.wsPort,
           clients: this.websocketManager.getConnectedClients().length
+        },
+        resources: {
+          memory: {
+            used: Math.round(resourceUsage.memoryUsage.heapUsed / 1024 / 1024),
+            total: Math.round(resourceUsage.memoryUsage.heapTotal / 1024 / 1024),
+            external: Math.round(resourceUsage.memoryUsage.external / 1024 / 1024),
+            unit: 'MB'
+          },
+          limits: resourceUsage.limits
         }
       });
     });

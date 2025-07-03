@@ -17,8 +17,17 @@ export interface TerminalSession {
 export class TerminalManager extends EventEmitter {
   private sessions: Map<string, TerminalSession> = new Map();
   private sessionsByUuid: Map<string, Set<string>> = new Map();
+  
+  // Resource limits
+  private readonly MAX_TERMINALS_PER_USER = 8;
+  private readonly MAX_TOTAL_TERMINALS = 50;
+  private readonly MAX_MEMORY_PER_TERMINAL = 100 * 1024 * 1024; // 100MB
+  private readonly MAX_IDLE_TIME = 2 * 60 * 60 * 1000; // 2 hours
 
   createSession(uuid: string, terminalId?: string, name?: string, color?: string): TerminalSession {
+    // Check resource limits first
+    this.enforceResourceLimits(uuid);
+    
     // Generate terminal ID if not provided
     if (!terminalId) {
       terminalId = `term_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
@@ -219,6 +228,67 @@ export class TerminalManager extends EventEmitter {
       // For Unix-like systems, use login shell
       return ['--login'];
     }
+  }
+
+  private enforceResourceLimits(uuid: string): void {
+    // Check total terminal limit
+    if (this.sessions.size >= this.MAX_TOTAL_TERMINALS) {
+      throw new Error(`Maximum total terminals reached (${this.MAX_TOTAL_TERMINALS}). Please close some terminals.`);
+    }
+
+    // Check per-user terminal limit
+    const userTerminals = this.sessionsByUuid.get(uuid);
+    if (userTerminals && userTerminals.size >= this.MAX_TERMINALS_PER_USER) {
+      throw new Error(`Maximum terminals per user reached (${this.MAX_TERMINALS_PER_USER}). Please close some terminals first.`);
+    }
+
+    // Check system memory (simplified check)
+    const memoryUsage = process.memoryUsage();
+    const totalMemoryMB = memoryUsage.heapUsed / (1024 * 1024);
+    const estimatedMaxMemory = this.MAX_MEMORY_PER_TERMINAL / (1024 * 1024) * this.MAX_TOTAL_TERMINALS;
+    
+    if (totalMemoryMB > estimatedMaxMemory * 0.8) { // 80% threshold
+      console.warn(`High memory usage detected: ${totalMemoryMB.toFixed(2)}MB`);
+      this.cleanupIdleSessionsAggressively();
+    }
+  }
+
+  private cleanupIdleSessionsAggressively(): void {
+    const now = new Date();
+    const aggressiveIdleTime = 30 * 60 * 1000; // 30 minutes for aggressive cleanup
+
+    for (const [sessionKey, session] of this.sessions.entries()) {
+      const idleTime = now.getTime() - session.lastActivity.getTime();
+      
+      if (idleTime > aggressiveIdleTime && session.isActive) {
+        console.log(`Aggressively cleaning up idle terminal session: ${sessionKey} (idle for ${Math.round(idleTime / 1000 / 60)} minutes)`);
+        this.terminateSession(session.uuid, session.terminalId);
+      }
+    }
+  }
+
+  getResourceUsage(): {
+    totalTerminals: number;
+    activeTerminals: number;
+    memoryUsage: NodeJS.MemoryUsage;
+    limits: {
+      maxTerminalsPerUser: number;
+      maxTotalTerminals: number;
+      maxMemoryPerTerminal: number;
+      maxIdleTime: number;
+    }
+  } {
+    return {
+      totalTerminals: this.sessions.size,
+      activeTerminals: this.getActiveSessions().length,
+      memoryUsage: process.memoryUsage(),
+      limits: {
+        maxTerminalsPerUser: this.MAX_TERMINALS_PER_USER,
+        maxTotalTerminals: this.MAX_TOTAL_TERMINALS,
+        maxMemoryPerTerminal: this.MAX_MEMORY_PER_TERMINAL,
+        maxIdleTime: this.MAX_IDLE_TIME
+      }
+    };
   }
 
   destroy(): void {

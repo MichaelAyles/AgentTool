@@ -296,9 +296,13 @@ export class WebSocketManager {
         }
       });
     } catch (error) {
+      console.error('Terminal creation failed:', error);
       this.sendMessage(client.ws, {
-        type: 'error' as any,
-        data: `Failed to create terminal: ${error}`
+        type: 'terminal_create_error' as any,
+        data: {
+          message: error instanceof Error ? error.message : 'Failed to create terminal',
+          type: 'resource_limit'
+        }
       });
     }
   }
