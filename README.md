@@ -1,6 +1,8 @@
-# Vibe Coding App
+# Vibe Coding Terminal
 
 A browser-based terminal interface that connects to your local development environment via UUID pairing. Access your terminal from anywhere with a secure, real-time connection.
+
+**🚀 Live at: [https://vibe.theduck.chat](https://vibe.theduck.chat)**
 
 ## Overview
 
@@ -10,13 +12,16 @@ Vibe Coding App consists of two main components:
 
 ## Features
 
-### Current Features (Planned)
-- 🔗 UUID-based session pairing
-- 💻 Real-time terminal access through browser
-- 🔄 WebSocket-based streaming for low latency
-- 💾 Local session persistence
-- 🌐 Cross-platform support (Mac, Linux, WSL)
-- 🔒 Secure local-only connections
+### Current Features
+- ✅ UUID-based session pairing
+- ✅ Real-time terminal access through browser
+- ✅ WebSocket-based streaming for low latency
+- ✅ Local session persistence
+- ✅ Cross-platform support (Mac, Linux, WSL)
+- ✅ Secure local-only connections
+- ✅ One-line installation script
+- ✅ Auto-reconnection support
+- ✅ Beautiful, responsive UI
 
 ### Future Features
 - 📁 File system browser
@@ -29,25 +34,19 @@ Vibe Coding App consists of two main components:
 ## Quick Start
 
 ### 1. Access the Web Interface
-Visit the hosted application at: `https://your-vercel-app.vercel.app`
+Visit: [https://vibe.theduck.chat](https://vibe.theduck.chat)
 
 ### 2. Install Desktop Connector
-Choose your installation method:
+The easiest way is to use the one-line install command shown on the website:
 
-#### Option A: Using npm (Recommended)
 ```bash
-npm install -g vibe-coding-connector
-vibe-connector start
+curl -fsSL https://raw.githubusercontent.com/MichaelAyles/AgentTool/main/install.sh | bash -s YOUR_UUID
 ```
 
-#### Option B: Using setup script
-Copy and run the setup script provided in the web interface.
-
 ### 3. Connect
-1. Start the desktop connector on your local machine
-2. Copy the UUID from the connector output
-3. Enter the UUID in the web interface
-4. Start coding!
+The connector will start automatically and connect to the web interface. You're ready to code!
+
+For detailed installation instructions, see [INSTALLATION.md](INSTALLATION.md)
 
 ## Architecture
 
