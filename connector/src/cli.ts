@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 
 import { program } from 'commander';
-import { VibeConnector } from './index';
+import { DuckBridgeConnector } from './index';
 import { v4 as uuidv4 } from 'uuid';
 import axios from 'axios';
 
 program
-  .name('vibe-connector')
-  .description('DuckBridge Desktop Connector - Bridge your terminal to AI-powered coding')
+  .name('duckbridge-connector')
+  .description('DuckBridge Desktop Connector - Bridge your terminal to the web')
   .version('0.1.0');
 
 // Start command
@@ -21,13 +21,13 @@ program
     try {
       if (options.banner !== false) {
         console.log('🦆 DuckBridge Connector');
-        console.log('========================');
+        console.log('=======================');
       }
 
       const httpPort = parseInt(options.port);
       const wsPort = parseInt(options.wsPort);
 
-      const connector = new VibeConnector(httpPort, wsPort);
+      const connector = new DuckBridgeConnector(httpPort, wsPort);
       await connector.start();
 
     } catch (error) {
@@ -45,7 +45,7 @@ program
     console.log('🆔 Generated UUID:', uuid);
     console.log('');
     console.log('💡 Usage:');
-    console.log('   1. Start the connector: vibe-connector start');
+    console.log('   1. Start the connector: duckbridge-connector start');
     console.log('   2. Visit: https://frontend-three-delta-48.vercel.app');
     console.log(`   3. Enter UUID: ${uuid}`);
   });
@@ -76,7 +76,7 @@ program
     } catch (error) {
       if (axios.isAxiosError(error) && error.code === 'ECONNREFUSED') {
         console.log('❌ Connector is not running');
-        console.log('💡 Start it with: vibe-connector start');
+        console.log('💡 Start it with: duckbridge-connector start');
       } else {
         console.error('❌ Failed to check status:', error instanceof Error ? error.message : error);
       }
@@ -127,7 +127,7 @@ program
     } catch (error) {
       if (axios.isAxiosError(error) && error.code === 'ECONNREFUSED') {
         console.log('❌ Connector is not running');
-        console.log('💡 Start it with: vibe-connector start');
+        console.log('💡 Start it with: duckbridge-connector start');
       } else {
         console.error('❌ Failed to list sessions:', error instanceof Error ? error.message : error);
       }
@@ -157,7 +157,7 @@ program
     } catch (error) {
       if (axios.isAxiosError(error) && error.code === 'ECONNREFUSED') {
         console.log('❌ Connector is not running');
-        console.log('💡 Start it with: vibe-connector start');
+        console.log('💡 Start it with: duckbridge-connector start');
       } else {
         console.error('❌ Failed to terminate session:', error instanceof Error ? error.message : error);
       }
@@ -179,7 +179,7 @@ program
     console.log('Frontend URL: https://frontend-three-delta-48.vercel.app');
     console.log('');
     console.log('💡 Manual Test Steps:');
-    console.log('1. Start connector: vibe-connector start');
+    console.log('1. Start connector: duckbridge-connector start');
     console.log('2. Open frontend in browser');
     console.log(`3. Enter UUID: ${testUuid}`);
     console.log('4. Check if terminal connects');
@@ -215,7 +215,7 @@ program
     } catch (error) {
       if (axios.isAxiosError(error) && error.code === 'ECONNREFUSED') {
         console.log('❌ Connector is not running');
-        console.log('💡 Start it with: vibe-connector start');
+        console.log('💡 Start it with: duckbridge-connector start');
       } else {
         console.error('❌ Failed to get info:', error instanceof Error ? error.message : error);
       }

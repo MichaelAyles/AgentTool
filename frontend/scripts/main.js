@@ -8,18 +8,13 @@ class DuckBridgeApp {
         this.reconnectAttempts = 0;
         this.maxReconnectAttempts = 5;
         this.currentUuid = this.generateUUID();
-        this.connectionStateDebounceTimer = null;
-        this.lastConnectionState = null;
-        this.wasManuallyDisconnected = false;
-        this.hasEverConnected = false;
         
         this.initializeElements();
         this.attachEventListeners();
-        this.handleUrlParameters();
         this.updateUuidDisplay();
         this.initializeTheme();
         this.initializeTagline();
-        this.checkConnectorAvailability();
+        this.checkUrlParams();
     }
     
     initializeElements() {
@@ -27,15 +22,8 @@ class DuckBridgeApp {
         this.uuidInput = document.getElementById('uuid-input');
         this.regenerateBtn = document.getElementById('regenerate-uuid');
         this.copyUuidBtn = document.getElementById('copy-uuid');
-        this.qrUuidBtn = document.getElementById('qr-uuid');
         this.commandUuidSpan = document.getElementById('command-uuid');
         this.uuidError = document.getElementById('uuid-error');
-        
-        // QR Modal elements
-        this.qrModal = document.getElementById('qr-modal');
-        this.qrModalClose = document.getElementById('qr-modal-close');
-        this.qrCanvas = document.getElementById('qr-canvas');
-        this.qrUrl = document.getElementById('qr-url');
         
         // Connection elements
         this.connectBtn = document.getElementById('connect-btn');
@@ -43,11 +31,12 @@ class DuckBridgeApp {
         this.copyInstallBtn = document.getElementById('copy-install');
         this.installCommand = document.getElementById('install-command');
         
-        // Status elements (removed - using single button approach)
+        // Status elements
+        this.statusIcon = document.getElementById('status-icon');
+        this.statusText = document.getElementById('status-text');
         this.sessionIdSpan = document.getElementById('session-id');
         this.connectionTimeSpan = document.getElementById('connection-time');
         this.disconnectBtn = document.getElementById('disconnect-btn');
-        this.killConnectorBtn = document.getElementById('kill-connector-btn');
         
         // Terminal elements
         this.terminalSection = document.getElementById('terminal-section');
@@ -55,41 +44,36 @@ class DuckBridgeApp {
         
         // Theme toggle
         this.themeToggle = document.getElementById('theme-toggle');
+        
+        // QR Code elements
+        this.qrCodeBtn = document.getElementById('qr-code-btn');
+        this.qrModal = document.getElementById('qr-modal');
+        this.qrClose = document.getElementById('qr-close');
+        this.qrCanvas = document.getElementById('qr-canvas');
+        this.qrUrl = document.getElementById('qr-url');
     }
     
     attachEventListeners() {
         // UUID controls
         this.regenerateBtn.addEventListener('click', () => this.regenerateUuid());
         this.copyUuidBtn.addEventListener('click', () => this.copyUuid());
-        
-        if (this.qrUuidBtn) {
-            this.qrUuidBtn.addEventListener('click', () => {
-                console.log('QR button clicked');
-                this.showQrCode();
-            });
-        } else {
-            console.error('QR button not found');
-        }
-        
         this.uuidInput.addEventListener('input', (e) => this.handleUuidInput(e));
         this.uuidInput.addEventListener('blur', () => this.validateUuid());
-        
-        // QR Modal controls
-        this.qrModalClose.addEventListener('click', () => this.hideQrCode());
-        this.qrModal.addEventListener('click', (e) => {
-            if (e.target === this.qrModal) {
-                this.hideQrCode();
-            }
-        });
         
         // Connection controls
         this.connectBtn.addEventListener('click', () => this.handleConnect());
         this.copyInstallBtn.addEventListener('click', () => this.copyInstallCommand());
         this.disconnectBtn.addEventListener('click', () => this.disconnect());
-        this.killConnectorBtn.addEventListener('click', () => this.killConnector());
         
         // Theme toggle
         this.themeToggle.addEventListener('click', () => this.toggleTheme());
+        
+        // QR Code controls
+        this.qrCodeBtn.addEventListener('click', () => this.showQrCode());
+        this.qrClose.addEventListener('click', () => this.hideQrCode());
+        this.qrModal.addEventListener('click', (e) => {
+            if (e.target === this.qrModal) this.hideQrCode();
+        });
         
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
@@ -147,99 +131,6 @@ class DuckBridgeApp {
         }
     }
     
-    showQrCode() {
-        console.log('showQrCode called', this.currentUuid);
-        
-        if (!this.currentUuid) {
-            console.log('No UUID available');
-            this.showUuidError('Please generate a UUID first');
-            return;
-        }
-        
-        console.log('Generating QR code for URL');
-        const url = `https://vibe.theduck.chat?uuid=${this.currentUuid}`;
-        
-        // Check if QRCode library is loaded
-        if (typeof QRCode === 'undefined') {
-            console.error('QRCode library not available');
-            this.showFallbackQrCode(url);
-            return;
-        }
-        this.generateQrCode(url);
-        this.qrUrl.textContent = url;
-        this.qrModal.classList.add('show');
-        
-        // Close on Escape key
-        const escapeHandler = (e) => {
-            if (e.key === 'Escape') {
-                this.hideQrCode();
-                document.removeEventListener('keydown', escapeHandler);
-            }
-        };
-        document.addEventListener('keydown', escapeHandler);
-    }
-    
-    hideQrCode() {
-        this.qrModal.classList.remove('show');
-    }
-    
-    generateQrCode(text) {
-        try {
-            // Clear previous QR code
-            this.qrCanvas.width = 200;
-            this.qrCanvas.height = 200;
-            
-            // Generate QR code
-            QRCode.toCanvas(this.qrCanvas, text, {
-                width: 200,
-                margin: 2,
-                color: {
-                    dark: '#000000',
-                    light: '#FFFFFF'
-                }
-            }, (error) => {
-                if (error) {
-                    console.error('QR Code generation failed:', error);
-                    this.showError('Failed to generate QR code: ' + error.message);
-                    this.hideQrCode();
-                }
-            });
-        } catch (error) {
-            console.error('QR Code generation error:', error);
-            this.showError('QR code generation failed: ' + error.message);
-            this.hideQrCode();
-        }
-    }
-    
-    showFallbackQrCode(url) {
-        // Show modal with external QR code link when library fails
-        const qrServiceUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
-        
-        // Create an image element instead of canvas
-        const img = document.createElement('img');
-        img.src = qrServiceUrl;
-        img.style.borderRadius = '0.5rem';
-        img.style.background = 'white';
-        img.style.padding = '1rem';
-        img.alt = 'QR Code';
-        
-        // Clear canvas and insert image
-        this.qrCanvas.style.display = 'none';
-        this.qrCanvas.parentNode.insertBefore(img, this.qrCanvas);
-        
-        this.qrUrl.textContent = url;
-        this.qrModal.classList.add('show');
-        
-        // Close on Escape key
-        const escapeHandler = (e) => {
-            if (e.key === 'Escape') {
-                this.hideQrCode();
-                document.removeEventListener('keydown', escapeHandler);
-            }
-        };
-        document.addEventListener('keydown', escapeHandler);
-    }
-    
     async copyInstallCommand() {
         const command = this.installCommand.textContent;
         try {
@@ -251,53 +142,11 @@ class DuckBridgeApp {
         }
     }
     
-    async checkConnectorAvailability() {
-        try {
-            const response = await fetch('http://localhost:3001/health', { 
-                method: 'GET',
-                signal: AbortSignal.timeout(3000)
-            });
-            if (response.ok) {
-                // If connector found, always go to available (unless currently connected)
-                if (this.lastConnectionState !== 'connected') {
-                    if (this.wasManuallyDisconnected) {
-                        this.wasManuallyDisconnected = false;
-                    }
-                    this.setConnectionState('available');
-                }
-            } else {
-                // If no connector found
-                if (this.hasEverConnected && !this.wasManuallyDisconnected) {
-                    // If we've connected before but haven't manually disconnected, set to disconnected
-                    this.setConnectionState('disconnected');
-                    this.wasManuallyDisconnected = true;
-                } else if (!this.hasEverConnected && this.lastConnectionState !== 'disconnected') {
-                    // If never connected and not disconnected, stay on no-connection
-                    this.setConnectionState('no-connection');
-                }
-            }
-        } catch (error) {
-            // Same logic for error case
-            if (this.hasEverConnected && !this.wasManuallyDisconnected) {
-                this.setConnectionState('disconnected');
-                this.wasManuallyDisconnected = true;
-            } else if (!this.hasEverConnected && this.lastConnectionState !== 'disconnected') {
-                this.setConnectionState('no-connection');
-            }
-            // Retry check in 5 seconds
-            setTimeout(() => this.checkConnectorAvailability(), 5000);
-        }
-    }
-
-    handleConnect(showConnectingState = true) {
+    handleConnect() {
         if (!this.validateUuid()) return;
         
         this.clearError();
-        
-        // Only show connecting state if this is a user-initiated connection or we've connected before
-        if (showConnectingState && (this.hasEverConnected || this.lastConnectionState === 'available')) {
-            this.setConnectionState('connecting');
-        }
+        this.setConnectionState('connecting');
         
         const wsUrl = 'ws://localhost:3002';
         
@@ -319,60 +168,26 @@ class DuckBridgeApp {
             
             this.wsConnection.onclose = (event) => {
                 console.log('WebSocket disconnected:', event.code, event.reason);
-                // If we've connected before, set to disconnected
-                if (this.hasEverConnected && !this.wasManuallyDisconnected) {
-                    this.setConnectionState('disconnected');
-                    this.wasManuallyDisconnected = true; // Treat connection loss as disconnected state
-                } else if (!this.hasEverConnected) {
-                    // If never connected, check availability to determine proper state
-                    setTimeout(() => this.checkConnectorAvailability(), 1000);
-                    return; // Don't double-check
-                }
-                // Check availability after a delay
+                this.setConnectionState('disconnected');
                 setTimeout(() => this.checkConnectorAvailability(), 3000);
             };
             
             this.wsConnection.onerror = (error) => {
                 console.error('WebSocket error:', error);
-                // If we've connected before, set to disconnected
-                if (this.hasEverConnected && !this.wasManuallyDisconnected) {
-                    this.setConnectionState('disconnected');
-                    this.wasManuallyDisconnected = true;
-                } else if (!this.hasEverConnected) {
-                    // If never connected, check availability to determine proper state
-                    setTimeout(() => this.checkConnectorAvailability(), 1000);
-                }
+                this.setConnectionState('disconnected');
             };
             
-            // Connection timeout - increased to reduce premature timeouts
+            // Connection timeout
             setTimeout(() => {
                 if (this.wsConnection.readyState === WebSocket.CONNECTING) {
                     this.wsConnection.close();
-                    // If we've connected before, set to disconnected
-                    if (this.hasEverConnected && !this.wasManuallyDisconnected) {
-                        this.setConnectionState('disconnected');
-                        this.wasManuallyDisconnected = true;
-                    } else if (!this.hasEverConnected) {
-                        // If never connected, check availability to determine proper state
-                        setTimeout(() => this.checkConnectorAvailability(), 1000);
-                        return;
-                    }
-                    setTimeout(() => this.checkConnectorAvailability(), 2000);
+                    this.setConnectionState('disconnected');
                 }
-            }, 15000);
+            }, 10000);
             
         } catch (error) {
             console.error('Failed to create WebSocket connection:', error);
-            // If we've connected before, set to disconnected
-            if (this.hasEverConnected && !this.wasManuallyDisconnected) {
-                this.setConnectionState('disconnected');
-                this.wasManuallyDisconnected = true;
-            } else if (!this.hasEverConnected) {
-                // If never connected, check availability to determine proper state
-                setTimeout(() => this.checkConnectorAvailability(), 1000);
-                return;
-            }
-            setTimeout(() => this.checkConnectorAvailability(), 2000);
+            this.setConnectionState('disconnected');
         }
     }
     
@@ -380,8 +195,6 @@ class DuckBridgeApp {
         this.sessionId = uuid;
         this.connectionStartTime = Date.now();
         this.reconnectAttempts = 0;
-        this.wasManuallyDisconnected = false; // Reset manual disconnect flag
-        this.hasEverConnected = true; // Mark that we've successfully connected
         
         this.setConnectionState('connected');
         this.sessionIdSpan.textContent = uuid.substring(0, 8) + '...';
@@ -396,29 +209,22 @@ class DuckBridgeApp {
     }
     
     handleConnectionError(message) {
-        console.log('Connection error:', message); // Log for debugging but don't show to user
-        
-        if (this.hasEverConnected && !this.wasManuallyDisconnected) {
-            this.setConnectionState('disconnected');
-            this.wasManuallyDisconnected = true;
-        } else if (!this.hasEverConnected) {
-            // If never connected, check availability to determine proper state
-            setTimeout(() => this.checkConnectorAvailability(), 1000);
-            return; // Don't attempt reconnection if never connected
-        }
+        this.setConnectionState('disconnected');
+        this.showError(message);
         
         if (this.reconnectAttempts < this.maxReconnectAttempts) {
             this.reconnectAttempts++;
-            // Exponential backoff with minimum 3 seconds to reduce flickering
-            const delay = Math.max(3000, 2000 * this.reconnectAttempts);
             setTimeout(() => {
-                console.log(`Reconnecting... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
-                this.handleConnect(false); // Don't show connecting state for automatic retries
-            }, delay);
-        } else {
-            // After max reconnect attempts, go back to checking availability
-            setTimeout(() => this.checkConnectorAvailability(), 10000);
+                this.showError(`Reconnecting... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+                this.handleConnect();
+            }, 2000 * this.reconnectAttempts);
         }
+    }
+    
+    checkConnectorAvailability() {
+        // Simple check to see if connector is available again
+        // This is a placeholder - could be enhanced with actual health check
+        console.log('Checking connector availability...');
     }
     
     disconnect() {
@@ -426,7 +232,6 @@ class DuckBridgeApp {
             this.wsConnection.close();
         }
         
-        this.wasManuallyDisconnected = true;
         this.setConnectionState('disconnected');
         this.terminalSection.classList.add('hidden');
         
@@ -438,97 +243,38 @@ class DuckBridgeApp {
         this.sessionId = null;
         this.connectionStartTime = null;
         this.reconnectAttempts = 0;
-        
-        // Continue checking for availability to allow reconnection
-        setTimeout(() => this.checkConnectorAvailability(), 2000);
-    }
-    
-    async killConnector() {
-        if (!confirm('Are you sure you want to kill the desktop connector? This will terminate all sessions.')) {
-            return;
-        }
-        
-        try {
-            const response = await fetch('http://localhost:3001/shutdown', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
-            });
-            
-            if (response.ok) {
-                this.showSuccessMessage('✅ Desktop connector terminated successfully');
-                this.disconnect();
-            } else {
-                throw new Error(`HTTP ${response.status}`);
-            }
-        } catch (error) {
-            console.error('Failed to kill connector:', error);
-            this.showError('Failed to terminate desktop connector. It may not be running.');
-        }
     }
     
     setConnectionState(state) {
-        // Clear any existing debounce timer
-        if (this.connectionStateDebounceTimer) {
-            clearTimeout(this.connectionStateDebounceTimer);
-        }
+        // Update status indicator
+        this.statusIcon.className = `status-icon ${state}`;
         
-        // Don't update if state hasn't changed
-        if (this.lastConnectionState === state) {
-            return;
-        }
-        
-        // For immediate feedback on user actions, don't debounce connecting state
-        if (state === 'connecting' && this.lastConnectionState === 'disconnected') {
-            this.updateConnectionStateUI(state);
-            this.lastConnectionState = state;
-            return;
-        }
-        
-        // Debounce other state changes to prevent flickering
-        this.connectionStateDebounceTimer = setTimeout(() => {
-            this.updateConnectionStateUI(state);
-            this.lastConnectionState = state;
-        }, 300);
-    }
-    
-    updateConnectionStateUI(state) {
+        // Update button and text
         const btn = this.connectBtn;
         const btnText = btn.querySelector('.btn-text');
         
-        // Remove all state classes
-        btn.classList.remove('no-connection', 'available', 'connected', 'disconnected');
+        btn.classList.remove('connecting', 'connected');
         
         switch (state) {
-            case 'no-connection':
-                btn.classList.add('no-connection');
-                btnText.textContent = 'No Connection Found';
-                btn.disabled = true;
-                break;
-                
-            case 'available':
-                btn.classList.add('available');
-                btnText.textContent = 'Connect to Terminal';
-                btn.disabled = false;
-                break;
-                
             case 'connecting':
-                btn.classList.add('available'); // Use blue color while connecting
+                this.statusText.textContent = 'Connecting...';
+                btn.classList.add('connecting');
                 btnText.textContent = 'Connecting...';
                 btn.disabled = true;
                 break;
                 
             case 'connected':
+                this.statusText.textContent = 'Connected';
                 btn.classList.add('connected');
                 btnText.textContent = 'Connected';
                 btn.disabled = true;
                 break;
                 
             case 'disconnected':
-                btn.classList.add('disconnected');
-                btnText.textContent = 'Disconnected';
-                btn.disabled = true;
+            default:
+                this.statusText.textContent = 'Disconnected';
+                btnText.textContent = 'Connect to Terminal';
+                btn.disabled = false;
                 break;
         }
     }
@@ -644,16 +390,7 @@ class DuckBridgeApp {
                     
                 case 'auth_error':
                     console.error('Authentication failed:', message.data);
-                    // If we've connected before, set to disconnected
-                    if (this.hasEverConnected && !this.wasManuallyDisconnected) {
-                        this.setConnectionState('disconnected');
-                        this.wasManuallyDisconnected = true;
-                    } else if (!this.hasEverConnected) {
-                        // If never connected, check availability to determine proper state
-                        setTimeout(() => this.checkConnectorAvailability(), 1000);
-                        return;
-                    }
-                    setTimeout(() => this.checkConnectorAvailability(), 2000);
+                    this.handleConnectionError(`Authentication failed: ${message.data}`);
                     break;
                     
                 case 'terminal_output':
@@ -711,48 +448,6 @@ class DuckBridgeApp {
         this.setTheme(savedTheme);
     }
     
-    initializeTagline() {
-        const taglines = [
-            "Get your ducks in a row with AI",
-            "Paddle through code with AI companions",
-            "Where coding flows like water",
-            "Your flock of AI coding assistants",
-            "Smooth sailing through code",
-            "Making waves in AI-powered development",
-            "Duck in, code out",
-            "Waddle less, code more",
-            "Your AI coding convoy",
-            "Glide through development",
-            "Coding that's just ducky",
-            "Float your ideas with AI"
-        ];
-        
-        const taglineElement = document.getElementById('tagline');
-        if (taglineElement) {
-            const randomTagline = taglines[Math.floor(Math.random() * taglines.length)];
-            taglineElement.textContent = randomTagline;
-        }
-    }
-    
-    handleUrlParameters() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const uuidParam = urlParams.get('uuid');
-        
-        if (uuidParam) {
-            // Validate the UUID format
-            const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-            if (uuidPattern.test(uuidParam)) {
-                this.currentUuid = uuidParam;
-                // Clear URL parameter after setting UUID
-                const url = new URL(window.location);
-                url.searchParams.delete('uuid');
-                window.history.replaceState({}, '', url);
-            } else {
-                console.warn('Invalid UUID in URL parameter');
-            }
-        }
-    }
-    
     toggleTheme() {
         const currentTheme = document.documentElement.getAttribute('data-theme');
         const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
@@ -802,11 +497,108 @@ class DuckBridgeApp {
             }, 1000);
         }
     }
+    
+    // Initialize tagline with random selection
+    initializeTagline() {
+        const taglines = [
+            "Get your ducks in a row with AI",
+            "Bridge the gap between code and creativity",
+            "Where rubber duck debugging meets real AI",
+            "Swimming upstream with artificial intelligence",
+            "Flocking together for better development",
+            "Making waves in the AI development pool",
+            "Ducking complexity, embracing simplicity",
+            "Paddle through code with AI assistance",
+            "Feathering your nest with smart tools",
+            "Migrate your workflow to the cloud",
+            "Quack the code with intelligent insights",
+            "Building nest-level development experiences"
+        ];
+        
+        const taglineElement = document.getElementById('tagline');
+        if (taglineElement) {
+            const randomTagline = taglines[Math.floor(Math.random() * taglines.length)];
+            taglineElement.textContent = randomTagline;
+        }
+    }
+    
+    // Check URL parameters for UUID
+    checkUrlParams() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const uuidParam = urlParams.get('uuid');
+        if (uuidParam && this.validateUuidString(uuidParam)) {
+            this.currentUuid = uuidParam;
+            this.updateUuidDisplay();
+        }
+    }
+    
+    // Helper method to validate UUID string format
+    validateUuidString(uuid) {
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        return uuidRegex.test(uuid);
+    }
+    
+    // QR Code functionality
+    showQrCode() {
+        console.log('QR Code button clicked');
+        const url = `https://vibe.theduck.chat?uuid=${this.currentUuid}`;
+        
+        if (typeof QRCode === 'undefined') {
+            console.log('QRCode library not available, using fallback');
+            this.showFallbackQrCode(url);
+            return;
+        }
+        
+        try {
+            this.generateQrCode(url);
+            this.qrUrl.textContent = url;
+            this.qrModal.classList.add('show');
+        } catch (error) {
+            console.error('Failed to generate QR code:', error);
+            this.showFallbackQrCode(url);
+        }
+    }
+    
+    generateQrCode(url) {
+        // Clear previous QR code
+        this.qrCanvas.width = 0;
+        this.qrCanvas.height = 0;
+        
+        QRCode.toCanvas(this.qrCanvas, url, {
+            width: 200,
+            height: 200,
+            margin: 2,
+            color: {
+                dark: '#000000',
+                light: '#ffffff'
+            }
+        }, (error) => {
+            if (error) {
+                console.error('QR code generation error:', error);
+                this.showFallbackQrCode(url);
+            }
+        });
+    }
+    
+    showFallbackQrCode(url) {
+        const fallbackUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
+        
+        // Replace canvas with image
+        const container = document.getElementById('qr-code-container');
+        container.innerHTML = `<img src="${fallbackUrl}" alt="QR Code" style="width: 200px; height: 200px; border-radius: 0.5rem;">`;
+        
+        this.qrUrl.textContent = url;
+        this.qrModal.classList.add('show');
+    }
+    
+    hideQrCode() {
+        this.qrModal.classList.remove('show');
+    }
 }
 
 // Global functions
 function showAbout() {
-    alert('Vibe Coding - Remote Terminal Access\\n\\nBuilt with ❤️ for developers\\n\\nConnect to your local terminal from anywhere with secure WebSocket connections.');
+    alert('DuckBridge - Remote Terminal Access\\n\\nBuilt with 🦆 for developers\\n\\nConnect to your local terminal from anywhere with secure WebSocket connections.');
 }
 
 // Initialize the application when DOM is ready

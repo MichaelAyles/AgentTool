@@ -5,7 +5,7 @@ import { TerminalManager } from './terminal';
 import { WebSocketManager } from './websocket';
 import { SessionDatabase } from './database';
 
-export class VibeConnector {
+export class DuckBridgeConnector {
   private app: express.Application;
   private terminalManager: TerminalManager;
   private websocketManager: WebSocketManager;
@@ -138,22 +138,6 @@ export class VibeConnector {
       });
     });
 
-    // Shutdown connector
-    this.app.post('/shutdown', (req, res) => {
-      console.log('🛑 Shutdown requested via API');
-      
-      // Send response immediately
-      res.status(200).json({
-        success: true,
-        message: 'Shutdown initiated'
-      });
-      
-      // Allow response to be sent before shutting down
-      setTimeout(() => {
-        this.shutdown('API_REQUEST');
-      }, 100);
-    });
-
     // 404 handler
     this.app.use((req, res) => {
       res.status(404).json({
@@ -163,8 +147,7 @@ export class VibeConnector {
           'GET /info', 
           'POST /generate-uuid',
           'GET /sessions',
-          'DELETE /sessions/:uuid',
-          'POST /shutdown'
+          'DELETE /sessions/:uuid'
         ]
       });
     });
@@ -185,7 +168,7 @@ export class VibeConnector {
         // Start HTTP server
         const server = this.app.listen(this.httpPort, () => {
           console.log('🦆 DuckBridge Connector Started');
-          console.log('================================');
+          console.log('==============================');
           console.log(`📡 HTTP API: http://localhost:${this.httpPort}`);
           console.log(`🔌 WebSocket: ws://localhost:${this.wsPort}`);
           console.log(`🆔 Connector UUID: ${this.uuid}`);
@@ -224,7 +207,7 @@ export class VibeConnector {
   }
 
   private shutdown(signal: string): void {
-    console.log(`\n🛑 Shutting down Vibe Connector (${signal})...`);
+    console.log(`\n🛑 Shutting down DuckBridge Connector (${signal})...`);
     
     // Cleanup resources
     this.websocketManager.destroy();
@@ -242,14 +225,14 @@ export class VibeConnector {
 }
 
 // Export for programmatic use
-export default VibeConnector;
+export default DuckBridgeConnector;
 
 // CLI execution
 if (require.main === module) {
-  const connector = new VibeConnector();
+  const connector = new DuckBridgeConnector();
   
   connector.start().catch((error) => {
-    console.error('Failed to start Vibe Connector:', error);
+    console.error('Failed to start DuckBridge Connector:', error);
     process.exit(1);
   });
 }
