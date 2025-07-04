@@ -268,7 +268,7 @@ export class WebSocketManager extends EventEmitter {
     }
   }
 
-  private verifyClient(info: { origin: string; secure: boolean; req: IncomingMessage }): boolean {
+  protected verifyClient(info: { origin: string; secure: boolean; req: IncomingMessage }): boolean {
     // For development, allow localhost and Vercel domains
     const allowedOrigins = [
       'http://localhost:3000',
@@ -288,7 +288,7 @@ export class WebSocketManager extends EventEmitter {
            origin.includes('localhost');
   }
 
-  private handleConnection(ws: WebSocket, request: IncomingMessage): void {
+  protected handleConnection(ws: WebSocket, request: IncomingMessage): void {
     const clientId = `client_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
     console.log(`📱 New WebSocket connection: ${clientId}`);
