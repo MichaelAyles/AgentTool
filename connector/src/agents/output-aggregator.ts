@@ -208,7 +208,7 @@ export class OutputAggregator extends EventEmitter {
     }
   }
 
-  private selectAggregationStrategy(task: AgentTask, results: TaskResult[]): AggregationStrategy {
+  private selectAggregationStrategy(task: AgentTask, _results: TaskResult[]): AggregationStrategy {
     // Find strategies that support this task type
     const compatibleStrategies = Array.from(this.strategies.values())
       .filter(strategy => 
@@ -228,7 +228,7 @@ export class OutputAggregator extends EventEmitter {
   private createSingleResultAggregation(
     taskId: string, 
     result: TaskResult, 
-    originalTask: AgentTask
+    _originalTask: AgentTask
   ): AggregatedOutput {
     return {
       id: `agg_${taskId}_single`,
@@ -266,7 +266,7 @@ export class OutputAggregator extends EventEmitter {
     
     const codeBlocks: string[] = [];
     const explanations: string[] = [];
-    const bestPractices: string[] = [];
+    const _bestPractices: string[] = [];
     
     successfulResults.forEach(result => {
       if (result.output?.generatedCode) {
@@ -305,8 +305,8 @@ export class OutputAggregator extends EventEmitter {
     
     const allIssues: string[] = [];
     const allSuggestions: string[] = [];
-    const securityConcerns: string[] = [];
-    const performanceIssues: string[] = [];
+    const _securityConcerns: string[] = [];
+    const _performanceIssues: string[] = [];
     
     successfulResults.forEach(result => {
       if (result.output?.review?.issues) {
@@ -507,7 +507,7 @@ export class OutputAggregator extends EventEmitter {
     return explanations.join('\n\n');
   }
 
-  private determineRecommendedApproach(results: TaskResult[]): string {
+  private determineRecommendedApproach(_results: TaskResult[]): string {
     // Analyze results to determine the recommended approach
     return 'Combined approach based on multiple agent recommendations';
   }
@@ -544,17 +544,17 @@ export class OutputAggregator extends EventEmitter {
     );
   }
 
-  private calculateOverallRating(results: TaskResult[]): number {
+  private calculateOverallRating(_results: TaskResult[]): number {
     // Calculate overall rating from multiple reviews
     return 7.5; // Placeholder implementation
   }
 
-  private calculateAgentAgreement(results: TaskResult[]): number {
+  private calculateAgentAgreement(_results: TaskResult[]): number {
     // Calculate level of agreement between agents
     return 0.8; // Placeholder implementation
   }
 
-  private calculateConsensusLevel(results: TaskResult[]): number {
+  private calculateConsensusLevel(_results: TaskResult[]): number {
     // Calculate consensus level among results
     return 0.75; // Placeholder implementation
   }

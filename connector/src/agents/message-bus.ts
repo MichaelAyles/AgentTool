@@ -127,7 +127,7 @@ export class AgentMessageBus extends EventEmitter {
   }
 
   public async sendMessage(message: AgentMessage): Promise<void> {
-    const startTime = Date.now();
+    const _startTime = Date.now();
     
     try {
       // Validate message

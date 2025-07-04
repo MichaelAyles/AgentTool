@@ -1,7 +1,7 @@
-import { BaseAgent, AgentTask, AgentConfig, AgentMessage, TaskResult, CoordinationPlan, AgentCapability } from './types';
+import { BaseAgent, AgentTask, AgentConfig, AgentMessage, TaskResult, CoordinationPlan } from './types';
 import { PromptGenerator } from './prompt-generator';
 import { AgentStateManager } from './state-manager';
-import { EventEmitter } from 'events';
+// import { EventEmitter } from 'events';
 
 export class MiddleManagerAgent extends BaseAgent {
   private promptGenerator: PromptGenerator;

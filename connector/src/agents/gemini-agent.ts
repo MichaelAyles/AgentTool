@@ -135,11 +135,10 @@ export class GeminiAgent extends BaseAgent {
         stdio: ['pipe', 'pipe', 'pipe']
       });
 
-      let _output = '';
       let error = '';
 
-      childProcess.stdout?.on('data', (data: any) => {
-        _output += data.toString();
+      childProcess.stdout?.on('data', (_data: any) => {
+        // Output data processed for verification
       });
 
       childProcess.stderr?.on('data', (data: any) => {
