@@ -1,0 +1,424 @@
+name: DuckBridge Connector Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'connector/**'
+      - '.github/workflows/connector-tests.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'connector/**'
+      - '.github/workflows/connector-tests.yml'
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+env:
+  NODE_VERSION: '20'
+  CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+  GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+jobs:
+  lint-and-typecheck:
+    name: Lint and Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'connector/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: ./connector
+        run: npm ci
+
+      - name: Run ESLint
+        working-directory: ./connector
+        run: npm run lint
+
+      - name: Type check
+        working-directory: ./connector
+        run: npx tsc --noEmit
+
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'connector/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: ./connector
+        run: npm ci
+
+      - name: Build project
+        working-directory: ./connector
+        run: npm run build
+
+      - name: Run unit tests
+        working-directory: ./connector
+        run: npm run test:unit
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unit-test-results
+          path: connector/coverage/
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'connector/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: ./connector
+        run: npm ci
+
+      - name: Build project
+        working-directory: ./connector
+        run: npm run build
+
+      - name: Install Claude CLI (Ubuntu/macOS)
+        if: runner.os != 'Windows'
+        run: |
+          npm install -g @anthropic-ai/claude-code
+          which claude || echo "Claude CLI not found in PATH"
+
+      - name: Install Claude CLI (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          npm install -g @anthropic-ai/claude-code
+          where claude || echo "Claude CLI not found in PATH"
+
+      - name: Setup Python for Gemini
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Gemini dependencies
+        run: |
+          pip install google-generativeai
+
+      - name: Run integration tests
+        working-directory: ./connector
+        run: npm run test:integration
+        timeout-minutes: 10
+
+      - name: Upload integration test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-test-results-${{ matrix.os }}
+          path: connector/coverage/
+
+  e2e-tests:
+    name: End-to-End Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'connector/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: ./connector
+        run: npm ci
+
+      - name: Build project
+        working-directory: ./connector
+        run: npm run build
+
+      - name: Install Claude CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Setup Python for Gemini
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Gemini dependencies
+        run: pip install google-generativeai
+
+      - name: Run E2E tests
+        working-directory: ./connector
+        run: npm run test:e2e
+        timeout-minutes: 15
+
+      - name: Upload E2E test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-test-results
+          path: connector/coverage/
+
+  stress-tests:
+    name: Stress Tests
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || contains(github.event.head_commit.message, '[stress-test]')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'connector/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: ./connector
+        run: npm ci
+
+      - name: Build project
+        working-directory: ./connector
+        run: npm run build
+
+      - name: Install Claude CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Setup Python for Gemini
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Gemini dependencies
+        run: pip install google-generativeai
+
+      - name: Run stress tests
+        working-directory: ./connector
+        run: npm run test:stress
+        timeout-minutes: 20
+
+      - name: Upload stress test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: stress-test-results
+          path: connector/tests/stress/stress-report-*.json
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'connector/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: ./connector
+        run: npm ci
+
+      - name: Run npm audit
+        working-directory: ./connector
+        run: npm audit --audit-level=moderate
+
+      - name: Run Snyk security scan
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=medium
+          command: test
+        continue-on-error: true
+
+  performance-benchmark:
+    name: Performance Benchmark
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || contains(github.event.head_commit.message, '[benchmark]')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'connector/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: ./connector
+        run: npm ci
+
+      - name: Build project
+        working-directory: ./connector
+        run: npm run build
+
+      - name: Install Claude CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Setup Python for Gemini
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Gemini dependencies
+        run: pip install google-generativeai
+
+      - name: Run performance benchmark
+        working-directory: ./connector
+        run: |
+          # Start connector in background
+          node dist/index.js &
+          CONNECTOR_PID=$!
+          
+          # Wait for startup
+          sleep 10
+          
+          # Run benchmark
+          node tests/stress/stress-test.js 3001 3002
+          
+          # Stop connector
+          kill $CONNECTOR_PID
+        timeout-minutes: 15
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: benchmark-results
+          path: connector/tests/stress/stress-report-*.json
+
+  test-coverage:
+    name: Test Coverage
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests, e2e-tests]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'connector/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: ./connector
+        run: npm ci
+
+      - name: Build project
+        working-directory: ./connector
+        run: npm run build
+
+      - name: Install Claude CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Setup Python for Gemini
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Gemini dependencies
+        run: pip install google-generativeai
+
+      - name: Run all tests with coverage
+        working-directory: ./connector
+        run: npm run test:coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          directory: ./connector/coverage
+          flags: connector
+          name: connector-coverage
+
+  deploy-test:
+    name: Test Deployment
+    runs-on: ubuntu-latest
+    needs: [lint-and-typecheck, unit-tests, integration-tests]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'connector/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: ./connector
+        run: npm ci
+
+      - name: Build project
+        working-directory: ./connector
+        run: npm run build
+
+      - name: Create distribution package
+        working-directory: ./connector
+        run: |
+          npm pack
+          mv *.tgz duckbridge-connector-latest.tgz
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: connector-package
+          path: connector/duckbridge-connector-latest.tgz
+
+      - name: Test installation
+        run: |
+          npm install -g ./connector/duckbridge-connector-latest.tgz
+          duckbridge-connector --version
+
+  notification:
+    name: Notify Results
+    runs-on: ubuntu-latest
+    needs: [lint-and-typecheck, unit-tests, integration-tests, e2e-tests, security-scan, test-coverage]
+    if: always()
+    steps:
+      - name: Notify success
+        if: ${{ needs.lint-and-typecheck.result == 'success' && needs.unit-tests.result == 'success' && needs.integration-tests.result == 'success' && needs.e2e-tests.result == 'success' }}
+        run: |
+          echo "✅ All connector tests passed!"
+          echo "::notice title=Tests Passed::All DuckBridge connector tests completed successfully"
+
+      - name: Notify failure
+        if: ${{ needs.lint-and-typecheck.result == 'failure' || needs.unit-tests.result == 'failure' || needs.integration-tests.result == 'failure' || needs.e2e-tests.result == 'failure' }}
+        run: |
+          echo "❌ Some connector tests failed!"
+          echo "::error title=Tests Failed::One or more DuckBridge connector tests failed"
+          exit 1
