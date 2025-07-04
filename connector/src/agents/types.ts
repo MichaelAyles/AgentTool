@@ -3,16 +3,19 @@ import { EventEmitter } from 'events';
 // Agent System Types and Interfaces
 export interface AgentTask {
   id: string;
-  type: 'code_generation' | 'code_review' | 'debugging' | 'documentation' | 'testing' | 'refactoring' | 'analysis';
+  type: 'code_generation' | 'code_review' | 'debugging' | 'documentation' | 'testing' | 'refactoring' | 'analysis' | 'code_analysis' | 'simple_task' | 'concurrent_task' | 'test_task';
   priority: 'low' | 'medium' | 'high' | 'critical';
   description: string;
   context: {
     projectId?: string;
-    terminalId: string;
+    terminalId?: string;
     workingDirectory?: string;
     files?: string[];
     previousOutput?: string;
     userInput?: string;
+    language?: string;
+    requirements?: string;
+    index?: number;
   };
   requirements: {
     tools: string[];
@@ -26,7 +29,9 @@ export interface AgentTask {
     estimatedDuration?: number;
     assignedTo?: string;
     dependencies?: string[];
+    source?: string;
   };
+  status?: 'pending' | 'assigned' | 'in_progress' | 'completed' | 'failed';
 }
 
 export interface AgentCapability {
@@ -64,6 +69,9 @@ export interface AgentStatus {
     activeProcesses: number;
   };
   healthScore: number;
+  startTime?: Date;
+  type?: string;
+  status?: 'pending' | 'assigned' | 'in_progress' | 'completed' | 'failed';
 }
 
 export interface AgentMessage {
@@ -125,6 +133,12 @@ export interface AgentMetrics {
     start: Date;
     end: Date;
   };
+  // Additional system metrics
+  totalAgents?: number;
+  agentsByType?: { [type: string]: number };
+  agentsByState?: { [state: string]: number };
+  averageHealthScore?: number;
+  systemUptime?: number;
 }
 
 // Abstract base class for all agents

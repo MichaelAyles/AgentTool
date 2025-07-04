@@ -33,7 +33,7 @@ export class AgentSpawner extends EventEmitter {
   private stateManager: AgentStateManager;
   private spawningQueue: SpawnConfig[] = [];
   private isProcessingQueue = false;
-  private healthCheckInterval: NodeJS.Timeout | null = null;
+  private healthCheckInterval: ReturnType<typeof setTimeout> | null = null;
   private maxInstances: number = 10;
   private defaultConfigs: Map<string, Partial<AgentConfig>> = new Map();
 

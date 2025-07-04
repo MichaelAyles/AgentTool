@@ -8,7 +8,7 @@ interface TestUtils {
 }
 
 declare global {
-  var testUtils: TestUtils;
+  let testUtils: TestUtils;
 }
 
 // Test utilities

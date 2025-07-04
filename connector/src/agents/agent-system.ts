@@ -189,13 +189,13 @@ export class AgentSystem extends EventEmitter {
     this.emit('taskCompleted', taskId, result);
   }
 
-  private async handleCoordinationPlanProgress(plan: any, result: TaskResult): Promise<void> {
+  private async handleCoordinationPlanProgress(plan: any, _result: TaskResult): Promise<void> {
     // Update coordination plan progress
     // This would involve checking if all steps are complete and aggregating results
     console.log(`Updating coordination plan progress: ${plan.id}`);
   }
 
-  private async handleCriticalAgentHealth(agentId: string, health: any): Promise<void> {
+  private async handleCriticalAgentHealth(agentId: string, _health: any): Promise<void> {
     console.log(`Handling critical health for agent: ${agentId}`);
     
     try {

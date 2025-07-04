@@ -1,4 +1,4 @@
-import { BaseAgent, AgentTask, AgentConfig, AgentMessage, TaskResult, AgentCapability } from './types';
+import { BaseAgent, AgentTask, AgentConfig, AgentMessage, TaskResult } from './types';
 import { spawn, ChildProcess } from 'child_process';
 import { promises as fs } from 'fs';
 import path from 'path';
@@ -135,11 +135,11 @@ export class GeminiAgent extends BaseAgent {
         stdio: ['pipe', 'pipe', 'pipe']
       });
 
-      let output = '';
+      let _output = '';
       let error = '';
 
       childProcess.stdout?.on('data', (data: any) => {
-        output += data.toString();
+        _output += data.toString();
       });
 
       childProcess.stderr?.on('data', (data: any) => {

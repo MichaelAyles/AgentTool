@@ -1,7 +1,5 @@
-import { BaseAgent, AgentTask, AgentConfig, AgentMessage, TaskResult, AgentCapability } from './types';
+import { BaseAgent, AgentTask, AgentConfig, AgentMessage, TaskResult } from './types';
 import { spawn, ChildProcess } from 'child_process';
-import { promises as fs } from 'fs';
-import path from 'path';
 
 export class ClaudeCodeAgent extends BaseAgent {
   private activeProcesses: Map<string, ChildProcess> = new Map();

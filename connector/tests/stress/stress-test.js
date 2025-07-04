@@ -400,7 +400,7 @@ class StressTest {
     
     try {
       // Create continuous load
-      const loadPromises = [];
+      // const _loadPromises = [];
       let requestCount = 0;
       
       const createLoad = async () => {
@@ -510,7 +510,7 @@ class StressTest {
     Object.values(this.results).forEach(category => {
       if (typeof category === 'object' && category !== null && !Array.isArray(category)) {
         Object.values(category).forEach(test => {
-          if (typeof test === 'object' && test.hasOwnProperty('success')) {
+          if (typeof test === 'object' && Object.prototype.hasOwnProperty.call(test, 'success')) {
             report.summary.totalTests++;
             if (test.success) {
               report.summary.passedTests++;

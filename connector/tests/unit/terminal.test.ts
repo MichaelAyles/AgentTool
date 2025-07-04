@@ -86,25 +86,18 @@ describe('TerminalManager', () => {
       expect(retrieved?.uuid).toBe(testUuid);
     });
 
-    test('should terminate specific terminal session', () => {
-      return new Promise<void>(async (resolve, reject) => {
-        try {
-          const session = await terminalManager.createSession(testUuid);
-          
-          // Terminate the session
-          const terminated = terminalManager.terminateSession(session.id);
-          expect(terminated).toBe(true);
-          
-          // Wait a bit for cleanup
-          setTimeout(() => {
-            const retrieved = terminalManager.getSession(session.id);
-            expect(retrieved?.isActive).toBe(false);
-            resolve();
-          }, 100);
-        } catch (error) {
-          reject(error);
-        }
-      });
+    test('should terminate specific terminal session', async () => {
+      const session = await terminalManager.createSession(testUuid);
+      
+      // Terminate the session
+      const terminated = terminalManager.terminateSession(session.id);
+      expect(terminated).toBe(true);
+      
+      // Wait a bit for cleanup
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      const retrieved = terminalManager.getSession(session.id);
+      expect(retrieved?.isActive).toBe(false);
     });
 
     test('should cleanup idle sessions', async () => {
