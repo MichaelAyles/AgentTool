@@ -5,8 +5,16 @@
   "private": true,
   "scripts": {
     "dev": "cd frontend && python3 -m http.server 8000",
+    "serve": "cd frontend && python3 -m http.server 3001",
     "build": "echo 'No build step required for static frontend'",
-    "test": "echo 'No tests configured yet'",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "test:report": "playwright show-report",
+    "test:mobile": "playwright test tests/mobile.spec.ts",
+    "test:visual": "playwright test tests/visual-regression.spec.ts",
+    "test:connector": "playwright test tests/connector.spec.ts",
     "lint": "echo 'No linting configured yet'"
   },
   "repository": {
@@ -24,5 +32,11 @@
   "bugs": {
     "url": "https://github.com/MichaelAyles/AgentTool/issues"
   },
-  "homepage": "https://github.com/MichaelAyles/AgentTool#readme"
+  "homepage": "https://github.com/MichaelAyles/AgentTool#readme",
+  "devDependencies": {
+    "@playwright/browser-chromium": "^1.53.2",
+    "@playwright/browser-firefox": "^1.53.2",
+    "@playwright/browser-webkit": "^1.53.2",
+    "@playwright/test": "^1.53.2"
+  }
 }
