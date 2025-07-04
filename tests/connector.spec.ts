@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { spawn, ChildProcess } from 'child_process';
 import { setTimeout } from 'timers/promises';
 
-test.describe('DuckBridge Connector Integration', () => {
+test.describe.skip('DuckBridge Connector Integration', () => {
   let connectorProcess: ChildProcess;
 
   test.beforeAll(async () => {

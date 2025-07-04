@@ -34,8 +34,12 @@ test.describe('Mobile Responsive Tests', () => {
   test('QR code modal is mobile-friendly', async ({ page }) => {
     await page.goto('/');
     
+    // Open login modal first
+    await page.locator('#show-login-btn').tap();
+    await expect(page.locator('#login-modal')).toBeVisible();
+    
     // Open QR modal
-    await page.locator('#qr-btn').tap();
+    await page.locator('#qr-code-btn').tap();
     
     // Check modal is visible and properly sized on mobile
     const modal = page.locator('#qr-modal');
@@ -76,6 +80,10 @@ test.describe('Mobile Responsive Tests', () => {
 
   test('mobile form inputs work correctly', async ({ page }) => {
     await page.goto('/');
+    
+    // Open login modal first
+    await page.locator('#show-login-btn').tap();
+    await expect(page.locator('#login-modal')).toBeVisible();
     
     // Test UUID input on mobile
     const uuidInput = page.locator('#uuid-input');
@@ -123,12 +131,16 @@ test.describe('Cross-Device Functionality', () => {
   test('QR code contains correct mobile URL', async ({ page }) => {
     await page.goto('/');
     
+    // Open login modal first
+    await page.locator('#show-login-btn').click();
+    await expect(page.locator('#login-modal')).toBeVisible();
+    
     // Generate UUID
-    await page.locator('#generate-uuid-btn').click();
+    await page.locator('#regenerate-uuid').click();
     const uuid = await page.locator('#uuid-input').inputValue();
     
     // Open QR modal
-    await page.locator('#qr-btn').click();
+    await page.locator('#qr-code-btn').click();
     
     // Check fallback URL contains UUID
     const fallbackText = page.locator('#qr-fallback-text');

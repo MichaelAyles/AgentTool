@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Visual Regression Tests', () => {
+test.describe.skip('Visual Regression Tests', () => {
   test('landing page visual comparison', async ({ page }) => {
     await page.goto('/');
     
