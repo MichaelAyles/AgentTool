@@ -78,15 +78,15 @@ if [ -d "$CONNECTOR_DIR" ]; then
     echo "🔄 Existing installation found. Updating..."
     cd "$CONNECTOR_DIR"
     
+    # Fetch first to update remote tracking
+    git fetch origin "$BRANCH" --quiet
+    
     # Check for local changes
     if ! git diff --quiet || ! git diff --cached --quiet; then
         echo "⚠️  Local changes detected. Stashing them..."
         git stash push -m "Auto-stashed by installer on $(date '+%Y-%m-%d %H:%M:%S')"
         echo "✅ Local changes stashed successfully"
     fi
-    
-    # Fetch and check for conflicts
-    git fetch origin "$BRANCH"
     
     # Try to merge
     if ! git merge origin/"$BRANCH" --ff-only 2>/dev/null; then
