@@ -5,6 +5,7 @@ import { SessionDatabase } from './database';
 import { CommandRoutingEngine } from './routing';
 import { LayoutManager } from './layout';
 import { CollaborationManager } from './collaboration';
+import { EventEmitter } from 'events';
 
 export interface WebSocketMessage {
   type: 'auth' | 'terminal_input' | 'terminal_resize' | 'terminal_create' | 'terminal_close' | 'terminal_list' | 'terminal_broadcast' | 'ping' | 'pong' | 'command_route' | 'command_history' | 'tool_history' | 'command_parse' | 'agent_output' | 'layout_get' | 'layout_set' | 'layout_create' | 'layout_update' | 'layout_delete' | 'layout_list' | 'layout_state' | 'layout_pane_assign' | 'layout_pane_remove' | 'layout_comparison' | 'layout_sync_scroll' | 'layout_export' | 'layout_import' | 'session_share' | 'session_join' | 'session_leave' | 'cursor_position' | 'comment_add' | 'comment_update' | 'comment_delete' | 'recording_start' | 'recording_stop' | 'recording_play';
@@ -33,27 +34,25 @@ export interface ConnectedClient {
   lastPing: number;
 }
 
-export class WebSocketManager {
-  private wss: WebSocketServer;
-  private clients: Map<string, ConnectedClient> = new Map();
-  private terminalManager: TerminalManager;
-  private database: SessionDatabase;
+export class WebSocketManager extends EventEmitter {
+  protected wss: WebSocketServer;
+  protected clients: Map<string, ConnectedClient> = new Map();
+  protected terminalManager: TerminalManager;
+  protected database: SessionDatabase;
   private commandRoutingEngine: CommandRoutingEngine | null = null;
   private layoutManager: LayoutManager | null = null;
   private collaborationManager: CollaborationManager | null = null;
   private pingInterval!: NodeJS.Timeout;
 
   constructor(port: number, terminalManager: TerminalManager, database: SessionDatabase) {
+    super();
     this.terminalManager = terminalManager;
     this.database = database;
 
-    // Create WebSocket server
-    this.wss = new WebSocketServer({ 
-      port,
-      verifyClient: this.verifyClient.bind(this)
-    });
+    // Create WebSocket server (can be overridden by subclasses)
+    this.wss = this.createWebSocketServer(port);
 
-    console.log(`🔌 WebSocket server listening on port ${port}`);
+    console.log(`🔌 WebSocket server starting on port ${port}`);
 
     // Handle new connections
     this.wss.on('connection', this.handleConnection.bind(this));
@@ -70,6 +69,13 @@ export class WebSocketManager {
       this.terminalManager.cleanupInactiveSessions();
       this.database.cleanupOldSessions();
     }, 5 * 60 * 1000); // Every 5 minutes
+  }
+
+  protected createWebSocketServer(port: number): WebSocketServer {
+    return new WebSocketServer({ 
+      port,
+      verifyClient: this.verifyClient.bind(this)
+    });
   }
 
   public setCommandRoutingEngine(engine: CommandRoutingEngine): void {
@@ -1652,6 +1658,10 @@ export class WebSocketManager {
 
   getClientByUuid(uuid: string): ConnectedClient | undefined {
     return this.clients.get(uuid);
+  }
+
+  close(): void {
+    this.destroy();
   }
 
   destroy(): void {

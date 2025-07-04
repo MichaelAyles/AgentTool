@@ -3,6 +3,7 @@ import cors from 'cors';
 import { v4 as uuidv4 } from 'uuid';
 import { TerminalManager } from './terminal';
 import { WebSocketManager } from './websocket';
+import { SSLWebSocketManager } from './ssl-websocket';
 import { SessionDatabase, FileDatabase } from './database';
 import { ProjectManager } from './project';
 import { ToolDetectionService } from './tools';
@@ -44,7 +45,8 @@ export class DuckBridgeConnector {
     this.commandRoutingEngine = new CommandRoutingEngine(this.toolDetectionService);
     this.layoutManager = new LayoutManager(this.fileDatabase);
     this.collaborationManager = new CollaborationManager(this.fileDatabase);
-    this.websocketManager = new WebSocketManager(this.wsPort, this.terminalManager, this.database);
+    // Use SSL WebSocket manager for secure connections
+    this.websocketManager = new SSLWebSocketManager(this.wsPort, this.terminalManager, this.database);
     
     // Initialize agent system components
     this.messageBus = new AgentMessageBus();

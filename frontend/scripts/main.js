@@ -383,13 +383,25 @@ class DuckBridgeApp {
         this.clearError();
         this.setConnectionState('connecting');
         
-        const wsUrl = 'ws://localhost:3002';
+        // Try SSL WebSocket first, fallback to regular WebSocket
+        this.tryConnect(['wss://localhost:3002', 'ws://localhost:3003', 'ws://localhost:3002']);
+    }
+
+    tryConnect(urls) {
+        if (urls.length === 0) {
+            this.setConnectionState('disconnected');
+            this.showError('Unable to connect to local connector. Make sure it is running.');
+            return;
+        }
+
+        const wsUrl = urls[0];
+        console.log(`Attempting connection to: ${wsUrl}`);
         
         try {
             this.wsConnection = new WebSocket(wsUrl);
             
             this.wsConnection.onopen = () => {
-                console.log('WebSocket connected');
+                console.log(`WebSocket connected to ${wsUrl}`);
                 this.sendMessage({
                     type: 'auth',
                     uuid: this.currentUuid,
@@ -402,27 +414,35 @@ class DuckBridgeApp {
             };
             
             this.wsConnection.onclose = (event) => {
-                console.log('WebSocket disconnected:', event.code, event.reason);
-                this.setConnectionState('disconnected');
-                setTimeout(() => this.checkConnectorAvailability(), 3000);
+                console.log(`WebSocket disconnected from ${wsUrl}:`, event.code, event.reason);
+                if (event.code !== 1000) { // Not a normal closure
+                    // Try next URL
+                    this.tryConnect(urls.slice(1));
+                } else {
+                    this.setConnectionState('disconnected');
+                    setTimeout(() => this.checkConnectorAvailability(), 3000);
+                }
             };
             
             this.wsConnection.onerror = (error) => {
-                console.error('WebSocket error:', error);
-                this.setConnectionState('disconnected');
+                console.error(`WebSocket error on ${wsUrl}:`, error);
+                // Try next URL
+                this.tryConnect(urls.slice(1));
             };
             
-            // Connection timeout
+            // Connection timeout - try next URL
             setTimeout(() => {
                 if (this.wsConnection.readyState === WebSocket.CONNECTING) {
+                    console.log(`Connection timeout for ${wsUrl}, trying next...`);
                     this.wsConnection.close();
-                    this.setConnectionState('disconnected');
+                    this.tryConnect(urls.slice(1));
                 }
-            }, 10000);
+            }, 5000); // Shorter timeout for faster fallback
             
         } catch (error) {
-            console.error('Failed to create WebSocket connection:', error);
-            this.setConnectionState('disconnected');
+            console.error(`Failed to create WebSocket connection to ${wsUrl}:`, error);
+            // Try next URL
+            this.tryConnect(urls.slice(1));
         }
     }
     
