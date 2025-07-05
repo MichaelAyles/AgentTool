@@ -16,6 +16,68 @@ export class SSLWebSocketManager extends WebSocketManager {
     super(port, terminalManager, database);
   }
 
+  // Override handleConnection for local GUI mode - auto-authenticate clients
+  protected handleConnection(ws: WebSocket, request: import('http').IncomingMessage): void {
+    const clientId = `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    console.log(`📱 New local WebSocket connection: ${clientId}`);
+
+    // Auto-authenticate for local GUI mode
+    const localUuid = `local-session-${Date.now()}`;
+    const client = {
+      ws,
+      uuid: localUuid,
+      authenticated: true, // Auto-authenticate in local mode
+      lastPing: Date.now()
+    };
+
+    this.clients.set(clientId, client);
+
+    // Send immediate auth success
+    this.sendMessage(ws, {
+      type: 'auth_success' as any,
+      data: {
+        uuid: localUuid,
+        session_id: clientId,
+        timestamp: Date.now(),
+        mode: 'local'
+      }
+    });
+
+    // Handle messages (skip auth message type in local mode)
+    ws.on('message', (data: Buffer) => {
+      try {
+        const message = JSON.parse(data.toString());
+        
+        // Skip auth messages in local mode since we auto-authenticate
+        if (message.type === 'auth') {
+          return;
+        }
+        
+        this.handleMessage(clientId, client, message);
+      } catch (error) {
+        console.error('Invalid WebSocket message:', error);
+        this.sendMessage(ws, {
+          type: 'error' as any,
+          data: 'Invalid message format'
+        });
+      }
+    });
+
+    ws.on('close', () => {
+      console.log(`📱 Local WebSocket disconnected: ${clientId}`);
+      this.clients.delete(clientId);
+      this.emit('clientDisconnected', { clientId, uuid: localUuid });
+    });
+
+    ws.on('error', (error) => {
+      console.error(`📱 Local WebSocket error for ${clientId}:`, error);
+      this.clients.delete(clientId);
+    });
+
+    this.emit('clientConnected', { clientId, uuid: localUuid });
+  }
+
   protected createWebSocketServer(port: number): WebSocketServer {
     // Try to create SSL server first
     try {

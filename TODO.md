@@ -245,6 +245,37 @@
   - [ ] Custom agent development framework
   - [ ] API for third-party integrations
 
+## Phase 4: Local GUI Implementation
+### 4.1 Directory Structure & Foundation
+- [ ] **Create public directory structure in connector for static files**
+- [ ] **Copy frontend HTML file and adapt for local use**
+- [ ] **Copy and organize frontend CSS files**
+- [ ] **Copy and adapt frontend JavaScript files**
+
+### 4.2 Frontend Adaptation
+- [ ] **Remove UUID pairing logic from frontend**
+- [ ] **Update WebSocket connection to use relative URLs**
+- [ ] **Remove remote authentication logic from WebSocket**
+- [ ] **Update QR code generation for local network access**
+
+### 4.3 Backend Integration
+- [ ] **Add Express static file serving to connector**
+- [ ] **Configure CORS for local-only access**
+- [ ] **Update connector startup to serve web interface**
+- [ ] **Add auto-open browser on startup functionality**
+
+### 4.4 Installation & Configuration
+- [ ] **Update install script to support local GUI mode**
+- [ ] **Add local network discovery for mobile access**
+- [ ] **Add port configuration options**
+- [ ] **Update documentation for local GUI usage**
+
+### 4.5 Development Experience
+- [ ] **Create development mode with hot reload**
+- [ ] **Add system tray icon support (optional)**
+- [ ] **Create packaged executable versions**
+- [ ] **Add update checker for new versions**
+
 ## Testing and Quality Assurance
 
 ### Unit Testing
@@ -401,7 +432,7 @@
   - [x] Add shared terminal sessions
   - [x] Implement real-time cursor tracking
   - [x] Create commenting system
-  - [x] Add session recording/playbook
+  - [x] Add session recording/playback
 
 ## Implementation Priority Order
 
@@ -440,4 +471,4 @@ Total estimated time: 8-9 weeks for full implementation
 - Use WebSockets for real-time terminal streaming
 - Keep security in mind from the beginning
 - Test on all target platforms early and often
-- Focus on user experience and ease of setupit sti
+- Focus on user experience and ease of setup

@@ -1,5 +1,7 @@
 import express from 'express';
 import cors from 'cors';
+import path from 'path';
+import { execSync } from 'child_process';
 import { v4 as uuidv4 } from 'uuid';
 import { TerminalManager } from './terminal';
 import { WebSocketManager } from './websocket';
@@ -34,7 +36,7 @@ export class DuckBridgeConnector {
   constructor(httpPort: number = 3001, wsPort: number = 3002) {
     this.httpPort = httpPort;
     this.wsPort = wsPort;
-    this.uuid = uuidv4();
+    this.uuid = uuidv4(); // Still generate for internal use, but no pairing needed
 
     // Initialize components
     this.database = new SessionDatabase();
@@ -70,13 +72,16 @@ export class DuckBridgeConnector {
   }
 
   private setupMiddleware(): void {
-    // CORS configuration
+    // CORS configuration for local GUI
     this.app.use(cors({
       origin: [
-        'http://localhost:3000',
-        'http://localhost:8000',
-        'https://vibe.theduck.chat',
-        /\.vercel\.app$/
+        // Allow all localhost ports for development
+        /^http:\/\/localhost:\d+$/,
+        /^http:\/\/127\.0\.0\.1:\d+$/,
+        // Allow local network access for mobile devices
+        /^http:\/\/192\.168\.\d{1,3}\.\d{1,3}:\d+$/,
+        /^http:\/\/10\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+$/,
+        /^http:\/\/172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}:\d+$/
       ],
       credentials: true
     }));
@@ -1441,6 +1446,12 @@ export class DuckBridgeConnector {
         message: error.message
       });
     });
+
+    // Serve local GUI - catch all routes not handled by API endpoints
+    this.app.get('*', (req, res) => {
+      // Serve index.html for all unmatched routes (SPA routing)
+      res.sendFile(path.join(__dirname, '../public/index.html'));
+    });
   }
 
   async start(): Promise<void> {
@@ -1455,20 +1466,29 @@ export class DuckBridgeConnector {
         try {
           // Start HTTP server
           const server = this.app.listen(this.httpPort, () => {
-            console.log('🦆 DuckBridge Connector Started');
-            console.log('==============================');
+            console.log('🦆 DuckBridge Connector Started (Local GUI Mode)');
+            console.log('==============================================');
+            console.log(`🌐 Local Web Interface: http://localhost:${this.httpPort}`);
             console.log(`📡 HTTP API: http://localhost:${this.httpPort}`);
             console.log(`🔌 WebSocket: ws://localhost:${this.wsPort}`);
-            console.log(`🆔 Connector UUID: ${this.uuid}`);
+            console.log(`🆔 Session ID: local-${this.uuid.slice(0, 8)}`);
             console.log('🤖 AI Agent System: Active');
-            console.log('📱 Frontend: https://vibe.theduck.chat');
-            console.log('================================');
+            console.log('==============================================');
             console.log('');
             console.log('💡 Quick Start:');
-            console.log(`   1. Visit https://vibe.theduck.chat`);
-            console.log(`   2. Enter UUID: ${this.uuid}`);
+            console.log(`   1. Open: http://localhost:${this.httpPort}`);
+            console.log('   2. Terminal will auto-connect');
             console.log('   3. Start coding with AI agents!');
             console.log('');
+            console.log('📱 Mobile Access:');
+            console.log(`   • Generate QR code from the web interface`);
+            console.log(`   • Access from local network devices`);
+            console.log('');
+            
+            // Auto-open browser after a short delay
+            setTimeout(() => {
+              this.openBrowser(`http://localhost:${this.httpPort}`);
+            }, 2000);
             
             resolve();
           });
@@ -1527,6 +1547,31 @@ export class DuckBridgeConnector {
       console.error('Error during shutdown:', error);
     } finally {
       process.exit(0);
+    }
+  }
+
+  // Auto-open browser functionality
+  private openBrowser(url: string): void {
+    try {
+      const platform = process.platform;
+      let command: string;
+      
+      switch (platform) {
+        case 'darwin': // macOS
+          command = `open "${url}"`;
+          break;
+        case 'win32': // Windows
+          command = `start "${url}"`;
+          break;
+        default: // Linux and others
+          command = `xdg-open "${url}"`;
+          break;
+      }
+      
+      console.log(`🌐 Opening browser: ${url}`);
+      execSync(command, { stdio: 'ignore' });
+    } catch (error) {
+      console.log(`⚠️  Could not auto-open browser. Please visit: ${url}`);
     }
   }
 

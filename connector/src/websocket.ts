@@ -335,7 +335,7 @@ export class WebSocketManager extends EventEmitter {
     });
   }
 
-  private handleMessage(clientId: string, client: ConnectedClient, message: WebSocketMessage): void {
+  protected handleMessage(clientId: string, client: ConnectedClient, message: WebSocketMessage): void {
     switch (message.type) {
       case 'auth':
         this.handleAuth(clientId, client, message);
@@ -1612,7 +1612,7 @@ export class WebSocketManager extends EventEmitter {
     });
   }
 
-  private sendMessage(ws: WebSocket, message: WebSocketMessage): void {
+  protected sendMessage(ws: WebSocket, message: WebSocketMessage): void {
     if (ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify(message));
     }
