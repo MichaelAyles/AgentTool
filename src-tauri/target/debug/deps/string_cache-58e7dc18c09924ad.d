@@ -1,0 +1,11 @@
+/Users/tribune/Desktop/AgentTool/src-tauri/target/debug/deps/libstring_cache-58e7dc18c09924ad.rmeta: /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/string_cache-0.8.9/src/lib.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/string_cache-0.8.9/src/atom.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/string_cache-0.8.9/src/dynamic_set.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/string_cache-0.8.9/src/static_sets.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/string_cache-0.8.9/src/trivial_impls.rs
+
+/Users/tribune/Desktop/AgentTool/src-tauri/target/debug/deps/libstring_cache-58e7dc18c09924ad.rlib: /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/string_cache-0.8.9/src/lib.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/string_cache-0.8.9/src/atom.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/string_cache-0.8.9/src/dynamic_set.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/string_cache-0.8.9/src/static_sets.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/string_cache-0.8.9/src/trivial_impls.rs
+
+/Users/tribune/Desktop/AgentTool/src-tauri/target/debug/deps/string_cache-58e7dc18c09924ad.d: /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/string_cache-0.8.9/src/lib.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/string_cache-0.8.9/src/atom.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/string_cache-0.8.9/src/dynamic_set.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/string_cache-0.8.9/src/static_sets.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/string_cache-0.8.9/src/trivial_impls.rs
+
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/string_cache-0.8.9/src/lib.rs:
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/string_cache-0.8.9/src/atom.rs:
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/string_cache-0.8.9/src/dynamic_set.rs:
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/string_cache-0.8.9/src/static_sets.rs:
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/string_cache-0.8.9/src/trivial_impls.rs:

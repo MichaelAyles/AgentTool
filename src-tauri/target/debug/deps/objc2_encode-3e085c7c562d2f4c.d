@@ -1,0 +1,10 @@
+/Users/tribune/Desktop/AgentTool/src-tauri/target/debug/deps/libobjc2_encode-3e085c7c562d2f4c.rmeta: /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/objc2-encode-4.1.0/src/lib.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/objc2-encode-4.1.0/src/encoding.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/objc2-encode-4.1.0/src/encoding_box.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/objc2-encode-4.1.0/src/helper.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/objc2-encode-4.1.0/src/parse.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/objc2-encode-4.1.0/src/static_str.rs
+
+/Users/tribune/Desktop/AgentTool/src-tauri/target/debug/deps/objc2_encode-3e085c7c562d2f4c.d: /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/objc2-encode-4.1.0/src/lib.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/objc2-encode-4.1.0/src/encoding.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/objc2-encode-4.1.0/src/encoding_box.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/objc2-encode-4.1.0/src/helper.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/objc2-encode-4.1.0/src/parse.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/objc2-encode-4.1.0/src/static_str.rs
+
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/objc2-encode-4.1.0/src/lib.rs:
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/objc2-encode-4.1.0/src/encoding.rs:
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/objc2-encode-4.1.0/src/encoding_box.rs:
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/objc2-encode-4.1.0/src/helper.rs:
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/objc2-encode-4.1.0/src/parse.rs:
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/objc2-encode-4.1.0/src/static_str.rs:

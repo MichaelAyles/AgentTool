@@ -1,0 +1,12 @@
+/Users/tribune/Desktop/AgentTool/src-tauri/target/debug/deps/libico-3fe3bc036a01f7b9.rmeta: /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ico-0.4.0/src/lib.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ico-0.4.0/src/macros.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ico-0.4.0/src/bmpdepth.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ico-0.4.0/src/icondir.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ico-0.4.0/src/image.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ico-0.4.0/src/restype.rs
+
+/Users/tribune/Desktop/AgentTool/src-tauri/target/debug/deps/libico-3fe3bc036a01f7b9.rlib: /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ico-0.4.0/src/lib.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ico-0.4.0/src/macros.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ico-0.4.0/src/bmpdepth.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ico-0.4.0/src/icondir.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ico-0.4.0/src/image.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ico-0.4.0/src/restype.rs
+
+/Users/tribune/Desktop/AgentTool/src-tauri/target/debug/deps/ico-3fe3bc036a01f7b9.d: /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ico-0.4.0/src/lib.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ico-0.4.0/src/macros.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ico-0.4.0/src/bmpdepth.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ico-0.4.0/src/icondir.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ico-0.4.0/src/image.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ico-0.4.0/src/restype.rs
+
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ico-0.4.0/src/lib.rs:
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ico-0.4.0/src/macros.rs:
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ico-0.4.0/src/bmpdepth.rs:
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ico-0.4.0/src/icondir.rs:
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ico-0.4.0/src/image.rs:
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ico-0.4.0/src/restype.rs:

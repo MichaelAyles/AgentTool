@@ -1,0 +1,10 @@
+/Users/tribune/Desktop/AgentTool/src-tauri/target/debug/deps/libtime_core-8db3293abe1d8471.rmeta: /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/time-core-0.1.4/src/lib.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/time-core-0.1.4/src/convert.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/time-core-0.1.4/src/hint.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/time-core-0.1.4/src/util.rs
+
+/Users/tribune/Desktop/AgentTool/src-tauri/target/debug/deps/libtime_core-8db3293abe1d8471.rlib: /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/time-core-0.1.4/src/lib.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/time-core-0.1.4/src/convert.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/time-core-0.1.4/src/hint.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/time-core-0.1.4/src/util.rs
+
+/Users/tribune/Desktop/AgentTool/src-tauri/target/debug/deps/time_core-8db3293abe1d8471.d: /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/time-core-0.1.4/src/lib.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/time-core-0.1.4/src/convert.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/time-core-0.1.4/src/hint.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/time-core-0.1.4/src/util.rs
+
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/time-core-0.1.4/src/lib.rs:
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/time-core-0.1.4/src/convert.rs:
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/time-core-0.1.4/src/hint.rs:
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/time-core-0.1.4/src/util.rs:

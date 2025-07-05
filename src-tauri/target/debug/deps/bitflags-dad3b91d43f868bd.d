@@ -1,0 +1,12 @@
+/Users/tribune/Desktop/AgentTool/src-tauri/target/debug/deps/libbitflags-dad3b91d43f868bd.rmeta: /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/bitflags-2.9.1/src/lib.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/bitflags-2.9.1/src/iter.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/bitflags-2.9.1/src/parser.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/bitflags-2.9.1/src/traits.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/bitflags-2.9.1/src/public.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/bitflags-2.9.1/src/internal.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/bitflags-2.9.1/src/external.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/bitflags-2.9.1/src/external/serde.rs
+
+/Users/tribune/Desktop/AgentTool/src-tauri/target/debug/deps/bitflags-dad3b91d43f868bd.d: /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/bitflags-2.9.1/src/lib.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/bitflags-2.9.1/src/iter.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/bitflags-2.9.1/src/parser.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/bitflags-2.9.1/src/traits.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/bitflags-2.9.1/src/public.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/bitflags-2.9.1/src/internal.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/bitflags-2.9.1/src/external.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/bitflags-2.9.1/src/external/serde.rs
+
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/bitflags-2.9.1/src/lib.rs:
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/bitflags-2.9.1/src/iter.rs:
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/bitflags-2.9.1/src/parser.rs:
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/bitflags-2.9.1/src/traits.rs:
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/bitflags-2.9.1/src/public.rs:
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/bitflags-2.9.1/src/internal.rs:
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/bitflags-2.9.1/src/external.rs:
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/bitflags-2.9.1/src/external/serde.rs:

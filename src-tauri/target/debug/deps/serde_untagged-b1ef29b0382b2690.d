@@ -1,0 +1,11 @@
+/Users/tribune/Desktop/AgentTool/src-tauri/target/debug/deps/libserde_untagged-b1ef29b0382b2690.rmeta: /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde-untagged-0.1.7/src/lib.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde-untagged-0.1.7/src/any.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde-untagged-0.1.7/src/error.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde-untagged-0.1.7/src/int.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde-untagged-0.1.7/src/map.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde-untagged-0.1.7/src/seed.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde-untagged-0.1.7/src/seq.rs
+
+/Users/tribune/Desktop/AgentTool/src-tauri/target/debug/deps/serde_untagged-b1ef29b0382b2690.d: /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde-untagged-0.1.7/src/lib.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde-untagged-0.1.7/src/any.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde-untagged-0.1.7/src/error.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde-untagged-0.1.7/src/int.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde-untagged-0.1.7/src/map.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde-untagged-0.1.7/src/seed.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde-untagged-0.1.7/src/seq.rs
+
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde-untagged-0.1.7/src/lib.rs:
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde-untagged-0.1.7/src/any.rs:
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde-untagged-0.1.7/src/error.rs:
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde-untagged-0.1.7/src/int.rs:
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde-untagged-0.1.7/src/map.rs:
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde-untagged-0.1.7/src/seed.rs:
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde-untagged-0.1.7/src/seq.rs:

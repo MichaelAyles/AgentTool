@@ -1,0 +1,11 @@
+/Users/tribune/Desktop/AgentTool/src-tauri/target/debug/deps/libgetrandom-1bfdae7b2a5cfd94.rmeta: /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/getrandom-0.3.3/src/lib.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/getrandom-0.3.3/src/backends.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/getrandom-0.3.3/src/error.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/getrandom-0.3.3/src/util.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/getrandom-0.3.3/src/../README.md /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/getrandom-0.3.3/src/backends/getentropy.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/getrandom-0.3.3/src/backends/../util_libc.rs
+
+/Users/tribune/Desktop/AgentTool/src-tauri/target/debug/deps/getrandom-1bfdae7b2a5cfd94.d: /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/getrandom-0.3.3/src/lib.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/getrandom-0.3.3/src/backends.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/getrandom-0.3.3/src/error.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/getrandom-0.3.3/src/util.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/getrandom-0.3.3/src/../README.md /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/getrandom-0.3.3/src/backends/getentropy.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/getrandom-0.3.3/src/backends/../util_libc.rs
+
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/getrandom-0.3.3/src/lib.rs:
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/getrandom-0.3.3/src/backends.rs:
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/getrandom-0.3.3/src/error.rs:
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/getrandom-0.3.3/src/util.rs:
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/getrandom-0.3.3/src/../README.md:
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/getrandom-0.3.3/src/backends/getentropy.rs:
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/getrandom-0.3.3/src/backends/../util_libc.rs:

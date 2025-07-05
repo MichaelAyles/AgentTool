@@ -1,0 +1,12 @@
+/Users/tribune/Desktop/AgentTool/src-tauri/target/debug/deps/libtinystr-85c07540069cca87.rmeta: /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tinystr-0.8.1/src/lib.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tinystr-0.8.1/src/macros.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tinystr-0.8.1/src/ascii.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tinystr-0.8.1/src/asciibyte.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tinystr-0.8.1/src/error.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tinystr-0.8.1/src/int_ops.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tinystr-0.8.1/src/unvalidated.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tinystr-0.8.1/src/ule.rs
+
+/Users/tribune/Desktop/AgentTool/src-tauri/target/debug/deps/tinystr-85c07540069cca87.d: /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tinystr-0.8.1/src/lib.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tinystr-0.8.1/src/macros.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tinystr-0.8.1/src/ascii.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tinystr-0.8.1/src/asciibyte.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tinystr-0.8.1/src/error.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tinystr-0.8.1/src/int_ops.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tinystr-0.8.1/src/unvalidated.rs /Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tinystr-0.8.1/src/ule.rs
+
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tinystr-0.8.1/src/lib.rs:
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tinystr-0.8.1/src/macros.rs:
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tinystr-0.8.1/src/ascii.rs:
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tinystr-0.8.1/src/asciibyte.rs:
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tinystr-0.8.1/src/error.rs:
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tinystr-0.8.1/src/int_ops.rs:
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tinystr-0.8.1/src/unvalidated.rs:
+/Users/tribune/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tinystr-0.8.1/src/ule.rs:
