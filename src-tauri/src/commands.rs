@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use tauri::State;
 use crate::models::*;
+use crate::session_manager::{SessionManager, ConversationMessage};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateSessionRequest {
@@ -16,33 +17,36 @@ pub struct ExecuteTaskRequest {
     pub agent_type: String, // "claude_code", "gemini_cli", or "middle_manager"
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SendMessageRequest {
+    pub session_id: String,
+    pub message: String,
+}
+
 #[tauri::command]
 pub fn greet(name: &str) -> String {
     format!("Hello {}! Welcome to AgentTool - Your Multi-Agent AI Assistant", name)
 }
 
 #[tauri::command]
-pub async fn create_session(request: CreateSessionRequest) -> Result<Session, String> {
-    let session = Session {
-        id: uuid::Uuid::new_v4().to_string(),
-        name: request.name,
-        project_path: request.project_path,
-        description: request.description,
-        status: SessionStatus::Created,
-        created_at: chrono::Utc::now(),
-        updated_at: chrono::Utc::now(),
-        worktree_path: None,
-        branch_name: None,
-    };
-    
-    // TODO: Persist to database
-    Ok(session)
+pub async fn create_session(
+    request: CreateSessionRequest,
+    session_manager: State<'_, SessionManager>,
+) -> Result<Session, String> {
+    session_manager
+        .create_session(request.name, request.project_path, request.description)
+        .await
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub async fn get_sessions() -> Result<Vec<Session>, String> {
-    // TODO: Fetch from database
-    Ok(vec![])
+pub async fn get_sessions(
+    session_manager: State<'_, SessionManager>,
+) -> Result<Vec<Session>, String> {
+    session_manager
+        .list_sessions()
+        .await
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -86,4 +90,45 @@ pub async fn configure_agent(config: AgentConfig) -> Result<(), String> {
 pub async fn list_agents() -> Result<Vec<AgentStatus>, String> {
     // TODO: Return list of configured agents
     Ok(vec![])
+}
+
+#[tauri::command]
+pub async fn send_message(
+    request: SendMessageRequest,
+    session_manager: State<'_, SessionManager>,
+) -> Result<Vec<ConversationMessage>, String> {
+    session_manager
+        .execute_user_request(&request.session_id, request.message)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_conversation_history(
+    session_id: String,
+    session_manager: State<'_, SessionManager>,
+) -> Result<Vec<ConversationMessage>, String> {
+    Ok(session_manager.get_conversation_history(&session_id).await)
+}
+
+#[tauri::command]
+pub async fn pause_session(
+    session_id: String,
+    session_manager: State<'_, SessionManager>,
+) -> Result<(), String> {
+    session_manager
+        .pause_session(&session_id)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn resume_session(
+    session_id: String,
+    session_manager: State<'_, SessionManager>,
+) -> Result<(), String> {
+    session_manager
+        .resume_session(&session_id)
+        .await
+        .map_err(|e| e.to_string())
 }
