@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DuckBridge - Local Terminal Manager</title>
+    <title>DuckBridge - Remote Terminal Access</title>
     <link rel="stylesheet" href="/styles/main.css">
     <link rel="stylesheet" href="/styles/agent-dashboard.css">
 </head>
@@ -14,13 +14,13 @@
             <div class="header-content">
                 <div class="logo">
                     <h1>🦆 DuckBridge</h1>
-                    <p class="tagline" id="tagline">Local Development Environment</p>
+                    <p class="tagline" id="tagline">Get your ducks in a row with AI</p>
                 </div>
                 <div class="header-controls">
                     <div class="connection-status-indicator" id="connection-status-indicator">
                         <button id="connection-status-btn" class="header-btn connection-status-btn" title="Connection Status">
-                            <div class="connection-dot connected" id="connection-dot"></div>
-                            <span class="connection-text" id="connection-text">Local Mode</span>
+                            <div class="connection-dot disconnected" id="connection-dot"></div>
+                            <span class="connection-text" id="connection-text">Disconnected</span>
                         </button>
                     </div>
                     <button id="agent-dashboard-btn" class="header-btn" title="AI Agent Dashboard">
@@ -56,8 +56,8 @@
             </div>
         </header>
 
-        <!-- Main Interface (always shown in local mode) -->
-        <main class="main" id="main-interface">
+        <!-- Main Interface (shown when connected) -->
+        <main class="main" id="main-interface" style="display: none;">
             <!-- Session Sidebar -->
             <aside class="session-sidebar" id="session-sidebar">
                 <div class="session-sidebar-header">
@@ -274,16 +274,12 @@
                                 </svg>
                                 Open Project
                             </button>
-                            <button id="qr-mobile-btn" class="secondary-btn" title="Mobile Access">
+                            <button id="logout-btn" class="logout-btn" title="Disconnect">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <rect x="3" y="3" width="5" height="5"/>
-                                    <rect x="16" y="3" width="5" height="5"/>
-                                    <rect x="3" y="16" width="5" height="5"/>
-                                    <path d="m21 16-3.5-3.5-2.5 2.5"/>
-                                    <path d="m14 12 1 1"/>
-                                    <path d="m12 21 1-1"/>
+                                    <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"></path>
+                                    <polyline points="16 17 21 12 16 7"></polyline>
+                                    <line x1="21" y1="12" x2="9" y2="12"></line>
                                 </svg>
-                                Mobile Access
                             </button>
                         </div>
                     </div>
@@ -493,17 +489,178 @@
             </div>
         </main>
 
+        <!-- Loading/Welcome Screen (shown initially) -->
+        <main class="welcome-screen" id="welcome-screen">
+            <div class="welcome-content">
+                <h2>Welcome to DuckBridge</h2>
+                <p>Connect to your local development environment</p>
+                <button id="show-login-btn" class="primary-btn">Get Started</button>
+            </div>
+        </main>
+
         <!-- Footer -->
         <footer class="footer">
             <p>&copy; 2025 DuckBridge. Built with 🦆 for developers. <a href="https://github.com/MichaelAyles/AgentTool" target="_blank">GitHub</a></p>
         </footer>
     </div>
 
-    <!-- QR Code Modal for Mobile Access -->
+    <!-- Login Modal -->
+    <div id="login-modal" class="modal">
+        <div class="modal-content login-modal-content">
+            <div class="modal-header">
+                <h3>Connect to Your Terminal</h3>
+                <button id="login-close" class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- UUID Section -->
+                <div class="uuid-section">
+                    <label for="uuid-input">Session UUID</label>
+                    <div class="uuid-display">
+                        <input type="text" id="uuid-input" class="uuid-input" 
+                               placeholder="Click to edit or generate new UUID"
+                               pattern="[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+                               maxlength="36">
+                        <div class="uuid-controls">
+                            <button id="regenerate-uuid" class="icon-btn" title="Generate new UUID">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="23 4 23 10 17 10"/>
+                                    <polyline points="1 20 1 14 7 14"/>
+                                    <path d="m3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                                </svg>
+                            </button>
+                            <button id="copy-uuid" class="icon-btn" title="Copy UUID">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                                </svg>
+                            </button>
+                            <button id="qr-code-btn" class="icon-btn" title="Show QR Code">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="5" height="5"/>
+                                    <rect x="16" y="3" width="5" height="5"/>
+                                    <rect x="3" y="16" width="5" height="5"/>
+                                    <path d="m21 16-3.5-3.5-2.5 2.5"/>
+                                    <path d="m14 12 1 1"/>
+                                    <path d="m12 21 1-1"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="uuid-error" class="error-message"></div>
+                </div>
+
+                <!-- Easy Install Section -->
+                <div class="easy-install-section">
+                    <h4>🚀 Super Easy Install</h4>
+                    <p class="install-description">Copy, paste, and run this one command in your terminal:</p>
+                    
+                    <div class="install-command-box">
+                        <div class="install-command-header">
+                            <span class="command-label">📋 One-Line Install</span>
+                            <button id="copy-easy-install" class="copy-btn" title="Copy install command">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                                </svg>
+                                <span class="copy-text">Copy</span>
+                            </button>
+                        </div>
+                        <div class="install-command-content">
+                            <code id="easy-install-command">curl -fsSL https://raw.githubusercontent.com/MichaelAyles/AgentTool/main/install.sh | bash</code>
+                        </div>
+                    </div>
+
+                    <div class="install-features">
+                        <div class="feature-item">
+                            <span class="feature-icon">✨</span>
+                            <span>Automatic setup & dependencies</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">🌐</span>
+                            <span>Local web interface opens automatically</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">🤖</span>
+                            <span>AI agents ready to use</span>
+                        </div>
+                    </div>
+
+                    <div class="install-or-separator">
+                        <span>OR</span>
+                    </div>
+                </div>
+
+                <!-- Advanced Setup (UUID Mode) -->
+                <div class="setup-section">
+                    <h4>Advanced Setup (Remote Mode)</h4>
+                    <div class="setup-steps">
+                        <div class="setup-step">
+                            <span class="step-number">1</span>
+                            <div class="step-content">
+                                <p>Install with UUID for remote connection</p>
+                                <div class="install-command">
+                                    <code id="install-command">curl -fsSL https://raw.githubusercontent.com/MichaelAyles/AgentTool/main/install.sh | bash -s <span id="command-uuid">loading...</span></code>
+                                    <button id="copy-install" class="icon-btn" title="Copy command">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="setup-step">
+                            <span class="step-number">2</span>
+                            <div class="step-content">
+                                <h4>Connect</h4>
+                                <div class="connect-controls">
+                                    <button id="connect-btn" class="primary-btn">
+                                        <span class="btn-text">Connect to Terminal</span>
+                                        <div class="btn-loading">
+                                            <div class="spinner"></div>
+                                        </div>
+                                    </button>
+                                    <div class="connection-status">
+                                        <div id="status-icon" class="status-icon disconnected"></div>
+                                        <span id="status-text">Disconnected</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="connection-error" class="error-message"></div>
+                </div>
+            </section>
+
+            <!-- Terminal section -->
+            <section id="terminal-section" class="terminal-section hidden">
+                <div class="card">
+                    <div class="terminal-header">
+                        <h3>Terminal Session</h3>
+                        <div class="terminal-controls">
+                            <div class="session-info">
+                                <span>Session: <span id="session-id">loading...</span></span>
+                                <span>Duration: <span id="connection-time">0:00</span></span>
+                            </div>
+                            <button id="disconnect-btn" class="secondary-btn">Disconnect</button>
+                        </div>
+                    </div>
+                    <div id="terminal-container" class="terminal-container"></div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>&copy; 2025 DuckBridge. Built with 🦆 for developers. <a href="https://github.com/MichaelAyles/AgentTool" target="_blank">GitHub</a></p>
+        </footer>
+    </div>
+
+    <!-- QR Code Modal -->
     <div id="qr-modal" class="qr-modal">
         <div class="qr-modal-content">
             <div class="qr-modal-header">
-                <h3>Mobile Access</h3>
+                <h3>QR Code for Mobile Access</h3>
                 <button id="qr-close" class="qr-close">&times;</button>
             </div>
             <div class="qr-modal-body">
@@ -511,7 +668,7 @@
                     <canvas id="qr-canvas"></canvas>
                 </div>
                 <p id="qr-url" class="qr-url"></p>
-                <p class="qr-instructions">Scan this QR code to access DuckBridge from your mobile device on the same network</p>
+                <p class="qr-instructions">Scan this QR code with your mobile device to access DuckBridge</p>
             </div>
         </div>
     </div>
@@ -582,6 +739,8 @@
                         <!-- Tool details will be dynamically added here -->
                     </div>
                 </div>
+                <p id="qr-url" class="qr-url"></p>
+                <p class="qr-instructions">Scan this QR code with your mobile device to access DuckBridge</p>
             </div>
         </div>
     </div>

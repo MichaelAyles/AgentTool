@@ -7,7 +7,7 @@ class DuckBridgeApp {
         this.connectionTimer = null;
         this.reconnectAttempts = 0;
         this.maxReconnectAttempts = 5;
-        this.currentUuid = null; // Not needed in local mode
+        this.currentUuid = this.generateUUID();
         this.isConnected = false;
         
         // Multi-terminal support
@@ -24,7 +24,7 @@ class DuckBridgeApp {
         
         this.initializeElements();
         this.attachEventListeners();
-        // this.updateUuidDisplay(); // Not needed in local mode
+        this.updateUuidDisplay();
         this.initializeTheme();
         this.initializeTagline();
         this.checkUrlParams();
@@ -32,9 +32,6 @@ class DuckBridgeApp {
         this.restoreActiveProject();
         this.initializeUI();
         this.initializeSidebar();
-        
-        // Auto-connect in local mode
-        this.autoConnectLocal();
         
         // Initialize tool manager
         this.toolManager = new ToolManager(this);
@@ -53,7 +50,7 @@ class DuckBridgeApp {
     }
     
     initializeElements() {
-        // UUID elements (not used in local mode but keeping for compatibility)
+        // UUID elements
         this.uuidInput = document.getElementById('uuid-input');
         this.regenerateBtn = document.getElementById('regenerate-uuid');
         this.copyUuidBtn = document.getElementById('copy-uuid');
@@ -65,6 +62,8 @@ class DuckBridgeApp {
         this.connectionError = document.getElementById('connection-error');
         this.copyInstallBtn = document.getElementById('copy-install');
         this.installCommand = document.getElementById('install-command');
+        this.copyEasyInstallBtn = document.getElementById('copy-easy-install');
+        this.easyInstallCommand = document.getElementById('easy-install-command');
         
         // Status elements
         this.statusIcon = document.getElementById('status-icon');
@@ -164,15 +163,18 @@ class DuckBridgeApp {
     }
     
     attachEventListeners() {
-        // UUID controls (disabled in local mode)
-        if (this.regenerateBtn) this.regenerateBtn.addEventListener('click', () => this.regenerateUuid());
-        if (this.copyUuidBtn) this.copyUuidBtn.addEventListener('click', () => this.copyUuid());
-        if (this.uuidInput) this.uuidInput.addEventListener('input', (e) => this.handleUuidInput(e));
-        if (this.uuidInput) this.uuidInput.addEventListener('blur', () => this.validateUuid());
+        // UUID controls
+        this.regenerateBtn.addEventListener('click', () => this.regenerateUuid());
+        this.copyUuidBtn.addEventListener('click', () => this.copyUuid());
+        this.uuidInput.addEventListener('input', (e) => this.handleUuidInput(e));
+        this.uuidInput.addEventListener('blur', () => this.validateUuid());
         
-        // Connection controls (auto-connect in local mode)
-        if (this.connectBtn) this.connectBtn.addEventListener('click', () => this.handleConnect());
-        if (this.copyInstallBtn) this.copyInstallBtn.addEventListener('click', () => this.copyInstallCommand());
+        // Connection controls
+        this.connectBtn.addEventListener('click', () => this.handleConnect());
+        this.copyInstallBtn.addEventListener('click', () => this.copyInstallCommand());
+        if (this.copyEasyInstallBtn) {
+            this.copyEasyInstallBtn.addEventListener('click', () => this.copyEasyInstallCommand());
+        }
         this.disconnectBtn.addEventListener('click', () => this.disconnect());
         
         // Theme toggle
@@ -379,6 +381,34 @@ class DuckBridgeApp {
             this.showError('Failed to copy install command');
         }
     }
+
+    async copyEasyInstallCommand() {
+        const command = this.easyInstallCommand.textContent;
+        try {
+            await navigator.clipboard.writeText(command);
+            
+            // Update button text to show feedback
+            const copyText = this.copyEasyInstallBtn.querySelector('.copy-text');
+            const originalText = copyText.textContent;
+            copyText.textContent = 'Copied!';
+            
+            setTimeout(() => {
+                copyText.textContent = originalText;
+            }, 2000);
+            
+        } catch (err) {
+            console.error('Failed to copy easy install command:', err);
+            
+            // Show error feedback
+            const copyText = this.copyEasyInstallBtn.querySelector('.copy-text');
+            const originalText = copyText.textContent;
+            copyText.textContent = 'Error';
+            
+            setTimeout(() => {
+                copyText.textContent = originalText;
+            }, 2000);
+        }
+    }
     
     handleConnect() {
         if (!this.validateUuid()) return;
@@ -386,11 +416,8 @@ class DuckBridgeApp {
         this.clearError();
         this.setConnectionState('connecting');
         
-        // Use relative WebSocket URLs for local GUI
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const host = window.location.hostname;
-        const port = window.location.port || '3001';
-        this.tryConnect([`${protocol}//${host}:3002`, `ws://${host}:3003`, `ws://${host}:3002`]);
+        // Try SSL WebSocket first, fallback to regular WebSocket
+        this.tryConnect(['wss://localhost:3002', 'ws://localhost:3003', 'ws://localhost:3002']);
     }
 
     tryConnect(urls) {
@@ -408,9 +435,11 @@ class DuckBridgeApp {
             
             this.wsConnection.onopen = () => {
                 console.log(`WebSocket connected to ${wsUrl}`);
-                // For local GUI, we're automatically authenticated
-                // Generate a simple session ID for internal use
-                this.handleConnectionSuccess('local-session-' + Date.now());
+                this.sendMessage({
+                    type: 'auth',
+                    uuid: this.currentUuid,
+                    timestamp: Date.now()
+                });
             };
             
             this.wsConnection.onmessage = (event) => {
@@ -1164,8 +1193,7 @@ class DuckBridgeApp {
     // QR Code functionality
     showQrCode() {
         console.log('QR Code button clicked');
-        // Get the local IP address for mobile access
-        const url = `http://${window.location.hostname}:${window.location.port || '3001'}`;
+        const url = `https://vibe.theduck.chat?uuid=${this.currentUuid}`;
         
         if (typeof QRCode === 'undefined') {
             console.log('QRCode library not available, using fallback');
@@ -1258,15 +1286,6 @@ class DuckBridgeApp {
     validateUuidString(uuid) {
         const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
         return uuidRegex.test(uuid);
-    }
-    
-    // Auto-connect for local mode
-    autoConnectLocal() {
-        // Auto-connect after a short delay to allow UI to initialize
-        setTimeout(() => {
-            console.log('Auto-connecting to local connector...');
-            this.handleConnect();
-        }, 1000);
     }
     
     showWelcomeScreen() {

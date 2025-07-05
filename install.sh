@@ -1,7 +1,9 @@
 #!/bin/bash
 
-# Vibe Coding Desktop Connector Installation Script
-# Usage: curl -fsSL https://raw.githubusercontent.com/MichaelAyles/AgentTool/main/install.sh | bash -s <uuid>
+# DuckBridge Desktop Connector Installation Script
+# Usage: 
+#   Local mode (recommended): curl -fsSL https://raw.githubusercontent.com/MichaelAyles/AgentTool/main/install.sh | bash
+#   Remote mode: curl -fsSL https://raw.githubusercontent.com/MichaelAyles/AgentTool/main/install.sh | bash -s <uuid>
 
 set -e
 
@@ -11,24 +13,28 @@ CONNECTOR_DIR="$INSTALL_DIR/connector"
 REPO_URL="https://github.com/MichaelAyles/AgentTool.git"
 BRANCH="main"
 
-echo "🚀 Installing Vibe Coding Desktop Connector..."
-echo "=================================="
+echo "🚀 Installing DuckBridge Desktop Connector..."
+echo "============================================="
 
-# Validate UUID parameter
+# Determine installation mode
 if [ -z "$UUID" ]; then
-    echo "❌ Error: UUID parameter required"
-    echo "Usage: curl -fsSL https://raw.githubusercontent.com/MichaelAyles/AgentTool/main/install.sh | bash -s <uuid>"
-    exit 1
+    echo "🌐 Installing in LOCAL MODE (recommended)"
+    echo "   - Web interface will be served locally"
+    echo "   - No UUID pairing required"
+    echo "   - Auto-opens browser when ready"
+    MODE="local"
+else
+    # Validate UUID format for remote mode
+    if ! echo "$UUID" | grep -qE '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'; then
+        echo "❌ Error: Invalid UUID format"
+        echo "Expected format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+        exit 1
+    fi
+    echo "🔗 Installing in REMOTE MODE"
+    echo "📋 UUID: $UUID"
+    MODE="remote"
 fi
 
-# Validate UUID format
-if ! echo "$UUID" | grep -qE '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'; then
-    echo "❌ Error: Invalid UUID format"
-    echo "Expected format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    exit 1
-fi
-
-echo "📋 UUID: $UUID"
 echo "📁 Install Directory: $INSTALL_DIR"
 echo ""
 
@@ -158,9 +164,19 @@ if [ "$STASH_COUNT" -gt 0 ]; then
     echo ""
 fi
 
-echo "🚀 Starting connector with UUID: $UUID"
-echo ""
+if [ "$MODE" = "local" ]; then
+    echo "🌐 Starting DuckBridge in LOCAL MODE..."
+    echo "   🚀 Web interface will open automatically"
+    echo "   📱 Access from mobile: Look for QR code in the interface"
+    echo "   🔗 Direct URL: http://localhost:3001"
+    echo ""
+else
+    echo "🔗 Starting DuckBridge with UUID: $UUID"
+    echo "   🌐 Connect at: https://vibe.theduck.chat"
+    echo "   📋 Use the UUID shown above to connect"
+    echo ""
+fi
 
-# Start the connector with the provided UUID
+# Start the connector
 cd "$CONNECTOR_DIR/connector"
 exec node dist/index.js

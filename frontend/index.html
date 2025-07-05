@@ -549,14 +549,55 @@
                     <div id="uuid-error" class="error-message"></div>
                 </div>
 
-                <!-- Setup Instructions -->
+                <!-- Easy Install Section -->
+                <div class="easy-install-section">
+                    <h4>🚀 Super Easy Install</h4>
+                    <p class="install-description">Copy, paste, and run this one command in your terminal:</p>
+                    
+                    <div class="install-command-box">
+                        <div class="install-command-header">
+                            <span class="command-label">📋 One-Line Install</span>
+                            <button id="copy-easy-install" class="copy-btn" title="Copy install command">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                                </svg>
+                                <span class="copy-text">Copy</span>
+                            </button>
+                        </div>
+                        <div class="install-command-content">
+                            <code id="easy-install-command">curl -fsSL https://raw.githubusercontent.com/MichaelAyles/AgentTool/main/install.sh | bash</code>
+                        </div>
+                    </div>
+
+                    <div class="install-features">
+                        <div class="feature-item">
+                            <span class="feature-icon">✨</span>
+                            <span>Automatic setup & dependencies</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">🌐</span>
+                            <span>Local web interface opens automatically</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">🤖</span>
+                            <span>AI agents ready to use</span>
+                        </div>
+                    </div>
+
+                    <div class="install-or-separator">
+                        <span>OR</span>
+                    </div>
+                </div>
+
+                <!-- Advanced Setup (UUID Mode) -->
                 <div class="setup-section">
-                    <h4>Quick Setup</h4>
+                    <h4>Advanced Setup (Remote Mode)</h4>
                     <div class="setup-steps">
                         <div class="setup-step">
                             <span class="step-number">1</span>
                             <div class="step-content">
-                                <p>Install Desktop Connector</p>
+                                <p>Install with UUID for remote connection</p>
                                 <div class="install-command">
                                     <code id="install-command">curl -fsSL https://raw.githubusercontent.com/MichaelAyles/AgentTool/main/install.sh | bash -s <span id="command-uuid">loading...</span></code>
                                     <button id="copy-install" class="icon-btn" title="Copy command">

@@ -62,6 +62,8 @@ class DuckBridgeApp {
         this.connectionError = document.getElementById('connection-error');
         this.copyInstallBtn = document.getElementById('copy-install');
         this.installCommand = document.getElementById('install-command');
+        this.copyEasyInstallBtn = document.getElementById('copy-easy-install');
+        this.easyInstallCommand = document.getElementById('easy-install-command');
         
         // Status elements
         this.statusIcon = document.getElementById('status-icon');
@@ -170,6 +172,9 @@ class DuckBridgeApp {
         // Connection controls
         this.connectBtn.addEventListener('click', () => this.handleConnect());
         this.copyInstallBtn.addEventListener('click', () => this.copyInstallCommand());
+        if (this.copyEasyInstallBtn) {
+            this.copyEasyInstallBtn.addEventListener('click', () => this.copyEasyInstallCommand());
+        }
         this.disconnectBtn.addEventListener('click', () => this.disconnect());
         
         // Theme toggle
@@ -374,6 +379,34 @@ class DuckBridgeApp {
         } catch (err) {
             console.error('Failed to copy command:', err);
             this.showError('Failed to copy install command');
+        }
+    }
+
+    async copyEasyInstallCommand() {
+        const command = this.easyInstallCommand.textContent;
+        try {
+            await navigator.clipboard.writeText(command);
+            
+            // Update button text to show feedback
+            const copyText = this.copyEasyInstallBtn.querySelector('.copy-text');
+            const originalText = copyText.textContent;
+            copyText.textContent = 'Copied!';
+            
+            setTimeout(() => {
+                copyText.textContent = originalText;
+            }, 2000);
+            
+        } catch (err) {
+            console.error('Failed to copy easy install command:', err);
+            
+            // Show error feedback
+            const copyText = this.copyEasyInstallBtn.querySelector('.copy-text');
+            const originalText = copyText.textContent;
+            copyText.textContent = 'Error';
+            
+            setTimeout(() => {
+                copyText.textContent = originalText;
+            }, 2000);
         }
     }
     
