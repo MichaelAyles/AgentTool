@@ -81,7 +81,7 @@ pub async fn get_agent_status(agent_id: String) -> Result<AgentStatus, String> {
 }
 
 #[tauri::command]
-pub async fn configure_agent(config: AgentConfig) -> Result<(), String> {
+pub async fn configure_agent(_config: AgentConfig) -> Result<(), String> {
     // TODO: Store agent configuration
     Ok(())
 }

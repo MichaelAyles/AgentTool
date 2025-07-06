@@ -387,85 +387,86 @@ impl SessionManager {
         Ok(())
     }
 
-    pub async fn complete_session(&self, session_id: &str) -> Result<()> {
-        let worktree_path = {
-            let mut sessions = self.active_sessions.write().unwrap();
-            if let Some(session_data) = sessions.get_mut(session_id) {
-                session_data.session.status = SessionStatus::Completed;
-                session_data.session.updated_at = chrono::Utc::now();
-                session_data.session.worktree_path.clone()
-            } else {
-                None
-            }
-        };
+    // Commented out unused methods to remove dead code warnings
+    // pub async fn complete_session(&self, session_id: &str) -> Result<()> {
+    //     let worktree_path = {
+    //         let mut sessions = self.active_sessions.write().unwrap();
+    //         if let Some(session_data) = sessions.get_mut(session_id) {
+    //             session_data.session.status = SessionStatus::Completed;
+    //             session_data.session.updated_at = chrono::Utc::now();
+    //             session_data.session.worktree_path.clone()
+    //         } else {
+    //             None
+    //         }
+    //     };
 
-        // Cleanup agent sessions
-        let claude_session_id = format!("{}-claude", session_id);
-        let _ = self.claude_adapter.stop_session(&claude_session_id).await;
+    //     // Cleanup agent sessions
+    //     let claude_session_id = format!("{}-claude", session_id);
+    //     let _ = self.claude_adapter.stop_session(&claude_session_id).await;
 
-        // Clean up git worktree if it exists
-        if let Some(worktree_path_str) = worktree_path {
-            let worktree_path = PathBuf::from(&worktree_path_str);
-            if let Some(session_data) = self.get_session(session_id).await {
-                let project_path = PathBuf::from(&session_data.project_path);
-                if let Err(e) = self.git_worktree_manager.remove_worktree(&project_path, &worktree_path).await {
-                    eprintln!("Warning: Failed to remove git worktree for session {}: {}", session_id, e);
-                }
-            }
-        }
+    //     // Clean up git worktree if it exists
+    //     if let Some(worktree_path_str) = worktree_path {
+    //         let worktree_path = PathBuf::from(&worktree_path_str);
+    //         if let Some(session_data) = self.get_session(session_id).await {
+    //             let project_path = PathBuf::from(&session_data.project_path);
+    //             if let Err(e) = self.git_worktree_manager.remove_worktree(&project_path, &worktree_path).await {
+    //                 eprintln!("Warning: Failed to remove git worktree for session {}: {}", session_id, e);
+    //             }
+    //         }
+    //     }
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 
-    pub async fn get_session_tasks(&self, session_id: &str) -> Vec<TaskResult> {
-        let sessions = self.active_sessions.read().unwrap();
-        sessions
-            .get(session_id)
-            .map(|data| data.active_tasks.values().cloned().collect())
-            .unwrap_or_default()
-    }
+    // pub async fn get_session_tasks(&self, session_id: &str) -> Vec<TaskResult> {
+    //     let sessions = self.active_sessions.read().unwrap();
+    //     sessions
+    //         .get(session_id)
+    //         .map(|data| data.active_tasks.values().cloned().collect())
+    //         .unwrap_or_default()
+    // }
 
-    pub async fn merge_session_to_main(&self, session_id: &str, commit_message: &str) -> Result<()> {
-        let session = self.get_session(session_id).await
-            .ok_or_else(|| anyhow::anyhow!("Session not found"))?;
+    // pub async fn merge_session_to_main(&self, session_id: &str, commit_message: &str) -> Result<()> {
+    //     let session = self.get_session(session_id).await
+    //         .ok_or_else(|| anyhow::anyhow!("Session not found"))?;
 
-        if let Some(worktree_path_str) = &session.worktree_path {
-            let worktree_path = PathBuf::from(worktree_path_str);
-            let project_path = PathBuf::from(&session.project_path);
+    //     if let Some(worktree_path_str) = &session.worktree_path {
+    //         let worktree_path = PathBuf::from(worktree_path_str);
+    //         let project_path = PathBuf::from(&session.project_path);
             
-            self.git_worktree_manager
-                .squash_and_merge_to_main(&project_path, &worktree_path, commit_message, None)
-                .await?;
-        }
+    //         self.git_worktree_manager
+    //             .squash_and_merge_to_main(&project_path, &worktree_path, commit_message, None)
+    //             .await?;
+    //     }
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 
-    pub async fn cleanup_all_sessions(&self) -> Result<()> {
-        // Stop all agent processes
-        self.claude_adapter.cleanup_all_sessions().await?;
-        self.gemini_adapter.cleanup_all_sessions().await?;
+    // pub async fn cleanup_all_sessions(&self) -> Result<()> {
+    //     // Stop all agent processes
+    //     self.claude_adapter.cleanup_all_sessions().await?;
+    //     self.gemini_adapter.cleanup_all_sessions().await?;
 
-        // Get list of active session IDs for cleanup
-        let active_session_ids: Vec<String> = {
-            let sessions = self.active_sessions.read().unwrap();
-            sessions.keys().cloned().collect()
-        };
+    //     // Get list of active session IDs for cleanup
+    //     let active_session_ids: Vec<String> = {
+    //         let sessions = self.active_sessions.read().unwrap();
+    //         sessions.keys().cloned().collect()
+    //     };
 
-        // Cleanup abandoned worktrees
-        for session_data in self.active_sessions.read().unwrap().values() {
-            let project_path = PathBuf::from(&session_data.session.project_path);
-            let _ = self.git_worktree_manager
-                .cleanup_abandoned_worktrees(&project_path, &active_session_ids)
-                .await;
-        }
+    //     // Cleanup abandoned worktrees
+    //     for session_data in self.active_sessions.read().unwrap().values() {
+    //         let project_path = PathBuf::from(&session_data.session.project_path);
+    //         let _ = self.git_worktree_manager
+    //             .cleanup_abandoned_worktrees(&project_path, &active_session_ids)
+    //             .await;
+    //     }
 
-        // Clear active sessions
-        {
-            let mut sessions = self.active_sessions.write().unwrap();
-            sessions.clear();
-        }
+    //     // Clear active sessions
+    //     {
+    //         let mut sessions = self.active_sessions.write().unwrap();
+    //         sessions.clear();
+    //     }
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 }

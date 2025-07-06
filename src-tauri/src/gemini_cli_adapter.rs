@@ -3,7 +3,7 @@ use std::process::Stdio;
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 use tokio::process::Child;
-use tokio::io::{AsyncBufReadExt, BufReader, AsyncWriteExt};
+use tokio::io::AsyncWriteExt; // Removed unused imports: AsyncBufReadExt, BufReader
 use anyhow::Result;
 
 pub struct GeminiCliAdapter {
@@ -13,8 +13,8 @@ pub struct GeminiCliAdapter {
 
 struct GeminiCliProcess {
     child: Child,
-    session_id: String,
-    project_path: String,
+    _session_id: String,
+    _project_path: String,
     permissions: AgentPermissions,
 }
 
@@ -79,8 +79,8 @@ impl GeminiCliAdapter {
 
         let process = GeminiCliProcess {
             child,
-            session_id: session_id.clone(),
-            project_path,
+            _session_id: session_id.clone(),
+            _project_path: project_path,
             permissions,
         };
 
@@ -138,7 +138,7 @@ impl GeminiCliAdapter {
     }
 
     pub async fn stop_session(&self, session_id: &str) -> Result<()> {
-        let mut process = {
+        let process = {
             let mut processes = self.processes.lock().unwrap();
             processes.remove(session_id)
         };
@@ -164,27 +164,28 @@ impl GeminiCliAdapter {
         Ok(())
     }
 
-    pub fn list_active_sessions(&self) -> Vec<String> {
-        let processes = self.processes.lock().unwrap();
-        processes.keys().cloned().collect()
-    }
+    // Commented out unused methods to remove dead code warnings
+    // pub fn list_active_sessions(&self) -> Vec<String> {
+    //     let processes = self.processes.lock().unwrap();
+    //     processes.keys().cloned().collect()
+    // }
 
-    pub fn get_session_status(&self, session_id: &str) -> Option<AgentStatus> {
-        let processes = self.processes.lock().unwrap();
-        
-        if let Some(_process) = processes.get(session_id) {
-            Some(AgentStatus {
-                id: session_id.to_string(),
-                name: "Gemini CLI".to_string(),
-                agent_type: "gemini_cli".to_string(),
-                status: "active".to_string(),
-                current_task: None,
-                last_activity: chrono::Utc::now(),
-            })
-        } else {
-            None
-        }
-    }
+    // pub fn get_session_status(&self, session_id: &str) -> Option<AgentStatus> {
+    //     let processes = self.processes.lock().unwrap();
+    //     
+    //     if let Some(_process) = processes.get(session_id) {
+    //         Some(AgentStatus {
+    //             id: session_id.to_string(),
+    //             name: "Gemini CLI".to_string(),
+    //             agent_type: "gemini_cli".to_string(),
+    //             status: "active".to_string(),
+    //             current_task: None,
+    //             last_activity: chrono::Utc::now(),
+    //         })
+    //     } else {
+    //         None
+    //     }
+    // }
 
     fn format_gemini_prompt(&self, task: &str, context: Option<&str>) -> String {
         let mut prompt = String::new();
@@ -202,17 +203,17 @@ impl GeminiCliAdapter {
         prompt
     }
 
-    fn clean_gemini_output(&self, output: &str) -> String {
-        // Remove CLI prompts and formatting
-        output.lines()
-            .filter(|line| !line.trim().starts_with(">>> "))
-            .filter(|line| !line.trim().starts_with("Gemini"))
-            .filter(|line| !line.trim().is_empty())
-            .collect::<Vec<&str>>()
-            .join("\n")
-            .trim()
-            .to_string()
-    }
+    // fn clean_gemini_output(&self, output: &str) -> String {
+    //     // Remove CLI prompts and formatting
+    //     output.lines()
+    //         .filter(|line| !line.trim().starts_with(">>> "))
+    //         .filter(|line| !line.trim().starts_with("Gemini"))
+    //         .filter(|line| !line.trim().is_empty())
+    //         .collect::<Vec<&str>>()
+    //         .join("\n")
+    //         .trim()
+    //         .to_string()
+    // }
 
     fn validate_task_permissions(&self, task: &str, permissions: &AgentPermissions) -> bool {
         let task_lower = task.to_lowercase();
@@ -239,17 +240,17 @@ impl GeminiCliAdapter {
         true
     }
 
-    pub async fn cleanup_all_sessions(&self) -> Result<()> {
-        let mut processes = self.processes.lock().unwrap();
-        let session_ids: Vec<String> = processes.keys().cloned().collect();
-        drop(processes);
+    // pub async fn cleanup_all_sessions(&self) -> Result<()> {
+    //     let processes = self.processes.lock().unwrap();
+    //     let session_ids: Vec<String> = processes.keys().cloned().collect();
+    //     drop(processes);
 
-        for session_id in session_ids {
-            let _ = self.stop_session(&session_id).await;
-        }
+    //     for session_id in session_ids {
+    //         let _ = self.stop_session(&session_id).await;
+    //     }
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 
     pub async fn execute_quick_task(&self, task: &str, project_path: &str) -> Result<TaskResult> {
         // For quick one-off tasks, spawn a temporary process

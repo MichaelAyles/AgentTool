@@ -186,13 +186,16 @@ install_agenttool() {
     
     # Build Rust backend
     cd src-tauri
-    cargo build --release
+    print_info "Compiling Rust backend..."
+    cargo build --release --quiet
     
     # Build frontend
     cd ../frontend
     if [ -f "package.json" ]; then
-        npm install
-        npm run build
+        print_info "Installing frontend dependencies..."
+        npm install --silent >/dev/null 2>&1
+        print_info "Building frontend..."
+        npm run build --silent >/dev/null 2>&1
     else
         print_error "Frontend package.json not found. Please check the repository structure."
         exit 1

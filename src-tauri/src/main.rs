@@ -11,7 +11,7 @@ mod gemini_cli_adapter;
 mod session_manager;
 mod git_worktree_manager;
 
-use tauri::Manager;
+// use tauri::Manager; // Removed unused import
 use commands::*;
 use session_manager::SessionManager;
 

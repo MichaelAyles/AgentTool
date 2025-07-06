@@ -1,8 +1,9 @@
-use crate::models::*;
+// use crate::models::*; // Unused - types are defined locally
 use serde_json::json;
-use std::process::Stdio;
-use tokio::process::Command;
-use tokio::io::{AsyncBufReadExt, BufReader};
+// Removed unused imports - these were only used in commented-out methods
+// use std::process::Stdio;
+// use tokio::process::Command;
+// use tokio::io::{AsyncBufReadExt, BufReader};
 
 pub struct MiddleManager {
     openrouter_api_key: String,
@@ -71,89 +72,90 @@ Respond with JSON in this format:
         })
     }
 
-    pub async fn coordinate_agents(&self, subtasks: Vec<SubTask>) -> Result<Vec<TaskResult>, String> {
-        let mut results = Vec::new();
-        
-        for subtask in subtasks {
-            let result = self.execute_subtask(&subtask).await?;
-            results.push(result);
-        }
-        
-        Ok(results)
-    }
+    // Commented out unused methods to remove dead code warnings
+    // pub async fn coordinate_agents(&self, subtasks: Vec<SubTask>) -> Result<Vec<TaskResult>, String> {
+    //     let mut results = Vec::new();
+    //     
+    //     for subtask in subtasks {
+    //         let result = self.execute_subtask(&subtask).await?;
+    //         results.push(result);
+    //     }
+    //     
+    //     Ok(results)
+    // }
 
-    async fn execute_subtask(&self, subtask: &SubTask) -> Result<TaskResult, String> {
-        match subtask.agent.as_str() {
-            "claude_code" => self.execute_claude_code_task(subtask).await,
-            "gemini_cli" => self.execute_gemini_cli_task(subtask).await,
-            "middle_manager" => self.execute_self_task(subtask).await,
-            _ => Err(format!("Unknown agent type: {}", subtask.agent)),
-        }
-    }
+    // async fn execute_subtask(&self, subtask: &SubTask) -> Result<TaskResult, String> {
+    //     match subtask.agent.as_str() {
+    //         "claude_code" => self.execute_claude_code_task(subtask).await,
+    //         "gemini_cli" => self.execute_gemini_cli_task(subtask).await,
+    //         "middle_manager" => self.execute_self_task(subtask).await,
+    //         _ => Err(format!("Unknown agent type: {}", subtask.agent)),
+    //     }
+    // }
 
-    async fn execute_claude_code_task(&self, subtask: &SubTask) -> Result<TaskResult, String> {
-        // TODO: Launch Claude Code in isolated process
-        let mut child = Command::new("claude-code")
-            .arg("--task")
-            .arg(&subtask.description)
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
-            .map_err(|e| format!("Failed to start claude-code: {}", e))?;
+    // async fn execute_claude_code_task(&self, subtask: &SubTask) -> Result<TaskResult, String> {
+    //     // TODO: Launch Claude Code in isolated process
+    //     let mut child = Command::new("claude-code")
+    //         .arg("--task")
+    //         .arg(&subtask.description)
+    //         .stdout(Stdio::piped())
+    //         .stderr(Stdio::piped())
+    //         .spawn()
+    //         .map_err(|e| format!("Failed to start claude-code: {}", e))?;
 
-        let stdout = child.stdout.take().unwrap();
-        let mut reader = BufReader::new(stdout).lines();
-        let mut output = String::new();
+    //     let stdout = child.stdout.take().unwrap();
+    //     let mut reader = BufReader::new(stdout).lines();
+    //     let mut output = String::new();
 
-        while let Some(line) = reader.next_line().await.map_err(|e| e.to_string())? {
-            output.push_str(&line);
-            output.push('\n');
-        }
+    //     while let Some(line) = reader.next_line().await.map_err(|e| e.to_string())? {
+    //         output.push_str(&line);
+    //         output.push('\n');
+    //     }
 
-        let status = child.wait().await.map_err(|e| e.to_string())?;
+    //     let status = child.wait().await.map_err(|e| e.to_string())?;
 
-        Ok(TaskResult {
-            id: uuid::Uuid::new_v4().to_string(),
-            session_id: subtask.id.clone(),
-            task_description: subtask.description.clone(),
-            agent_type: subtask.agent.clone(),
-            status: if status.success() { TaskStatus::Completed } else { TaskStatus::Failed },
-            result: Some(output),
-            error: if status.success() { None } else { Some("Task failed".to_string()) },
-            created_at: chrono::Utc::now(),
-            completed_at: Some(chrono::Utc::now()),
-        })
-    }
+    //     Ok(TaskResult {
+    //         id: uuid::Uuid::new_v4().to_string(),
+    //         session_id: subtask.id.clone(),
+    //         task_description: subtask.description.clone(),
+    //         agent_type: subtask.agent.clone(),
+    //         status: if status.success() { TaskStatus::Completed } else { TaskStatus::Failed },
+    //         result: Some(output),
+    //         error: if status.success() { None } else { Some("Task failed".to_string()) },
+    //         created_at: chrono::Utc::now(),
+    //         completed_at: Some(chrono::Utc::now()),
+    //     })
+    // }
 
-    async fn execute_gemini_cli_task(&self, subtask: &SubTask) -> Result<TaskResult, String> {
-        // TODO: Implement Gemini CLI execution
-        Ok(TaskResult {
-            id: uuid::Uuid::new_v4().to_string(),
-            session_id: subtask.id.clone(),
-            task_description: subtask.description.clone(),
-            agent_type: subtask.agent.clone(),
-            status: TaskStatus::Completed,
-            result: Some("Gemini CLI task completed".to_string()),
-            error: None,
-            created_at: chrono::Utc::now(),
-            completed_at: Some(chrono::Utc::now()),
-        })
-    }
+    // async fn execute_gemini_cli_task(&self, subtask: &SubTask) -> Result<TaskResult, String> {
+    //     // TODO: Implement Gemini CLI execution
+    //     Ok(TaskResult {
+    //         id: uuid::Uuid::new_v4().to_string(),
+    //         session_id: subtask.id.clone(),
+    //         task_description: subtask.description.clone(),
+    //         agent_type: subtask.agent.clone(),
+    //         status: TaskStatus::Completed,
+    //         result: Some("Gemini CLI task completed".to_string()),
+    //         error: None,
+    //         created_at: chrono::Utc::now(),
+    //         completed_at: Some(chrono::Utc::now()),
+    //     })
+    // }
 
-    async fn execute_self_task(&self, subtask: &SubTask) -> Result<TaskResult, String> {
-        // Handle coordination tasks directly
-        Ok(TaskResult {
-            id: uuid::Uuid::new_v4().to_string(),
-            session_id: subtask.id.clone(),
-            task_description: subtask.description.clone(),
-            agent_type: subtask.agent.clone(),
-            status: TaskStatus::Completed,
-            result: Some("Middle manager task completed".to_string()),
-            error: None,
-            created_at: chrono::Utc::now(),
-            completed_at: Some(chrono::Utc::now()),
-        })
-    }
+    // async fn execute_self_task(&self, subtask: &SubTask) -> Result<TaskResult, String> {
+    //     // Handle coordination tasks directly
+    //     Ok(TaskResult {
+    //         id: uuid::Uuid::new_v4().to_string(),
+    //         session_id: subtask.id.clone(),
+    //         task_description: subtask.description.clone(),
+    //         agent_type: subtask.agent.clone(),
+    //         status: TaskStatus::Completed,
+    //         result: Some("Middle manager task completed".to_string()),
+    //         error: None,
+    //         created_at: chrono::Utc::now(),
+    //         completed_at: Some(chrono::Utc::now()),
+    //     })
+    // }
 
     async fn call_openrouter_api(&self, prompt: &str) -> Result<String, String> {
         if self.openrouter_api_key.is_empty() {
@@ -161,7 +163,7 @@ Respond with JSON in this format:
         }
 
         let client = reqwest::Client::new();
-        let payload = serde_json::json!({
+        let payload = json!({
             "model": self.default_model,
             "messages": [
                 {

@@ -6,14 +6,14 @@ use crate::models::*;
 
 pub struct AgentRegistry {
     agents: Arc<RwLock<HashMap<String, AgentConfig>>>,
-    running_agents: Arc<RwLock<HashMap<String, AgentStatus>>>,
+    _running_agents: Arc<RwLock<HashMap<String, AgentStatus>>>,
 }
 
 impl AgentRegistry {
     pub fn new() -> Self {
         Self {
             agents: Arc::new(RwLock::new(HashMap::new())),
-            running_agents: Arc::new(RwLock::new(HashMap::new())),
+            _running_agents: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -23,40 +23,41 @@ impl AgentRegistry {
         Ok(())
     }
 
-    pub async fn get_agent(&self, agent_id: &str) -> Option<AgentConfig> {
-        let agents = self.agents.read().await;
-        agents.get(agent_id).cloned()
-    }
+    // Commented out unused methods to remove dead code warnings
+    // pub async fn get_agent(&self, agent_id: &str) -> Option<AgentConfig> {
+    //     let agents = self.agents.read().await;
+    //     agents.get(agent_id).cloned()
+    // }
 
-    pub async fn list_agents(&self) -> Vec<AgentConfig> {
-        let agents = self.agents.read().await;
-        agents.values().cloned().collect()
-    }
+    // pub async fn list_agents(&self) -> Vec<AgentConfig> {
+    //     let agents = self.agents.read().await;
+    //     agents.values().cloned().collect()
+    // }
 
-    pub async fn update_agent_status(&self, status: AgentStatus) {
-        let mut running_agents = self.running_agents.write().await;
-        running_agents.insert(status.id.clone(), status);
-    }
+    // pub async fn update_agent_status(&self, status: AgentStatus) {
+    //     let mut running_agents = self._running_agents.write().await;
+    //     running_agents.insert(status.id.clone(), status);
+    // }
 
-    pub async fn get_agent_status(&self, agent_id: &str) -> Option<AgentStatus> {
-        let running_agents = self.running_agents.read().await;
-        running_agents.get(agent_id).cloned()
-    }
+    // pub async fn get_agent_status(&self, agent_id: &str) -> Option<AgentStatus> {
+    //     let running_agents = self._running_agents.read().await;
+    //     running_agents.get(agent_id).cloned()
+    // }
 
-    pub async fn list_running_agents(&self) -> Vec<AgentStatus> {
-        let running_agents = self.running_agents.read().await;
-        running_agents.values().cloned().collect()
-    }
+    // pub async fn list_running_agents(&self) -> Vec<AgentStatus> {
+    //     let running_agents = self._running_agents.read().await;
+    //     running_agents.values().cloned().collect()
+    // }
 
-    pub async fn remove_agent(&self, agent_id: &str) -> bool {
-        let mut agents = self.agents.write().await;
-        let mut running_agents = self.running_agents.write().await;
-        
-        let removed = agents.remove(agent_id).is_some();
-        running_agents.remove(agent_id);
-        
-        removed
-    }
+    // pub async fn remove_agent(&self, agent_id: &str) -> bool {
+    //     let mut agents = self.agents.write().await;
+    //     let mut running_agents = self._running_agents.write().await;
+    //     
+    //     let removed = agents.remove(agent_id).is_some();
+    //     running_agents.remove(agent_id);
+    //     
+    //     removed
+    // }
 }
 
 static mut REGISTRY: Option<AgentRegistry> = None;
@@ -126,8 +127,9 @@ pub async fn initialize_registry(_app_handle: AppHandle) {
     }
 }
 
-pub fn get_registry() -> &'static AgentRegistry {
-    unsafe {
-        REGISTRY.as_ref().expect("Agent registry not initialized")
-    }
-}
+// Commented out unused function
+// pub fn get_registry() -> &'static AgentRegistry {
+//     unsafe {
+//         REGISTRY.as_ref().expect("Agent registry not initialized")
+//     }
+// }

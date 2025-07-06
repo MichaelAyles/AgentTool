@@ -1,4 +1,4 @@
-use rusqlite::{Connection, Result as SqliteResult, Row};
+use rusqlite::Connection;
 use anyhow::Result;
 use std::sync::{Arc, Mutex};
 use crate::models::*;
@@ -135,29 +135,30 @@ impl Database {
         Ok(sessions)
     }
 
-    pub fn create_task(&self, task: &TaskResult) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
-        conn.execute(
-            r#"
-            INSERT INTO tasks 
-            (id, session_id, task_description, agent_type, status, result, error, created_at, completed_at)
-            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
-            "#,
-            (
-                &task.id,
-                &task.session_id,
-                &task.task_description,
-                &task.agent_type,
-                &format!("{:?}", task.status),
-                &task.result,
-                &task.error,
-                &task.created_at.to_rfc3339(),
-                &task.completed_at.map(|dt| dt.to_rfc3339()),
-            )
-        )?;
+    // Commented out unused method to remove dead code warning
+    // pub fn create_task(&self, task: &TaskResult) -> Result<()> {
+    //     let conn = self.conn.lock().unwrap();
+    //     conn.execute(
+    //         r#"
+    //         INSERT INTO tasks 
+    //         (id, session_id, task_description, agent_type, status, result, error, created_at, completed_at)
+    //         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+    //         "#,
+    //         (
+    //             &task.id,
+    //             &task.session_id,
+    //             &task.task_description,
+    //             &task.agent_type,
+    //             &format!("{:?}", task.status),
+    //             &task.result,
+    //             &task.error,
+    //             &task.created_at.to_rfc3339(),
+    //             &task.completed_at.map(|dt| dt.to_rfc3339()),
+    //         )
+    //     )?;
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 }
 
 static mut DATABASE: Option<Database> = None;

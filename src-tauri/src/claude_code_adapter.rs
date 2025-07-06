@@ -1,9 +1,9 @@
 use crate::models::*;
-use std::process::{Command, Stdio};
+use std::process::Stdio;
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 use tokio::process::Child;
-use tokio::io::{AsyncBufReadExt, BufReader, AsyncWriteExt};
+// use tokio::io::{AsyncBufReadExt, BufReader, AsyncWriteExt}; // Removed unused imports
 use anyhow::Result;
 
 pub struct ClaudeCodeAdapter {
@@ -13,8 +13,8 @@ pub struct ClaudeCodeAdapter {
 
 struct ClaudeCodeProcess {
     child: Child,
-    session_id: String,
-    project_path: String,
+    _session_id: String,
+    _project_path: String,
     permissions: AgentPermissions,
 }
 
@@ -72,8 +72,8 @@ impl ClaudeCodeAdapter {
 
         let process = ClaudeCodeProcess {
             child,
-            session_id: session_id.clone(),
-            project_path,
+            _session_id: session_id.clone(),
+            _project_path: project_path,
             permissions,
         };
 
@@ -87,7 +87,7 @@ impl ClaudeCodeAdapter {
         &self,
         session_id: &str,
         task: &str,
-        context: Option<&str>,
+        _context: Option<&str>,
     ) -> Result<TaskResult> {
         // Check permissions without holding the lock
         let permissions = {
@@ -129,7 +129,7 @@ impl ClaudeCodeAdapter {
     }
 
     pub async fn stop_session(&self, session_id: &str) -> Result<()> {
-        let mut process = {
+        let process = {
             let mut processes = self.processes.lock().unwrap();
             processes.remove(session_id)
         };
@@ -147,15 +147,16 @@ impl ClaudeCodeAdapter {
         Ok(())
     }
 
-    pub fn list_active_sessions(&self) -> Vec<String> {
-        let processes = self.processes.lock().unwrap();
-        processes.keys().cloned().collect()
-    }
+    // Commented out unused methods to remove dead code warnings
+    // pub fn list_active_sessions(&self) -> Vec<String> {
+    //     let processes = self.processes.lock().unwrap();
+    //     processes.keys().cloned().collect()
+    // }
 
     pub fn get_session_status(&self, session_id: &str) -> Option<AgentStatus> {
         let processes = self.processes.lock().unwrap();
         
-        if let Some(process) = processes.get(session_id) {
+        if let Some(_process) = processes.get(session_id) {
             Some(AgentStatus {
                 id: session_id.to_string(),
                 name: "Claude Code".to_string(),
@@ -194,15 +195,15 @@ impl ClaudeCodeAdapter {
         true
     }
 
-    pub async fn cleanup_all_sessions(&self) -> Result<()> {
-        let mut processes = self.processes.lock().unwrap();
-        let session_ids: Vec<String> = processes.keys().cloned().collect();
-        drop(processes);
+    // pub async fn cleanup_all_sessions(&self) -> Result<()> {
+    //     let processes = self.processes.lock().unwrap();
+    //     let session_ids: Vec<String> = processes.keys().cloned().collect();
+    //     drop(processes);
 
-        for session_id in session_ids {
-            let _ = self.stop_session(&session_id).await;
-        }
+    //     for session_id in session_ids {
+    //         let _ = self.stop_session(&session_id).await;
+    //     }
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 }

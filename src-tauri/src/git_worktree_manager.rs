@@ -1,7 +1,7 @@
 use anyhow::Result;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use uuid::Uuid;
+// use uuid::Uuid; // Removed unused import
 
 pub struct GitWorktreeManager {
     base_worktree_dir: PathBuf,
@@ -63,141 +63,142 @@ impl GitWorktreeManager {
         Ok(worktree_path)
     }
 
-    /// Remove a git worktree
-    pub async fn remove_worktree(&self, project_path: &Path, worktree_path: &Path) -> Result<()> {
-        // Get the branch name before removing the worktree
-        let branch_name = self.get_worktree_branch(worktree_path)?;
+    // Commented out unused methods to remove dead code warnings
+    // /// Remove a git worktree
+    // pub async fn remove_worktree(&self, project_path: &Path, worktree_path: &Path) -> Result<()> {
+    //     // Get the branch name before removing the worktree
+    //     let branch_name = self.get_worktree_branch(worktree_path)?;
 
-        // Remove the worktree
-        let output = Command::new("git")
-            .current_dir(project_path)
-            .args([
-                "worktree",
-                "remove",
-                "--force",
-                worktree_path.to_str().unwrap(),
-            ])
-            .output()?;
+    //     // Remove the worktree
+    //     let output = Command::new("git")
+    //         .current_dir(project_path)
+    //         .args([
+    //             "worktree",
+    //             "remove",
+    //             "--force",
+    //             worktree_path.to_str().unwrap(),
+    //         ])
+    //         .output()?;
 
-        if !output.status.success() {
-            eprintln!(
-                "Warning: Failed to remove worktree {}: {}",
-                worktree_path.display(),
-                String::from_utf8_lossy(&output.stderr)
-            );
-        }
+    //     if !output.status.success() {
+    //         eprintln!(
+    //             "Warning: Failed to remove worktree {}: {}",
+    //             worktree_path.display(),
+    //             String::from_utf8_lossy(&output.stderr)
+    //         );
+    //     }
 
-        // Clean up the branch if it was a session branch
-        if branch_name.starts_with("session/") {
-            let _ = self.delete_branch(project_path, &branch_name);
-        }
+    //     // Clean up the branch if it was a session branch
+    //     if branch_name.starts_with("session/") {
+    //         let _ = self.delete_branch(project_path, &branch_name);
+    //     }
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 
-    /// Squash commits in a worktree and merge to main branch
-    pub async fn squash_and_merge_to_main(
-        &self,
-        project_path: &Path,
-        worktree_path: &Path,
-        commit_message: &str,
-        main_branch: Option<String>,
-    ) -> Result<()> {
-        let main_branch = main_branch.unwrap_or_else(|| self.get_main_branch(project_path).unwrap_or("main".to_string()));
-        let current_branch = self.get_worktree_branch(worktree_path)?;
+    // /// Squash commits in a worktree and merge to main branch
+    // pub async fn squash_and_merge_to_main(
+    //     &self,
+    //     project_path: &Path,
+    //     worktree_path: &Path,
+    //     commit_message: &str,
+    //     main_branch: Option<String>,
+    // ) -> Result<()> {
+    //     let main_branch = main_branch.unwrap_or_else(|| self.get_main_branch(project_path).unwrap_or("main".to_string()));
+    //     let current_branch = self.get_worktree_branch(worktree_path)?;
 
-        // Switch to main branch in the original repo
-        Command::new("git")
-            .current_dir(project_path)
-            .args(["checkout", &main_branch])
-            .output()?;
+    //     // Switch to main branch in the original repo
+    //     Command::new("git")
+    //         .current_dir(project_path)
+    //         .args(["checkout", &main_branch])
+    //         .output()?;
 
-        // Pull latest changes from remote
-        let _ = Command::new("git")
-            .current_dir(project_path)
-            .args(["pull", "origin", &main_branch])
-            .output();
+    //     // Pull latest changes from remote
+    //     let _ = Command::new("git")
+    //         .current_dir(project_path)
+    //         .args(["pull", "origin", &main_branch])
+    //         .output();
 
-        // Merge the session branch with squash
-        let output = Command::new("git")
-            .current_dir(project_path)
-            .args([
-                "merge",
-                "--squash",
-                &current_branch,
-            ])
-            .output()?;
+    //     // Merge the session branch with squash
+    //     let output = Command::new("git")
+    //         .current_dir(project_path)
+    //         .args([
+    //             "merge",
+    //             "--squash",
+    //             &current_branch,
+    //         ])
+    //         .output()?;
 
-        if !output.status.success() {
-            return Err(anyhow::anyhow!(
-                "Failed to squash merge: {}",
-                String::from_utf8_lossy(&output.stderr)
-            ));
-        }
+    //     if !output.status.success() {
+    //         return Err(anyhow::anyhow!(
+    //             "Failed to squash merge: {}",
+    //             String::from_utf8_lossy(&output.stderr)
+    //         ));
+    //     }
 
-        // Commit the squashed changes
-        let output = Command::new("git")
-            .current_dir(project_path)
-            .args(["commit", "-m", commit_message])
-            .output()?;
+    //     // Commit the squashed changes
+    //     let output = Command::new("git")
+    //         .current_dir(project_path)
+    //         .args(["commit", "-m", commit_message])
+    //         .output()?;
 
-        if !output.status.success() {
-            return Err(anyhow::anyhow!(
-                "Failed to commit squashed changes: {}",
-                String::from_utf8_lossy(&output.stderr)
-            ));
-        }
+    //     if !output.status.success() {
+    //         return Err(anyhow::anyhow!(
+    //             "Failed to commit squashed changes: {}",
+    //             String::from_utf8_lossy(&output.stderr)
+    //         ));
+    //     }
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 
-    /// Rebase the worktree branch onto the latest main
-    pub async fn rebase_onto_main(
-        &self,
-        project_path: &Path,
-        worktree_path: &Path,
-        main_branch: Option<String>,
-    ) -> Result<()> {
-        let main_branch = main_branch.unwrap_or_else(|| self.get_main_branch(project_path).unwrap_or("main".to_string()));
+    // /// Rebase the worktree branch onto the latest main
+    // pub async fn rebase_onto_main(
+    //     &self,
+    //     project_path: &Path,
+    //     worktree_path: &Path,
+    //     main_branch: Option<String>,
+    // ) -> Result<()> {
+    //     let main_branch = main_branch.unwrap_or_else(|| self.get_main_branch(project_path).unwrap_or("main".to_string()));
 
-        // Fetch latest changes
-        Command::new("git")
-            .current_dir(worktree_path)
-            .args(["fetch", "origin"])
-            .output()?;
+    //     // Fetch latest changes
+    //     Command::new("git")
+    //         .current_dir(worktree_path)
+    //         .args(["fetch", "origin"])
+    //         .output()?;
 
-        // Rebase onto main
-        let output = Command::new("git")
-            .current_dir(worktree_path)
-            .args(["rebase", &format!("origin/{}", main_branch)])
-            .output()?;
+    //     // Rebase onto main
+    //     let output = Command::new("git")
+    //         .current_dir(worktree_path)
+    //         .args(["rebase", &format!("origin/{}", main_branch)])
+    //         .output()?;
 
-        if !output.status.success() {
-            return Err(anyhow::anyhow!(
-                "Failed to rebase: {}",
-                String::from_utf8_lossy(&output.stderr)
-            ));
-        }
+    //     if !output.status.success() {
+    //         return Err(anyhow::anyhow!(
+    //             "Failed to rebase: {}",
+    //             String::from_utf8_lossy(&output.stderr)
+    //         ));
+    //     }
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 
-    /// Get the current branch of a worktree
-    pub fn get_worktree_branch(&self, worktree_path: &Path) -> Result<String> {
-        let output = Command::new("git")
-            .current_dir(worktree_path)
-            .args(["branch", "--show-current"])
-            .output()?;
+    // /// Get the current branch of a worktree
+    // pub fn get_worktree_branch(&self, worktree_path: &Path) -> Result<String> {
+    //     let output = Command::new("git")
+    //         .current_dir(worktree_path)
+    //         .args(["branch", "--show-current"])
+    //         .output()?;
 
-        if !output.status.success() {
-            return Err(anyhow::anyhow!(
-                "Failed to get current branch: {}",
-                String::from_utf8_lossy(&output.stderr)
-            ));
-        }
+    //     if !output.status.success() {
+    //         return Err(anyhow::anyhow!(
+    //             "Failed to get current branch: {}",
+    //             String::from_utf8_lossy(&output.stderr)
+    //         ));
+    //     }
 
-        Ok(String::from_utf8(output.stdout)?.trim().to_string())
-    }
+    //     Ok(String::from_utf8(output.stdout)?.trim().to_string())
+    // }
 
     /// Get the main branch name (main, master, or develop)
     pub fn get_main_branch(&self, project_path: &Path) -> Option<String> {
@@ -233,46 +234,46 @@ impl GitWorktreeManager {
         None
     }
 
-    /// List all worktrees for a project
-    pub fn list_worktrees(&self, project_path: &Path) -> Result<Vec<WorktreeInfo>> {
-        let output = Command::new("git")
-            .current_dir(project_path)
-            .args(["worktree", "list", "--porcelain"])
-            .output()?;
+    // /// List all worktrees for a project
+    // pub fn list_worktrees(&self, project_path: &Path) -> Result<Vec<WorktreeInfo>> {
+    //     let output = Command::new("git")
+    //         .current_dir(project_path)
+    //         .args(["worktree", "list", "--porcelain"])
+    //         .output()?;
 
-        if !output.status.success() {
-            return Err(anyhow::anyhow!(
-                "Failed to list worktrees: {}",
-                String::from_utf8_lossy(&output.stderr)
-            ));
-        }
+    //     if !output.status.success() {
+    //         return Err(anyhow::anyhow!(
+    //             "Failed to list worktrees: {}",
+    //             String::from_utf8_lossy(&output.stderr)
+    //         ));
+    //     }
 
-        let mut worktrees = Vec::new();
-        let output_str = String::from_utf8(output.stdout)?;
-        let mut current_worktree = WorktreeInfo::default();
+    //     let mut worktrees = Vec::new();
+    //     let output_str = String::from_utf8(output.stdout)?;
+    //     let mut current_worktree = WorktreeInfo::default();
 
-        for line in output_str.lines() {
-            if line.starts_with("worktree ") {
-                if !current_worktree.path.is_empty() {
-                    worktrees.push(current_worktree);
-                }
-                current_worktree = WorktreeInfo {
-                    path: line.strip_prefix("worktree ").unwrap().to_string(),
-                    ..Default::default()
-                };
-            } else if line.starts_with("branch ") {
-                current_worktree.branch = line.strip_prefix("branch ").unwrap().to_string();
-            } else if line.starts_with("HEAD ") {
-                current_worktree.head = line.strip_prefix("HEAD ").unwrap().to_string();
-            }
-        }
+    //     for line in output_str.lines() {
+    //         if line.starts_with("worktree ") {
+    //             if !current_worktree.path.is_empty() {
+    //                 worktrees.push(current_worktree);
+    //             }
+    //             current_worktree = WorktreeInfo {
+    //                 path: line.strip_prefix("worktree ").unwrap().to_string(),
+    //                 ..Default::default()
+    //             };
+    //         } else if line.starts_with("branch ") {
+    //             current_worktree.branch = line.strip_prefix("branch ").unwrap().to_string();
+    //         } else if line.starts_with("HEAD ") {
+    //             current_worktree.head = line.strip_prefix("HEAD ").unwrap().to_string();
+    //         }
+    //     }
 
-        if !current_worktree.path.is_empty() {
-            worktrees.push(current_worktree);
-        }
+    //     if !current_worktree.path.is_empty() {
+    //         worktrees.push(current_worktree);
+    //     }
 
-        Ok(worktrees)
-    }
+    //     Ok(worktrees)
+    // }
 
     /// Check if a directory is a git repository
     fn is_git_repo(&self, path: &Path) -> Result<bool> {
@@ -319,23 +320,23 @@ impl GitWorktreeManager {
         Ok(())
     }
 
-    /// Delete a branch
-    fn delete_branch(&self, project_path: &Path, branch_name: &str) -> Result<()> {
-        let output = Command::new("git")
-            .current_dir(project_path)
-            .args(["branch", "-D", branch_name])
-            .output()?;
+    // /// Delete a branch
+    // fn delete_branch(&self, project_path: &Path, branch_name: &str) -> Result<()> {
+    //     let output = Command::new("git")
+    //         .current_dir(project_path)
+    //         .args(["branch", "-D", branch_name])
+    //         .output()?;
 
-        if !output.status.success() {
-            return Err(anyhow::anyhow!(
-                "Failed to delete branch {}: {}",
-                branch_name,
-                String::from_utf8_lossy(&output.stderr)
-            ));
-        }
+    //     if !output.status.success() {
+    //         return Err(anyhow::anyhow!(
+    //             "Failed to delete branch {}: {}",
+    //             branch_name,
+    //             String::from_utf8_lossy(&output.stderr)
+    //         ));
+    //     }
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 
     /// Initialize worktree with session metadata
     async fn initialize_worktree_metadata(
@@ -357,40 +358,41 @@ impl GitWorktreeManager {
         Ok(())
     }
 
-    /// Clean up all worktrees for abandoned sessions
-    pub async fn cleanup_abandoned_worktrees(&self, project_path: &Path, active_session_ids: &[String]) -> Result<()> {
-        let worktrees = self.list_worktrees(project_path)?;
+    // /// Clean up all worktrees for abandoned sessions
+    // pub async fn cleanup_abandoned_worktrees(&self, project_path: &Path, active_session_ids: &[String]) -> Result<()> {
+    //     let worktrees = self.list_worktrees(project_path)?;
 
-        for worktree in worktrees {
-            // Skip the main worktree
-            if worktree.path == project_path.to_string_lossy() {
-                continue;
-            }
+    //     for worktree in worktrees {
+    //         // Skip the main worktree
+    //         if worktree.path == project_path.to_string_lossy() {
+    //             continue;
+    //         }
 
-            // Check if this is a session worktree
-            let metadata_path = Path::new(&worktree.path).join(".agenttool-session.json");
-            if let Ok(metadata_content) = tokio::fs::read_to_string(&metadata_path).await {
-                if let Ok(metadata) = serde_json::from_str::<serde_json::Value>(&metadata_content) {
-                    if let Some(session_id) = metadata["session_id"].as_str() {
-                        if !active_session_ids.contains(&session_id.to_string()) {
-                            // This session is no longer active, clean up the worktree
-                            let _ = self.remove_worktree(project_path, Path::new(&worktree.path)).await;
-                        }
-                    }
-                }
-            }
-        }
+    //         // Check if this is a session worktree
+    //         let metadata_path = Path::new(&worktree.path).join(".agenttool-session.json");
+    //         if let Ok(metadata_content) = tokio::fs::read_to_string(&metadata_path).await {
+    //             if let Ok(metadata) = serde_json::from_str::<serde_json::Value>(&metadata_content) {
+    //                 if let Some(session_id) = metadata["session_id"].as_str() {
+    //                     if !active_session_ids.contains(&session_id.to_string()) {
+    //                         // This session is no longer active, clean up the worktree
+    //                         let _ = self.remove_worktree(project_path, Path::new(&worktree.path)).await;
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //     }
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 }
 
-#[derive(Debug, Clone, Default)]
-pub struct WorktreeInfo {
-    pub path: String,
-    pub branch: String,
-    pub head: String,
-}
+// Commented out to remove dead code warning - fields are never read
+// #[derive(Debug, Clone, Default)]
+// pub struct WorktreeInfo {
+//     pub path: String,
+//     pub branch: String,
+//     pub head: String,
+// }
 
 #[cfg(test)]
 mod tests {
