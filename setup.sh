@@ -188,6 +188,9 @@ install_agenttool() {
     if [ -f "package.json" ]; then
         npm install
         npm run build
+    else
+        print_error "Frontend package.json not found. Please check the repository structure."
+        exit 1
     fi
     
     # Copy binary to bin directory

@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "identifier": "com.agenttool.app",
   "build": {
-    "beforeBuildCommand": "npm run build",
-    "beforeDevCommand": "npm run dev",
-    "devUrl": "http://localhost:1420",
-    "frontendDist": "../dist"
+    "beforeBuildCommand": "cd ../frontend && npm install && npm run build",
+    "beforeDevCommand": "cd ../frontend && npm run dev",
+    "devUrl": "http://localhost:5173",
+    "frontendDist": "../frontend/dist"
   },
   "app": {
     "windows": [
