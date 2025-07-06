@@ -204,10 +204,10 @@ setup_path() {
     
     # Add to PATH if not already present
     if [[ ":$PATH:" != *":$BIN_DIR:"* ]]; then
-        # Detect shell
-        if [[ -n "$ZSH_VERSION" ]]; then
+        # Detect shell from SHELL environment variable
+        if [[ "$SHELL" == *"zsh"* ]]; then
             SHELL_CONFIG="$HOME/.zshrc"
-        elif [[ -n "$BASH_VERSION" ]]; then
+        elif [[ "$SHELL" == *"bash"* ]]; then
             SHELL_CONFIG="$HOME/.bashrc"
         else
             SHELL_CONFIG="$HOME/.profile"
@@ -279,11 +279,13 @@ print_completion() {
     echo -e "${NC}"
     
     echo -e "${CYAN}Next steps:${NC}"
-    echo "1. Restart your shell or run: source ~/.bashrc (or ~/.zshrc)"
+    echo "1. Restart your shell or run: source $SHELL_CONFIG"
     echo "2. Configure your API keys in: ~/.config/agenttool/config.json"
     echo "3. Install Claude Code: https://claude.ai/code"
     echo "4. Install Gemini CLI: https://ai.google.dev/gemini-api/docs/cli"
-    echo "5. Run AgentTool: agenttool"
+    echo "5. Launch AgentTool GUI: agenttool"
+    echo ""
+    echo -e "${YELLOW}Note:${NC} AgentTool is a desktop GUI application."
     echo ""
     echo -e "${PURPLE}Documentation:${NC} https://github.com/MichaelAyles/AgentTool"
     echo -e "${PURPLE}Issues:${NC} https://github.com/MichaelAyles/AgentTool/issues"

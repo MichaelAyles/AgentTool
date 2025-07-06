@@ -42,7 +42,7 @@
       "open": true
     },
     "fs": {
-      "scope": ["**"]
+      "requireLiteralLeadingDot": false
     },
     "process": {
       "all": true
