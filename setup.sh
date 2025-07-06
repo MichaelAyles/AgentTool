@@ -170,7 +170,26 @@ install_agenttool() {
     if [ -d "$INSTALL_DIR/AgentTool" ]; then
         print_info "AgentTool already exists, updating..."
         cd "$INSTALL_DIR/AgentTool"
-        git pull origin main
+        
+        # Check for untracked files that would be overwritten
+        if ! git pull origin main 2>/dev/null; then
+            print_warning "Git pull failed due to untracked files."
+            echo -e "${YELLOW}The following files would be overwritten:${NC}"
+            git status --porcelain=v1 2>/dev/null | grep '^??' | sed 's/^?? /  - /'
+            echo ""
+            echo -e "${CYAN}Do you want to overwrite these files? (y/N):${NC}"
+            read -r response
+            case "$response" in
+                [yY][eE][sS]|[yY])
+                    print_info "Removing untracked files and updating..."
+                    git clean -fd
+                    git pull origin main
+                    ;;
+                *)
+                    print_info "Keeping existing files and continuing with current version..."
+                    ;;
+            esac
+        fi
     else
         cd "$INSTALL_DIR"
         git clone "$REPO_URL" AgentTool
