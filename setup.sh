@@ -171,44 +171,11 @@ install_agenttool() {
         print_info "AgentTool already exists, updating..."
         cd "$INSTALL_DIR/AgentTool"
         
-        # Check for untracked files that would be overwritten
-        if ! git pull origin main 2>/dev/null; then
-            print_warning "Git pull failed due to untracked files."
-            echo -e "${YELLOW}The following files would be overwritten:${NC}"
-            git status --porcelain=v1 2>/dev/null | grep '^??' | sed 's/^?? /  - /'
-            echo ""
-            
-            # Check if we can read from stdin (not piped) or if force update is set
-            if [ "$AGENTTOOL_FORCE_UPDATE" = "true" ]; then
-                print_info "Force update enabled, removing untracked files..."
-                git clean -fd
-                git pull origin main
-            elif [ -t 0 ]; then
-                echo -e "${CYAN}Do you want to overwrite these files? (y/N):${NC}"
-                read -r response
-                case "$response" in
-                    [yY][eE][sS]|[yY])
-                        print_info "Removing untracked files and updating..."
-                        git clean -fd
-                        git pull origin main
-                        ;;
-                    *)
-                        print_info "Keeping existing files and continuing with current version..."
-                        ;;
-                esac
-            else
-                print_warning "Script is running in non-interactive mode (piped)."
-                print_warning "To update with conflicts, you have two options:"
-                echo ""
-                echo "  Option 1: Force update (removes untracked files):"
-                echo "     curl -fsSL https://raw.githubusercontent.com/MichaelAyles/AgentTool/main/setup.sh | AGENTTOOL_FORCE_UPDATE=true bash"
-                echo ""
-                echo "  Option 2: Run interactively:"
-                echo "     curl -fsSL https://raw.githubusercontent.com/MichaelAyles/AgentTool/main/setup.sh -o setup.sh && chmod +x setup.sh && ./setup.sh"
-                echo ""
-                print_info "Continuing with current version..."
-            fi
-        fi
+        # Always clean and pull to ensure latest version
+        print_info "Cleaning local changes and updating to latest version..."
+        git clean -fd
+        git reset --hard
+        git pull origin main
     else
         cd "$INSTALL_DIR"
         git clone "$REPO_URL" AgentTool
