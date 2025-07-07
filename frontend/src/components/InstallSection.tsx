@@ -1,21 +1,8 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { motion } from 'framer-motion'
-import { Copy, Check, Download, Terminal, GitBranch } from 'lucide-react'
+import { Download, Terminal, GitBranch } from 'lucide-react'
 
 const InstallSection: React.FC = () => {
-  const [copied, setCopied] = useState(false)
-  
-  const installScript = `curl -fsSL https://raw.githubusercontent.com/MichaelAyles/AgentTool/main/setup.sh | bash`
-  
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(installScript)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch (err) {
-      console.error('Failed to copy text: ', err)
-    }
-  }
 
   return (
     <section className="py-24 px-4" id="install">
@@ -30,72 +17,20 @@ const InstallSection: React.FC = () => {
         >
           <h2 className="text-4xl md:text-5xl font-bold mb-6">
             <span className="text-gradient bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent">
-              Get Started
+              Installation Steps
             </span>
           </h2>
           <p className="text-xl text-gray-400 max-w-2xl mx-auto">
-            Install AgentTool with a single command. The setup script will handle 
-            all dependencies and configuration automatically.
+            The setup script handles all dependencies and configuration automatically.
+            Just copy the command above and paste it in your terminal.
           </p>
-        </motion.div>
-
-        {/* Install command box */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          viewport={{ once: true }}
-          className="mb-12"
-        >
-          <div className="relative group">
-            <div className="absolute -inset-1 bg-gradient-to-r from-green-400 via-blue-500 to-purple-600 rounded-2xl blur opacity-25 group-hover:opacity-75 transition duration-1000 group-hover:duration-200"></div>
-            <div className="relative bg-gray-900 border border-gray-700 rounded-2xl p-6">
-              {/* Terminal header */}
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-2">
-                  <Terminal className="text-green-400" size={20} />
-                  <span className="text-gray-400 font-mono text-sm">bash</span>
-                </div>
-                <div className="flex space-x-2">
-                  <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                  <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                </div>
-              </div>
-              
-              {/* Command */}
-              <div className="flex items-center justify-between bg-black/50 rounded-lg p-4">
-                <code className="text-green-400 font-mono text-sm md:text-base flex-1 text-left">
-                  {installScript}
-                </code>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={handleCopy}
-                  className="ml-4 p-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex items-center space-x-2"
-                >
-                  {copied ? (
-                    <>
-                      <Check size={16} />
-                      <span className="text-sm font-medium">Copied!</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy size={16} />
-                      <span className="text-sm font-medium">Copy</span>
-                    </>
-                  )}
-                </motion.button>
-              </div>
-            </div>
-          </div>
         </motion.div>
 
         {/* Installation steps */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
           viewport={{ once: true }}
           className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16"
         >
@@ -128,7 +63,7 @@ const InstallSection: React.FC = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.6 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
           viewport={{ once: true }}
           className="text-center"
         >
@@ -155,7 +90,7 @@ const InstallSection: React.FC = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.8 }}
+          transition={{ duration: 0.6, delay: 0.6 }}
           viewport={{ once: true }}
           className="mt-16 text-center"
         >
