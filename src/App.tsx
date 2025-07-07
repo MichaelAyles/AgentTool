@@ -1,70 +1,95 @@
 import { useState } from 'react'
-import { invoke } from '@tauri-apps/api/core'
 import './App.css'
+import { AgentList } from './components/AgentList'
+import { SessionList } from './components/SessionList'
+import { TaskMonitor } from './components/TaskMonitor'
+import { CommandInput } from './components/CommandInput'
 
 function App() {
-  const [greetMsg, setGreetMsg] = useState('')
-  const [name, setName] = useState('')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'agents' | 'sessions' | 'tasks'>('dashboard')
 
-  async function greet() {
-    setGreetMsg(await invoke('greet', { name }))
+  function refreshData() {
+    // This will trigger a refresh in child components if needed
+    window.location.reload()
   }
 
   return (
-    <div className="container mx-auto p-6">
-      <h1 className="text-4xl font-bold text-center mb-8">
-        🤖 AgentTool
-      </h1>
-      
-      <p className="text-xl text-center mb-8 text-gray-600">
-        Hierarchical Multi-Agent System for AI-Powered Development
-      </p>
+    <div className="min-h-screen bg-gray-100">
+      <header className="bg-white shadow-sm">
+        <div className="container mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <h1 className="text-3xl font-bold text-gray-800">
+              🤖 AgentTool
+            </h1>
+            <p className="text-sm text-gray-600">
+              Hierarchical Multi-Agent System for AI-Powered Development
+            </p>
+          </div>
+        </div>
+      </header>
 
-      <div className="max-w-md mx-auto">
-        <form
-          className="space-y-4"
-          onSubmit={(e) => {
-            e.preventDefault()
-            greet()
-          }}
-        >
-          <input
-            id="greet-input"
-            onChange={(e) => setName(e.currentTarget.value)}
-            placeholder="Enter a name..."
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <button 
-            type="submit"
-            className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition-colors"
-          >
-            Greet
-          </button>
-        </form>
+      <nav className="bg-white border-b">
+        <div className="container mx-auto px-6">
+          <div className="flex space-x-8">
+            <button
+              onClick={() => setActiveTab('dashboard')}
+              className={`py-4 px-2 border-b-2 font-medium text-sm ${
+                activeTab === 'dashboard'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Dashboard
+            </button>
+            <button
+              onClick={() => setActiveTab('agents')}
+              className={`py-4 px-2 border-b-2 font-medium text-sm ${
+                activeTab === 'agents'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Agents
+            </button>
+            <button
+              onClick={() => setActiveTab('sessions')}
+              className={`py-4 px-2 border-b-2 font-medium text-sm ${
+                activeTab === 'sessions'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Sessions
+            </button>
+            <button
+              onClick={() => setActiveTab('tasks')}
+              className={`py-4 px-2 border-b-2 font-medium text-sm ${
+                activeTab === 'tasks'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Tasks
+            </button>
+          </div>
+        </div>
+      </nav>
 
-        {greetMsg && (
-          <p className="mt-4 p-4 bg-green-100 text-green-800 rounded-lg">
-            {greetMsg}
-          </p>
+      <main className="container mx-auto px-6 py-8">
+        {activeTab === 'dashboard' && (
+          <div className="space-y-8">
+            <CommandInput onCommandSent={refreshData} />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <SessionList />
+              <TaskMonitor />
+            </div>
+          </div>
         )}
-      </div>
 
-      <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h3 className="text-lg font-semibold mb-2">🎯 Middle Manager</h3>
-          <p className="text-gray-600">Intelligent task coordination and agent management</p>
-        </div>
-        
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h3 className="text-lg font-semibold mb-2">🔒 Secure Isolation</h3>
-          <p className="text-gray-600">Process isolation and git worktree separation</p>
-        </div>
-        
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h3 className="text-lg font-semibold mb-2">⚡ Real-time</h3>
-          <p className="text-gray-600">Live agent monitoring and coordination</p>
-        </div>
-      </div>
+        {activeTab === 'agents' && <AgentList />}
+        {activeTab === 'sessions' && <SessionList />}
+        {activeTab === 'tasks' && <TaskMonitor />}
+      </main>
     </div>
   )
 }
