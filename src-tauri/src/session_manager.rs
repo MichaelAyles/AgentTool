@@ -47,10 +47,7 @@ impl SessionManager {
             active_sessions: Arc::new(RwLock::new(HashMap::new())),
             claude_adapter: Arc::new(ClaudeCodeAdapter::new("claude-code".to_string())),
             gemini_adapter: Arc::new(GeminiCliAdapter::new("gemini".to_string())),
-            middle_manager: Arc::new(MiddleManager::new(
-                std::env::var("OPENROUTER_API_KEY").unwrap_or_default(),
-                "anthropic/claude-3-sonnet".to_string(),
-            )),
+            middle_manager: Arc::new(MiddleManager::new()),
             git_worktree_manager: Arc::new(GitWorktreeManager::new(
                 PathBuf::from(std::env::var("AGENT_TOOL_WORKTREE_DIR").unwrap_or_else(|_| {
                     std::env::temp_dir().join("agent-tool-worktrees").to_string_lossy().to_string()

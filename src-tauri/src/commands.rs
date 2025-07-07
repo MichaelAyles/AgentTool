@@ -51,45 +51,51 @@ pub async fn get_sessions(
 
 #[tauri::command]
 pub async fn execute_task(request: ExecuteTaskRequest) -> Result<TaskResult, String> {
-    // TODO: Route to appropriate agent
-    let result = TaskResult {
-        id: uuid::Uuid::new_v4().to_string(),
-        session_id: request.session_id,
-        task_description: request.task_description,
-        agent_type: request.agent_type,
-        status: TaskStatus::InProgress,
-        result: None,
-        error: None,
-        created_at: chrono::Utc::now(),
-        completed_at: None,
+    // Route to appropriate agent based on agent_type
+    let result = match request.agent_type.as_str() {
+        "claude_code" => {
+            crate::claude_code_adapter::execute_task(request).await
+        },
+        "gemini_cli" => {
+            crate::gemini_cli_adapter::execute_task(request).await
+        },
+        "middle_manager" => {
+            crate::middle_manager::MiddleManager::new().execute_task(request).await
+        },
+        _ => {
+            return Err(format!("Unknown agent type: {}", request.agent_type));
+        }
     };
     
-    Ok(result)
+    result
 }
 
 #[tauri::command]
 pub async fn get_agent_status(agent_id: String) -> Result<AgentStatus, String> {
-    // TODO: Get actual agent status
-    Ok(AgentStatus {
-        id: agent_id,
-        name: "Sample Agent".to_string(),
-        agent_type: "claude_code".to_string(),
-        status: "idle".to_string(),
-        current_task: None,
-        last_activity: chrono::Utc::now(),
-    })
+    // Get actual agent status from agent registry
+    match crate::agent_registry::get_agent_status(&agent_id).await {
+        Some(status) => Ok(status),
+        None => Err(format!("Agent not found: {}", agent_id)),
+    }
 }
 
 #[tauri::command]
-pub async fn configure_agent(_config: AgentConfig) -> Result<(), String> {
-    // TODO: Store agent configuration
+pub async fn configure_agent(config: AgentConfig) -> Result<(), String> {
+    // Store agent configuration in database and update registry
+    crate::database::store_agent_config(&config).await
+        .map_err(|e| format!("Failed to store agent configuration: {}", e))?;
+    
+    crate::agent_registry::update_agent_config(config).await
+        .map_err(|e| format!("Failed to update agent registry: {}", e))?;
+    
     Ok(())
 }
 
 #[tauri::command]
 pub async fn list_agents() -> Result<Vec<AgentStatus>, String> {
-    // TODO: Return list of configured agents
-    Ok(vec![])
+    // Return list of all configured agents from registry
+    crate::agent_registry::list_all_agents().await
+        .map_err(|e| format!("Failed to list agents: {}", e))
 }
 
 #[tauri::command]

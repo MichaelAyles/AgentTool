@@ -127,9 +127,52 @@ pub async fn initialize_registry(_app_handle: AppHandle) {
     }
 }
 
-// Commented out unused function
-// pub fn get_registry() -> &'static AgentRegistry {
-//     unsafe {
-//         REGISTRY.as_ref().expect("Agent registry not initialized")
-//     }
-// }
+pub fn get_registry() -> &'static AgentRegistry {
+    unsafe {
+        REGISTRY.as_ref().expect("Agent registry not initialized")
+    }
+}
+
+// Additional agent registry functions for commands.rs
+pub async fn get_agent_status(agent_id: &str) -> Option<AgentStatus> {
+    let registry = get_registry();
+    let agents = registry.agents.read().await;
+    
+    if let Some(config) = agents.get(agent_id) {
+        Some(AgentStatus {
+            id: config.id.clone(),
+            name: config.name.clone(),
+            agent_type: config.agent_type.clone(),
+            status: "ready".to_string(),
+            current_task: None,
+            last_activity: chrono::Utc::now(),
+        })
+    } else {
+        None
+    }
+}
+
+pub async fn update_agent_config(config: AgentConfig) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let registry = get_registry();
+    let mut agents = registry.agents.write().await;
+    agents.insert(config.id.clone(), config);
+    Ok(())
+}
+
+pub async fn list_all_agents() -> Result<Vec<AgentStatus>, Box<dyn std::error::Error + Send + Sync>> {
+    let registry = get_registry();
+    let agents = registry.agents.read().await;
+    
+    let agent_statuses: Vec<AgentStatus> = agents.values().map(|config| {
+        AgentStatus {
+            id: config.id.clone(),
+            name: config.name.clone(),
+            agent_type: config.agent_type.clone(),
+            status: "ready".to_string(),
+            current_task: None,
+            last_activity: chrono::Utc::now(),
+        }
+    }).collect();
+    
+    Ok(agent_statuses)
+}

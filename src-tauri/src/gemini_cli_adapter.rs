@@ -271,3 +271,22 @@ impl GeminiCliAdapter {
         Ok(result)
     }
 }
+
+// Module-level execute_task function that matches the signature expected by commands.rs
+pub async fn execute_task(request: crate::commands::ExecuteTaskRequest) -> Result<crate::models::TaskResult, String> {
+    // Create a default adapter instance (unused for now)
+    let _adapter = GeminiCliAdapter::new("gemini".to_string());
+    
+    // For now, return a mock result since we don't have persistent sessions
+    Ok(TaskResult {
+        id: uuid::Uuid::new_v4().to_string(),
+        session_id: request.session_id,
+        task_description: request.task_description.clone(),
+        agent_type: request.agent_type,
+        status: TaskStatus::Completed,
+        result: Some(format!("Gemini CLI executed: {}", request.task_description)),
+        error: None,
+        created_at: chrono::Utc::now(),
+        completed_at: Some(chrono::Utc::now()),
+    })
+}

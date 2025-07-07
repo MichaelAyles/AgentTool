@@ -11,11 +11,37 @@ pub struct MiddleManager {
 }
 
 impl MiddleManager {
-    pub fn new(openrouter_api_key: String, default_model: String) -> Self {
+    pub fn new() -> Self {
+        Self {
+            openrouter_api_key: std::env::var("OPENROUTER_API_KEY").unwrap_or_default(),
+            default_model: "anthropic/claude-3-sonnet".to_string(),
+        }
+    }
+
+    pub fn new_with_config(openrouter_api_key: String, default_model: String) -> Self {
         Self {
             openrouter_api_key,
             default_model,
         }
+    }
+
+    pub async fn execute_task(&self, request: crate::commands::ExecuteTaskRequest) -> Result<crate::models::TaskResult, String> {
+        // Use the task decomposition to handle the request
+        let decomposition = self.process_task(&request.task_description, "").await?;
+        
+        // For now, return a completed task result
+        Ok(crate::models::TaskResult {
+            id: uuid::Uuid::new_v4().to_string(),
+            session_id: request.session_id,
+            task_description: request.task_description,
+            agent_type: request.agent_type,
+            status: crate::models::TaskStatus::Completed,
+            result: Some(format!("Middle Manager processed task with strategy: {} - {}", 
+                decomposition.strategy, decomposition.reasoning)),
+            error: None,
+            created_at: chrono::Utc::now(),
+            completed_at: Some(chrono::Utc::now()),
+        })
     }
 
     pub async fn process_task(&self, task: &str, context: &str) -> Result<TaskDecomposition, String> {

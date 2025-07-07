@@ -2,6 +2,7 @@ use rusqlite::Connection;
 use anyhow::Result;
 use std::sync::{Arc, Mutex};
 use crate::models::*;
+use crate::session_manager::ConversationMessage;
 
 pub struct Database {
     conn: Arc<Mutex<Connection>>,
@@ -175,4 +176,40 @@ pub fn get_database() -> &'static Database {
     unsafe {
         DATABASE.as_ref().expect("Database not initialized")
     }
+}
+
+// Additional database functions for agent management
+pub async fn store_agent_config(config: &AgentConfig) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let db = get_database();
+    let conn = db.conn.lock().unwrap();
+    conn.execute(
+        "INSERT OR REPLACE INTO agents (id, name, agent_type, config, permissions, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+        (
+            &config.id,
+            &config.name,
+            &config.agent_type,
+            &serde_json::to_string(&config.config)?,
+            &serde_json::to_string(&config.permissions)?,
+            &chrono::Utc::now().to_rfc3339(),
+            &chrono::Utc::now().to_rfc3339(),
+        ),
+    )?;
+    Ok(())
+}
+
+pub async fn store_message(session_id: &str, message: &ConversationMessage) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let db = get_database();
+    let conn = db.conn.lock().unwrap();
+    conn.execute(
+        "INSERT INTO agent_messages (id, from_agent, to_agent, message_type, content, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        (
+            &uuid::Uuid::new_v4().to_string(),
+            &format!("{:?}", message.role),
+            &session_id,
+            "user_message",
+            &message.content,
+            &message.created_at.to_rfc3339(),
+        ),
+    )?;
+    Ok(())
 }
