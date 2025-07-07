@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "identifier": "com.agenttool.app",
   "build": {
-    "beforeBuildCommand": "cd ../frontend && npm install && npm run build",
-    "beforeDevCommand": "cd ../frontend && npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:5173",
-    "frontendDist": "../frontend/dist"
+    "frontendDist": "../dist"
   },
   "app": {
     "windows": [
@@ -23,7 +23,7 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' http: https: ws: wss:;"
     }
   },
   "bundle": {

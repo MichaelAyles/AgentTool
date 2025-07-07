@@ -185,5 +185,8 @@ local-config.json
 # Reference directories (cloned repos)
 reference-*/
 
+# MCP servers (external git repos)
+mcp-*/
+
 # Vercel
 .vercel
