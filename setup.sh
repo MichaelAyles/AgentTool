@@ -200,6 +200,10 @@ install_agenttool() {
         print_error "Frontend package.json not found. Please check the repository structure."
         exit 1
     fi
+
+    # Correct the devUrl before building
+    print_info "Correcting devUrl in tauri.conf.json"
+    sed -i.bak 's|http://localhost:5173|http://localhost:1420|g' ../src-tauri/tauri.conf.json
     
     # Copy binary to bin directory
     cd ../src-tauri
