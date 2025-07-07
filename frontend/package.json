@@ -1,6 +1,7 @@
 {
   "name": "agenttool-landing",
   "version": "1.0.0",
+  "type": "module",
   "description": "Beautiful landing page for AgentTool - Hierarchical Multi-Agent System",
   "scripts": {
     "dev": "vite",
